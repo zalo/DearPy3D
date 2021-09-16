@@ -44,6 +44,7 @@ target_include_directories(dearpy3dsandbox
 
 	PRIVATE
 
+		"../DearPy3D/"
 		"../DearPy3D/core/"
 		"../DearPy3D/renderer/"
 		"../DearPy3D/renderer/drawables/"

@@ -13,29 +13,11 @@ namespace DearPy3D {
 	class mvSwapChain
 	{
 
-		struct SwapChainSupportDetails 
-		{
-			VkSurfaceCapabilitiesKHR capabilities;
-			std::vector<VkSurfaceFormatKHR> formats;
-			std::vector<VkPresentModeKHR> presentModes;
-		};
+
 
 	public:
 
 		void resize(float width, float height);
-
-		// setup
-		void init(float width, float height);
-		void createSurface(GLFWwindow* window);
-		void createRenderPass();
-
-		void createFrameBuffers();
-		void createDepthResources();
-		void createSyncObjects();
-
-		// cleanup
-		void freeSyncObjects();
-		void freeSurface();
 
 		void beginFrame();
 		void present();
@@ -52,10 +34,6 @@ namespace DearPy3D {
 		VkExtent2D   getSwapChainExtent() { return _swapChainExtent; }
 		VkFormat     getSwatChainFormat() const { return _swapChainImageFormat; }
 
-	private:
-
-		// helpers
-		SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
 	private:
 
