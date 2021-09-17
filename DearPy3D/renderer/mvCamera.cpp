@@ -1,5 +1,4 @@
 #include "mvCamera.h"
-#include "mvGraphics.h"
 #include <algorithm>
 
 namespace DearPy3D {

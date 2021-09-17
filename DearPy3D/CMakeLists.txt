@@ -30,8 +30,6 @@ target_sources(dearpy3d
 		"renderer/mvGraphicsContext.cpp"
 		"renderer/mvCamera.cpp"
 		"renderer/mvImGuiManager.cpp"
-		"renderer/mvLogicalDevice.cpp"
-		"renderer/mvSwapChain.cpp"
 
 		# pipeline
 		"renderer/pipeline/mvPipeline.cpp"

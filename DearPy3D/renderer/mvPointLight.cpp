@@ -1,5 +1,6 @@
 #include "mvPointLight.h"
-#include "mvGraphics.h"
+#include "mvContext.h"
+#include "mvGraphicsContext.h"
 
 namespace DearPy3D {
 
@@ -25,7 +26,7 @@ namespace DearPy3D {
 		_info.viewLightPos.y = out.y;
 		_info.viewLightPos.z = out.z;
 
-		_buffer[mvGraphics::GetContext().getSwapChain().getCurrentImageIndex()]->update(_info);
+		_buffer[GContext->graphics.currentImageIndex]->update(_info);
 
 		_info.viewLightPos = posCopy;
 	}

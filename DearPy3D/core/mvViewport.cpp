@@ -54,6 +54,7 @@ namespace DearPy3D {
 
 		GContext->viewport.width = width;
 		GContext->viewport.height = height;
+		GContext->viewport.running = true;
 	}
 
 	void ProcessViewportEvents()

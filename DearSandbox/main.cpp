@@ -17,20 +17,18 @@ int main()
     InitializeViewport(500, 500);
     
     // graphics
-    CreateVulkanInstance({ "VK_LAYER_KHRONOS_validation" });
-    if(GContext->graphics.enableValidationLayers)
-        SetupDebugMessenger();
-    CreateSurface(GContext->viewport.handle, GContext->graphics.surface);
-    CreatePhysicalDevice(GContext->graphics.physicalDevice, GContext->graphics.deviceProperties, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
-    CreateLogicalDevice(GContext->graphics);
+    GContext->graphics.instance = mvCreateVulkanInstance({ "VK_LAYER_KHRONOS_validation" });
+    GContext->graphics.surface = mvCreateSurface(GContext->viewport.handle);
+    GContext->graphics.physicalDevice = mvCreatePhysicalDevice(GContext->graphics.deviceProperties, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
+    GContext->graphics.logicalDevice = mvCreateLogicalDevice(GContext->graphics.physicalDevice);
     mvAllocator::Init();
     CreateSwapChain(GContext->graphics, 500, 500);
     CreateMainCommandPool(GContext->graphics);
-    CreateMainDescriptorPool(GContext->graphics.logicalDevice, &(GContext->graphics.descriptorPool));
-    CreateMainRenderPass(GContext->graphics.logicalDevice, &(GContext->graphics.renderPass), GContext->graphics.swapChainImageFormat);
-    CreateMainDepthResources(GContext->graphics.logicalDevice, GContext->graphics.depthImage, GContext->graphics.depthImageView, GContext->graphics.depthImageMemory);
-    CreateFrameBuffers(GContext->graphics.logicalDevice, GContext->graphics.renderPass, GContext->graphics.swapChainFramebuffers, GContext->graphics.swapChainImageViews, GContext->graphics.depthImageView);
-    CreateSyncObjects(GContext->graphics.logicalDevice, GContext->graphics.imageAvailableSemaphores, GContext->graphics.renderFinishedSemaphores, GContext->graphics.inFlightFences, GContext->graphics.imagesInFlight);
+    CreateMainDescriptorPool(&(GContext->graphics.descriptorPool));
+    CreateMainRenderPass(&(GContext->graphics.renderPass), GContext->graphics.swapChainImageFormat);
+    CreateMainDepthResources(&GContext->graphics.depthImage, &GContext->graphics.depthImageView, &GContext->graphics.depthImageMemory);
+    CreateFrameBuffers(GContext->graphics.renderPass, GContext->graphics.swapChainFramebuffers, GContext->graphics.swapChainImageViews, GContext->graphics.depthImageView);
+    CreateSyncObjects(GContext->graphics.imageAvailableSemaphores, GContext->graphics.renderFinishedSemaphores, GContext->graphics.inFlightFences, GContext->graphics.imagesInFlight);
 
     auto renderer = mvRenderer();
     auto imgui = mvImGuiManager(GContext->viewport.handle);
@@ -94,10 +92,10 @@ int main()
         if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_W) == GLFW_PRESS) camera.translate(0.0f, 0.0f, dt);
         if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_S) == GLFW_PRESS) camera.translate(0.0f, 0.0f, -dt);
         if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_A) == GLFW_PRESS) camera.translate(-dt, 0.0f, 0.0f);
-        if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_D) == GLFW_PRESS)camera.translate(dt, 0.0f, 0.0f);
-        if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_R) == GLFW_PRESS)camera.translate(0.0f, dt, 0.0f);
-        if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_F) == GLFW_PRESS)camera.translate(0.0f, -dt, 0.0f);
-        if (!GContext->viewport.cursorEnabled) camera.rotate(GContext->viewport.deltaX, GContext->viewport.deltaX);
+        if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_D) == GLFW_PRESS) camera.translate(dt, 0.0f, 0.0f);
+        if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_R) == GLFW_PRESS) camera.translate(0.0f, dt, 0.0f);
+        if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_F) == GLFW_PRESS) camera.translate(0.0f, -dt, 0.0f);
+        if (!GContext->viewport.cursorEnabled) camera.rotate(GContext->viewport.deltaX, GContext->viewport.deltaY);
         
         //---------------------------------------------------------------------
         // wait for fences and acquire next image
@@ -108,10 +106,14 @@ int main()
         // main pass
         //---------------------------------------------------------------------
         
-        auto currentCommandBuffer = mvGraphics::GetContext().getSwapChain().getCurrentCommandBuffer();
+        auto currentCommandBuffer = GetCurrentCommandBuffer();
 
         renderer.beginPass(currentCommandBuffer, GContext->graphics.renderPass);
         imgui.beginFrame();
+
+        ImGui::Begin("Cool window");
+        ImGui::Button("Press me");
+        ImGui::End();
 
         renderer.setCamera(camera);
 

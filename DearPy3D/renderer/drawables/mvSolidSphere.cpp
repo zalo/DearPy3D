@@ -1,5 +1,4 @@
 #include "mvSolidSphere.h"
-#include "mvGraphics.h"
 #include "mvTexture.h"
 #include "mvSampler.h"
 #include "Sphere.h"

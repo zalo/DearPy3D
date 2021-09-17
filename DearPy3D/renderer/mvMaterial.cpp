@@ -1,6 +1,6 @@
 #include "mvMaterial.h"
 #include <stdexcept>
-#include "mvGraphics.h"
+#include "mvContext.h"
 #include "mvTexture.h"
 #include "mvSampler.h"
 
@@ -49,7 +49,7 @@ namespace DearPy3D {
 
 		std::vector<VkDescriptorSet> descriptorSets;
 
-		if (vkCreateDescriptorSetLayout(mvGraphics::GetContext().getLogicalDevice(), &layoutInfo, nullptr, &descriptorSetLayouts.back()) != VK_SUCCESS)
+		if (vkCreateDescriptorSetLayout(GContext->graphics.logicalDevice, &layoutInfo, nullptr, &descriptorSetLayouts.back()) != VK_SUCCESS)
 			throw std::runtime_error("failed to create descriptor set layout!");
 
 		//-----------------------------------------------------------------------------
@@ -59,11 +59,11 @@ namespace DearPy3D {
 		std::vector<VkDescriptorSetLayout> layouts(3, descriptorSetLayouts[0]);
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = mvGraphics::GetContext().getDescriptorPool();
+		allocInfo.descriptorPool = GContext->graphics.descriptorPool;
 		allocInfo.descriptorSetCount = 3;
 		allocInfo.pSetLayouts = layouts.data();
 
-		if (vkAllocateDescriptorSets(mvGraphics::GetContext().getLogicalDevice(), &allocInfo, descriptorSets.data()) != VK_SUCCESS)
+		if (vkAllocateDescriptorSets(GContext->graphics.logicalDevice, &allocInfo, descriptorSets.data()) != VK_SUCCESS)
 			throw std::runtime_error("failed to allocate descriptor sets!");
 
 		//-----------------------------------------------------------------------------
@@ -100,7 +100,7 @@ namespace DearPy3D {
 			descriptorWrites[i].pBufferInfo = &materialInfo;
 		}
 
-		vkUpdateDescriptorSets(mvGraphics::GetContext().getLogicalDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+		vkUpdateDescriptorSets(GContext->graphics.logicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 
 		_pipeline = std::make_shared<mvPipeline>();
 		_pipeline->setVertexLayout(vlayout);
@@ -124,7 +124,7 @@ namespace DearPy3D {
 
 	void mvMaterial::cleanup()
 	{
-		vkDeviceWaitIdle(mvGraphics::GetContext().getLogicalDevice());
+		vkDeviceWaitIdle(GContext->graphics.logicalDevice);
 		_deletionQueue.flush();
 	}
 

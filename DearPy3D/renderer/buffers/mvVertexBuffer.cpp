@@ -1,6 +1,6 @@
 #include "mvVertexBuffer.h"
 #include <stdexcept>
-#include "mvGraphics.h"
+#include "mvContext.h"
 
 namespace DearPy3D {
 
@@ -34,7 +34,7 @@ namespace DearPy3D {
 
         _memoryAllocation = allocator.allocateBuffer(indexBufferInfo, VMA_MEMORY_USAGE_GPU_ONLY, _vertexBuffer);
 
-        VkCommandBuffer copyCmd = mvGraphics::GetContext().getLogicalDevice().beginSingleTimeCommands();
+        VkCommandBuffer copyCmd = BeginSingleTimeCommands();
 
         VkBufferCopy copyRegion = {};
         copyRegion.size = bufferSize;
@@ -45,7 +45,7 @@ namespace DearPy3D {
             1,
             &copyRegion);
 
-        mvGraphics::GetContext().getLogicalDevice().endSingleTimeCommands(copyCmd);
+        EndSingleTimeCommands(copyCmd);
 
         allocator.destroyBuffer(stagingBuffer, stagingBufferAllocation);
 
@@ -59,13 +59,13 @@ namespace DearPy3D {
     {
         VkBuffer vertexBuffers[] = { _vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
-        vkCmdBindVertexBuffers(mvGraphics::GetContext().getSwapChain().getCurrentCommandBuffer(), 0, 1, vertexBuffers, offsets);
+        vkCmdBindVertexBuffers(GetCurrentCommandBuffer(), 0, 1, vertexBuffers, offsets);
     }
 
     void mvVertexBuffer::cleanup()
     {
         auto allocator = mvAllocator();
-        vkDestroyBuffer(mvGraphics::GetContext().getLogicalDevice(), _vertexBuffer, nullptr);
+        vkDestroyBuffer(GetLogicalDevice(), _vertexBuffer, nullptr);
         allocator.free(_memoryAllocation);
     }
 }

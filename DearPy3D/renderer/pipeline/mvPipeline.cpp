@@ -1,6 +1,6 @@
 #include "mvPipeline.h"
 #include <stdexcept>
-#include "mvGraphics.h"
+#include "mvContext.h"
 
 namespace DearPy3D {
 
@@ -33,17 +33,18 @@ namespace DearPy3D {
     {
 
         // todo: handle this
-        uint32_t uniform_offset = index * 256;
-        vkCmdBindDescriptorSets(mvGraphics::GetContext().getSwapChain().getCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
+        //uint32_t uniform_offset = index * 256;
+        uint32_t uniform_offset = index * 64;
+        vkCmdBindDescriptorSets(GetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
             _pipelineLayout, 0, 1, _descriptorSets.data(), 1, &uniform_offset);
 
-        vkCmdBindPipeline(mvGraphics::GetContext().getSwapChain().getCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
+        vkCmdBindPipeline(GetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
     }
 
     void mvPipeline::finish()
     {
-        vkDestroyPipeline(mvGraphics::GetContext().getLogicalDevice(), _pipeline, nullptr);
-        vkDestroyPipelineLayout(mvGraphics::GetContext().getLogicalDevice(), _pipelineLayout, nullptr);
+        vkDestroyPipeline(GetLogicalDevice(), _pipeline, nullptr);
+        vkDestroyPipelineLayout(GetLogicalDevice(), _pipelineLayout, nullptr);
     }
 
 	void mvPipeline::finalize()
@@ -90,14 +91,14 @@ namespace DearPy3D {
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
-        viewport.width = (float)mvGraphics::GetContext().getSwapChain().getSwapChainExtent().width;
-        viewport.height = (float)mvGraphics::GetContext().getSwapChain().getSwapChainExtent().height;
+        viewport.width = (float)GContext->graphics.swapChainExtent.width;
+        viewport.height = (float)GContext->graphics.swapChainExtent.height;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 
         VkRect2D scissor{};
         scissor.offset = { 0, 0 };
-        scissor.extent = mvGraphics::GetContext().getSwapChain().getSwapChainExtent();
+        scissor.extent = GContext->graphics.swapChainExtent;
 
         VkPipelineViewportStateCreateInfo viewportState{};
         viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -183,7 +184,7 @@ namespace DearPy3D {
         pipelineLayoutInfo.pushConstantRangeCount = 1;
         pipelineLayoutInfo.pSetLayouts = _descriptorSetLayouts.data();
 
-        if (vkCreatePipelineLayout(mvGraphics::GetContext().getLogicalDevice(), &pipelineLayoutInfo, nullptr, &_pipelineLayout) != VK_SUCCESS)
+        if (vkCreatePipelineLayout(GetLogicalDevice(), &pipelineLayoutInfo, nullptr, &_pipelineLayout) != VK_SUCCESS)
             throw std::runtime_error("failed to create pipeline layout!");
 
         //---------------------------------------------------------------------
@@ -203,25 +204,25 @@ namespace DearPy3D {
         pipelineInfo.pMultisampleState = &multisampling;
         pipelineInfo.pColorBlendState = &colorBlending;
         pipelineInfo.layout = _pipelineLayout;
-        pipelineInfo.renderPass = mvGraphics::GetContext().getSwapChain().getMainRenderPassInfo().renderPass;
+        pipelineInfo.renderPass = GContext->graphics.renderPass;
         pipelineInfo.subpass = 0;
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineInfo.pDepthStencilState = &depthStencil;
 
-        if (vkCreateGraphicsPipelines(mvGraphics::GetContext().getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline) != VK_SUCCESS)
+        if (vkCreateGraphicsPipelines(GetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline) != VK_SUCCESS)
             throw std::runtime_error("failed to create graphics pipeline!");
 
         // no longer need this
-        vkDestroyShaderModule(mvGraphics::GetContext().getLogicalDevice(), _vertexShader->getShaderModule(), nullptr);
-        vkDestroyShaderModule(mvGraphics::GetContext().getLogicalDevice(), _fragShader->getShaderModule(), nullptr);
+        vkDestroyShaderModule(GetLogicalDevice(), _vertexShader->getShaderModule(), nullptr);
+        vkDestroyShaderModule(GetLogicalDevice(), _fragShader->getShaderModule(), nullptr);
         _vertexShader = nullptr;
         _fragShader = nullptr;
 
-        mvGraphics::GetContext().getDeletionQueue().pushDeletor([=]() {
-            vkDestroyPipeline(mvGraphics::GetContext().getLogicalDevice(), _pipeline, nullptr);
-            vkDestroyPipelineLayout(mvGraphics::GetContext().getLogicalDevice(), _pipelineLayout, nullptr);
+        GContext->graphics.deletionQueue.pushDeletor([=]() {
+            vkDestroyPipeline(GetLogicalDevice(), _pipeline, nullptr);
+            vkDestroyPipelineLayout(GetLogicalDevice(), _pipelineLayout, nullptr);
             for(auto descriptorSetLayout : _descriptorSetLayouts)
-                vkDestroyDescriptorSetLayout(mvGraphics::GetContext().getLogicalDevice(), descriptorSetLayout, nullptr);
+                vkDestroyDescriptorSetLayout(GetLogicalDevice(), descriptorSetLayout, nullptr);
             _descriptorSetLayouts.clear();
             _descriptorSets.clear();
             });

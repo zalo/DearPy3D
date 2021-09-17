@@ -17,27 +17,46 @@ namespace DearPy3D {
     // public API
     //-----------------------------------------------------------------------------
 
-    VkInstance    GetVkInstance();
-    VkImageView   CreateImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
-    std::uint32_t FindMemoryType (VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
-    size_t        GetRequiredUniformBufferSize(size_t size);
-    void          CreateImage    (VkDevice logicalDevice, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
-
-    void CreateVulkanInstance(std::vector<const char*> validationLayers);
-    void SetupDebugMessenger();
-    void CreateSurface(GLFWwindow* window, VkSurfaceKHR surface);
-    void CreatePhysicalDevice(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties& properties, std::vector<const char*> deviceExtensions);
-    void CreateLogicalDevice(mvGraphicsContext& context);
-    void CreateSwapChain(mvGraphicsContext& context, int width, int height);
-    void CreateMainCommandPool(mvGraphicsContext& context);
-    void CreateMainDescriptorPool(VkDevice logicalDevice, VkDescriptorPool* descriptorPool);
-    void CreateMainRenderPass(VkDevice logicalDevice, VkRenderPass* renderPass, VkFormat format);
-    void CreateMainDepthResources(VkDevice logicalDevice, VkImage depthImage, VkImageView depthImageView, VkDeviceMemory depthImageMemory);
-    void CreateFrameBuffers(VkDevice logicalDevice, VkRenderPass renderPass, std::vector<VkFramebuffer>& frameBuffers, std::vector<VkImageView>& swapChainImageViews, VkImageView depthImageView);
-    void CreateSyncObjects(VkDevice logicalDevice, std::vector<VkSemaphore>& imgAvailSema, std::vector<VkSemaphore>& imgFinishSema, std::vector<VkFence>& inFlightFences, std::vector<VkFence>& imagesInFlight);
+    // convenience
+    VkInstance       GetVkInstance();
+    VkDevice         GetLogicalDevice();
+    VkPhysicalDevice GetPhysicalDevice();
+    VkCommandBuffer  GetCurrentCommandBuffer();
+    
+    // initialization
+    VkInstance       mvCreateVulkanInstance(std::vector<const char*> validationLayers);
+    VkSurfaceKHR     mvCreateSurface       (GLFWwindow* window);
+    VkPhysicalDevice mvCreatePhysicalDevice(VkPhysicalDeviceProperties& properties, std::vector<const char*> deviceExtensions);
+    VkDevice         mvCreateLogicalDevice (VkPhysicalDevice physicalDevice);
+    void             CreateSwapChain(mvGraphicsContext& context, int width, int height);
+    void             CreateMainCommandPool(mvGraphicsContext& context);
+    void             CreateMainDescriptorPool(VkDescriptorPool* descriptorPool);
+    void             CreateMainRenderPass(VkRenderPass* renderPass, VkFormat format);
+    void             CreateMainDepthResources(VkImage* depthImage, VkImageView* depthImageView, VkDeviceMemory* depthImageMemory);
+    void             CreateFrameBuffers(VkRenderPass renderPass, std::vector<VkFramebuffer>& frameBuffers, std::vector<VkImageView>& swapChainImageViews, VkImageView depthImageView);
+    void             CreateSyncObjects(std::vector<VkSemaphore>& imgAvailSema, std::vector<VkSemaphore>& imgFinishSema, std::vector<VkFence>& inFlightFences, std::vector<VkFence>& imagesInFlight);
 
     void RecreateSwapChain(int width, int height);
     void CleanupGraphicsContext();
+
+    void BeginFrame();
+    void EndFrame();
+    void Draw(uint32_t vertexCount);
+    void Present();
+
+    // resource utilities
+    void          CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+    void          CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+    void          TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void          CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+    VkImageView   CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+    std::uint32_t FindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+    size_t        GetRequiredUniformBufferSize(size_t size);
+    void          CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+
+
+    VkCommandBuffer BeginSingleTimeCommands();
+    void            EndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
     struct mvGraphicsContext
     {
@@ -76,7 +95,7 @@ namespace DearPy3D {
 
         // maybe can remove
         std::vector<const char*> validationLayers;
-        std::vector<const char*> deviceExtensions = ;
+        std::vector<const char*> deviceExtensions;
         bool enableValidationLayers = true;
         VkDebugUtilsMessengerEXT debugMessenger;
     };

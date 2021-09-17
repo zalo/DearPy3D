@@ -1,6 +1,8 @@
 #include "mvRenderer.h"
 #include <stdexcept>
-#include "mvGraphics.h"
+#include <array>
+#include "mvContext.h"
+#include "mvGraphicsContext.h"
 #include "mvDrawable.h"
 #include "mvMaterial.h"
 #include "mvCamera.h"
@@ -9,13 +11,13 @@ namespace DearPy3D {
 
 	void mvRenderer::beginFrame()
 	{
-		mvGraphics::GetContext().getSwapChain().beginFrame();
+		BeginFrame();
 	}
 
 	void mvRenderer::endFrame()
 	{
-		mvGraphics::GetContext().getSwapChain().endFrame();
-		mvGraphics::GetContext().getSwapChain().present();
+		EndFrame();
+		Present();
 	}
 
 	void mvRenderer::beginPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass)
@@ -26,13 +28,12 @@ namespace DearPy3D {
 		if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
 			throw std::runtime_error("failed to begin recording command buffer!");
 
-
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderPass = renderPass;
-		renderPassInfo.framebuffer = mvGraphics::GetContext().getSwapChain().getMainRenderPassInfo().framebuffer;
+		renderPassInfo.framebuffer = GContext->graphics.swapChainFramebuffers[GContext->graphics.currentImageIndex];
 		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = mvGraphics::GetContext().getSwapChain().getSwapChainExtent();
+		renderPassInfo.renderArea.extent = GContext->graphics.swapChainExtent;
 
 		std::array<VkClearValue, 2> clearValues{};
 		clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
@@ -62,10 +63,10 @@ namespace DearPy3D {
 		_transforms.modelViewProjection = _projection * _transforms.modelView;
 
 		vkCmdPushConstants(
-			mvGraphics::GetContext().getSwapChain().getCurrentCommandBuffer(),
+			GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex],
 			pipeline.getLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvRenderer::Transforms),&_transforms);
 
-		mvGraphics::GetContext().getSwapChain().draw(drawable.getVertexCount());
+		Draw(drawable.getVertexCount());
 	}
 
 	void mvRenderer::setCamera(mvCamera& camera)

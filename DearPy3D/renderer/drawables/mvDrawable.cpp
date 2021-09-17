@@ -1,11 +1,11 @@
 #include "mvDrawable.h"
-#include "mvGraphics.h"
+#include "mvContext.h"
 
 namespace DearPy3D {
 
 	void mvDrawable::cleanup()
 	{
-		vkDeviceWaitIdle(mvGraphics::GetContext().getLogicalDevice());
+		vkDeviceWaitIdle(GetLogicalDevice());
 		_deletionQueue.flush();
 	}
 

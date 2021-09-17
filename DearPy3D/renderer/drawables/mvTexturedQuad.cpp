@@ -1,5 +1,4 @@
 #include "mvTexturedQuad.h"
-#include "mvGraphics.h"
 #include "mvTexture.h"
 #include "mvSampler.h"
 #include <chrono>
