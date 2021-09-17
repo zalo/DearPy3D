@@ -41,7 +41,7 @@ namespace DearPy3D {
 		size_t offset_size = mvGetRequiredUniformBufferSize(sizeof(mvMaterialData));
 		auto cindex = GContext->graphics.currentImageIndex;
 		void* udata;
-		vkMapMemory(mvGetLogicalDevice(), _bufferMemory[cindex], offset_size *index, offset_size, 0, &udata);
+		vkMapMemory(mvGetLogicalDevice(), _bufferMemory[cindex], offset_size * index, offset_size, 0, &udata);
 		memcpy(udata, &data, sizeof(mvMaterialData));
 		vkUnmapMemory(mvGetLogicalDevice(), _bufferMemory[cindex]);
 	}

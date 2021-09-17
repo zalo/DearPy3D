@@ -759,7 +759,7 @@ namespace DearPy3D {
 
     void mvRecreateSwapChain()
     {
-        vkDeviceWaitIdle(GContext->graphics.logicalDevice);
+        vkDeviceWaitIdle(mvGetLogicalDevice());
 
         GContext->graphics.deletionQueue.flush();
 
