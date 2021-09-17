@@ -5,7 +5,7 @@ namespace DearPy3D {
 
 	void mvDrawable::cleanup()
 	{
-		vkDeviceWaitIdle(GetLogicalDevice());
+		vkDeviceWaitIdle(mvGetLogicalDevice());
 		_deletionQueue.flush();
 	}
 

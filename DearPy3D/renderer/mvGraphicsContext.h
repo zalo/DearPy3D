@@ -18,45 +18,34 @@ namespace DearPy3D {
     //-----------------------------------------------------------------------------
 
     // convenience
-    VkInstance       GetVkInstance();
-    VkDevice         GetLogicalDevice();
-    VkPhysicalDevice GetPhysicalDevice();
-    VkCommandBuffer  GetCurrentCommandBuffer();
+    VkInstance       mvGetVkInstance();
+    VkDevice         mvGetLogicalDevice();
+    VkPhysicalDevice mvGetPhysicalDevice();
+    VkCommandBuffer  mvGetCurrentCommandBuffer();
     
     // initialization
-    VkInstance       mvCreateVulkanInstance(std::vector<const char*> validationLayers);
-    VkSurfaceKHR     mvCreateSurface       (GLFWwindow* window);
-    VkPhysicalDevice mvCreatePhysicalDevice(VkPhysicalDeviceProperties& properties, std::vector<const char*> deviceExtensions);
-    VkDevice         mvCreateLogicalDevice (VkPhysicalDevice physicalDevice);
-    void             CreateSwapChain(mvGraphicsContext& context, int width, int height);
-    void             CreateMainCommandPool(mvGraphicsContext& context);
-    void             CreateMainDescriptorPool(VkDescriptorPool* descriptorPool);
-    void             CreateMainRenderPass(VkRenderPass* renderPass, VkFormat format);
-    void             CreateMainDepthResources(VkImage* depthImage, VkImageView* depthImageView, VkDeviceMemory* depthImageMemory);
-    void             CreateFrameBuffers(VkRenderPass renderPass, std::vector<VkFramebuffer>& frameBuffers, std::vector<VkImageView>& swapChainImageViews, VkImageView depthImageView);
-    void             CreateSyncObjects(std::vector<VkSemaphore>& imgAvailSema, std::vector<VkSemaphore>& imgFinishSema, std::vector<VkFence>& inFlightFences, std::vector<VkFence>& imagesInFlight);
+    void mvSetupGraphicsContext();
+    void mvRecreateSwapChain();
+    void mvCleanupGraphicsContext();
 
-    void RecreateSwapChain(int width, int height);
-    void CleanupGraphicsContext();
-
-    void BeginFrame();
-    void EndFrame();
-    void Draw(uint32_t vertexCount);
-    void Present();
+    void mvBeginFrame();
+    void mvEndFrame();
+    void mvDraw(uint32_t vertexCount);
+    void mvPresent();
 
     // resource utilities
-    void          CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-    void          CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-    void          TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
-    void          CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
-    VkImageView   CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
-    std::uint32_t FindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
-    size_t        GetRequiredUniformBufferSize(size_t size);
-    void          CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+    void          mvCreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+    void          mvCopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+    void          mvTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void          mvCopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+    VkImageView   mvCreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+    std::uint32_t mvFindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+    size_t        mvGetRequiredUniformBufferSize(size_t size);
+    void          mvCreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 
 
-    VkCommandBuffer BeginSingleTimeCommands();
-    void            EndSingleTimeCommands(VkCommandBuffer commandBuffer);
+    VkCommandBuffer mvBeginSingleTimeCommands();
+    void            mvEndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
     struct mvGraphicsContext
     {

@@ -34,7 +34,7 @@ namespace DearPy3D {
 
         _memoryAllocation = allocator.allocateBuffer(indexBufferInfo, VMA_MEMORY_USAGE_GPU_ONLY, _indexBuffer);
 
-        VkCommandBuffer copyCmd = BeginSingleTimeCommands();
+        VkCommandBuffer copyCmd = mvBeginSingleTimeCommands();
 
         VkBufferCopy copyRegion = {};
         copyRegion.size = bufferSize;
@@ -45,7 +45,7 @@ namespace DearPy3D {
             1,
             &copyRegion);
 
-        EndSingleTimeCommands(copyCmd);
+        mvEndSingleTimeCommands(copyCmd);
 
         allocator.destroyBuffer(stagingBuffer, stagingBufferAllocation);
 	}
@@ -57,13 +57,13 @@ namespace DearPy3D {
 
     void mvIndexBuffer::bind()
     {
-        vkCmdBindIndexBuffer(GetCurrentCommandBuffer(), _indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), _indexBuffer, 0, VK_INDEX_TYPE_UINT16);
     }
 
     void mvIndexBuffer::cleanup()
     {
         auto allocator = mvAllocator();
-        vkDestroyBuffer(GetLogicalDevice(), _indexBuffer, nullptr);
+        vkDestroyBuffer(mvGetLogicalDevice(), _indexBuffer, nullptr);
         allocator.free(_memoryAllocation);
     }
 

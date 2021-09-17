@@ -19,34 +19,34 @@ namespace DearPy3D {
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
 
-        CreateBuffer(imageSize,
+        mvCreateBuffer(imageSize,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
         void* data;
-        vkMapMemory(GetLogicalDevice(), stagingBufferMemory, 0, imageSize, 0, &data);
+        vkMapMemory(mvGetLogicalDevice(), stagingBufferMemory, 0, imageSize, 0, &data);
         memcpy(data, pixels, static_cast<size_t>(imageSize));
-        vkUnmapMemory(GetLogicalDevice(), stagingBufferMemory);
+        vkUnmapMemory(mvGetLogicalDevice(), stagingBufferMemory);
 
         stbi_image_free(pixels);
 
-        CreateImage(texWidth, texHeight,
+        mvCreateImage(texWidth, texHeight,
             VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             _textureImage, _textureImageMemory);
 
-        TransitionImageLayout(_textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        CopyBufferToImage(stagingBuffer, _textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-        TransitionImageLayout(_textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        mvTransitionImageLayout(_textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        mvCopyBufferToImage(stagingBuffer, _textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+        mvTransitionImageLayout(_textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-        vkDestroyBuffer(GetLogicalDevice(), stagingBuffer, nullptr);
-        vkFreeMemory(GetLogicalDevice(), stagingBufferMemory, nullptr);
+        vkDestroyBuffer(mvGetLogicalDevice(), stagingBuffer, nullptr);
+        vkFreeMemory(mvGetLogicalDevice(), stagingBufferMemory, nullptr);
 
-        _textureImageView = CreateImageView(_textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+        _textureImageView = mvCreateImageView(_textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 	}
 
     void mvTexture::cleanup()
     {
-        vkDestroyImageView(GetLogicalDevice(), _textureImageView, nullptr);
-        vkDestroyImage(GetLogicalDevice(), _textureImage, nullptr);
-        vkFreeMemory(GetLogicalDevice(), _textureImageMemory, nullptr);
+        vkDestroyImageView(mvGetLogicalDevice(), _textureImageView, nullptr);
+        vkDestroyImage(mvGetLogicalDevice(), _textureImage, nullptr);
+        vkFreeMemory(mvGetLogicalDevice(), _textureImageMemory, nullptr);
     }
 }

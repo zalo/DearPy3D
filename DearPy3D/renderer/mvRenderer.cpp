@@ -11,13 +11,13 @@ namespace DearPy3D {
 
 	void mvRenderer::beginFrame()
 	{
-		BeginFrame();
+		mvBeginFrame();
 	}
 
 	void mvRenderer::endFrame()
 	{
-		EndFrame();
-		Present();
+		mvEndFrame();
+		mvPresent();
 	}
 
 	void mvRenderer::beginPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass)
@@ -66,7 +66,7 @@ namespace DearPy3D {
 			GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex],
 			pipeline.getLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvRenderer::Transforms),&_transforms);
 
-		Draw(drawable.getVertexCount());
+		mvDraw(drawable.getVertexCount());
 	}
 
 	void mvRenderer::setCamera(mvCamera& camera)

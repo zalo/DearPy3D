@@ -33,18 +33,18 @@ namespace DearPy3D {
     {
 
         // todo: handle this
-        //uint32_t uniform_offset = index * 256;
-        uint32_t uniform_offset = index * 64;
-        vkCmdBindDescriptorSets(GetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
+        uint32_t uniform_offset = index * 256;
+        //uint32_t uniform_offset = index * 64;
+        vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
             _pipelineLayout, 0, 1, _descriptorSets.data(), 1, &uniform_offset);
 
-        vkCmdBindPipeline(GetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
+        vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
     }
 
     void mvPipeline::finish()
     {
-        vkDestroyPipeline(GetLogicalDevice(), _pipeline, nullptr);
-        vkDestroyPipelineLayout(GetLogicalDevice(), _pipelineLayout, nullptr);
+        vkDestroyPipeline(mvGetLogicalDevice(), _pipeline, nullptr);
+        vkDestroyPipelineLayout(mvGetLogicalDevice(), _pipelineLayout, nullptr);
     }
 
 	void mvPipeline::finalize()
@@ -184,7 +184,7 @@ namespace DearPy3D {
         pipelineLayoutInfo.pushConstantRangeCount = 1;
         pipelineLayoutInfo.pSetLayouts = _descriptorSetLayouts.data();
 
-        if (vkCreatePipelineLayout(GetLogicalDevice(), &pipelineLayoutInfo, nullptr, &_pipelineLayout) != VK_SUCCESS)
+        if (vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &_pipelineLayout) != VK_SUCCESS)
             throw std::runtime_error("failed to create pipeline layout!");
 
         //---------------------------------------------------------------------
@@ -209,20 +209,20 @@ namespace DearPy3D {
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineInfo.pDepthStencilState = &depthStencil;
 
-        if (vkCreateGraphicsPipelines(GetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline) != VK_SUCCESS)
+        if (vkCreateGraphicsPipelines(mvGetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline) != VK_SUCCESS)
             throw std::runtime_error("failed to create graphics pipeline!");
 
         // no longer need this
-        vkDestroyShaderModule(GetLogicalDevice(), _vertexShader->getShaderModule(), nullptr);
-        vkDestroyShaderModule(GetLogicalDevice(), _fragShader->getShaderModule(), nullptr);
+        vkDestroyShaderModule(mvGetLogicalDevice(), _vertexShader->getShaderModule(), nullptr);
+        vkDestroyShaderModule(mvGetLogicalDevice(), _fragShader->getShaderModule(), nullptr);
         _vertexShader = nullptr;
         _fragShader = nullptr;
 
         GContext->graphics.deletionQueue.pushDeletor([=]() {
-            vkDestroyPipeline(GetLogicalDevice(), _pipeline, nullptr);
-            vkDestroyPipelineLayout(GetLogicalDevice(), _pipelineLayout, nullptr);
+            vkDestroyPipeline(mvGetLogicalDevice(), _pipeline, nullptr);
+            vkDestroyPipelineLayout(mvGetLogicalDevice(), _pipelineLayout, nullptr);
             for(auto descriptorSetLayout : _descriptorSetLayouts)
-                vkDestroyDescriptorSetLayout(GetLogicalDevice(), descriptorSetLayout, nullptr);
+                vkDestroyDescriptorSetLayout(mvGetLogicalDevice(), descriptorSetLayout, nullptr);
             _descriptorSetLayouts.clear();
             _descriptorSets.clear();
             });

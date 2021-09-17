@@ -20,9 +20,9 @@ namespace DearPy3D {
         // Setup Platform/Renderer backends
         ImGui_ImplGlfw_InitForVulkan(window, true);
         ImGui_ImplVulkan_InitInfo init_info = {};
-        init_info.Instance = GetVkInstance();
-        init_info.PhysicalDevice = GetPhysicalDevice();
-        init_info.Device = GetLogicalDevice();
+        init_info.Instance = mvGetVkInstance();
+        init_info.PhysicalDevice = mvGetPhysicalDevice();
+        init_info.Device = mvGetLogicalDevice();
         init_info.QueueFamily = GContext->graphics.graphicsQueueFamily;
         init_info.Queue = GContext->graphics.graphicsQueue;
         init_info.PipelineCache = nullptr;
@@ -36,9 +36,9 @@ namespace DearPy3D {
         // Upload Fonts
         {
             // Use any command queue
-            VkCommandBuffer command_buffer = BeginSingleTimeCommands();
+            VkCommandBuffer command_buffer = mvBeginSingleTimeCommands();
             ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
-            EndSingleTimeCommands(command_buffer);
+            mvEndSingleTimeCommands(command_buffer);
             ImGui_ImplVulkan_DestroyFontUploadObjects();
         }
 
@@ -53,7 +53,7 @@ namespace DearPy3D {
 
     void mvImGuiManager::resize()
     {
-        vkDeviceWaitIdle(GetLogicalDevice());
+        vkDeviceWaitIdle(mvGetLogicalDevice());
         ImGui_ImplVulkan_SetMinImageCount(GContext->graphics.minImageCount);
     }
 

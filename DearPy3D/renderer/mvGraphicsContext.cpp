@@ -24,11 +24,24 @@ namespace DearPy3D {
     struct SwapChainSupportDetails;
     struct QueueFamilyIndices;
 
-    static SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
-    static bool                    CheckValidationLayerSupport(const std::vector<const char*> layers);
-    static bool                    IsDeviceSuitable(VkPhysicalDevice device, VkPhysicalDeviceProperties& properties, std::vector<const char*> deviceExtensions);
-    static bool                    CheckDeviceExtensionSupport(VkPhysicalDevice device, std::vector<const char*> deviceExtensions);
-    static void                    mvSetupDebugMessenger(VkInstance instance);
+    static SwapChainSupportDetails mvQuerySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
+    static bool                    mvCheckValidationLayerSupport(const std::vector<const char*> layers);
+    static bool                    mvIsDeviceSuitable(VkPhysicalDevice device, VkPhysicalDeviceProperties& properties, std::vector<const char*> deviceExtensions);
+    static bool                    mvCheckDeviceExtensionSupport(VkPhysicalDevice device, std::vector<const char*> deviceExtensions);
+    
+    // initialization
+    static void mvSetupDebugMessenger();
+    static void mvCreateVulkanInstance();
+    static void mvCreateSurface();
+    static void mvCreatePhysicalDevice();
+    static void mvCreateLogicalDevice();
+    static void mvCreateSwapChain();
+    static void mvCreateMainCommandPool();
+    static void mvCreateMainDescriptorPool();
+    static void mvCreateMainRenderPass();
+    static void mvCreateMainDepthResources();
+    static void mvCreateFrameBuffers();
+    static void mvCreateSyncObjects();
 
     //-----------------------------------------------------------------------------
     // internals
@@ -47,7 +60,7 @@ namespace DearPy3D {
         std::optional<uint32_t> presentFamily;
     };
 
-    static SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface)
+    static SwapChainSupportDetails mvQuerySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface)
     {
         SwapChainSupportDetails details;
 
@@ -76,7 +89,7 @@ namespace DearPy3D {
         return details;
     }
 
-    static bool CheckValidationLayerSupport(const std::vector<const char*> layers)
+    static bool mvCheckValidationLayerSupport(const std::vector<const char*> layers)
     {
         uint32_t layerCount;
         vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -102,7 +115,7 @@ namespace DearPy3D {
         return true;
     }
 
-    static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device)
+    static QueueFamilyIndices mvFindQueueFamilies(VkPhysicalDevice device)
     {
 
         QueueFamilyIndices indices;
@@ -128,11 +141,11 @@ namespace DearPy3D {
         return indices;
     }
 
-    static bool IsDeviceSuitable(VkPhysicalDevice device, VkPhysicalDeviceProperties& properties, std::vector<const char*> deviceExtensions)
+    static bool mvIsDeviceSuitable(VkPhysicalDevice device, VkPhysicalDeviceProperties& properties, std::vector<const char*> deviceExtensions)
     {
-        QueueFamilyIndices indices = FindQueueFamilies(device);
+        QueueFamilyIndices indices = mvFindQueueFamilies(device);
 
-        bool extensionsSupported = CheckDeviceExtensionSupport(device, deviceExtensions);
+        bool extensionsSupported = mvCheckDeviceExtensionSupport(device, deviceExtensions);
 
         bool swapChainAdequate = false;
         if (extensionsSupported)
@@ -149,7 +162,7 @@ namespace DearPy3D {
         return extensionsSupported && swapChainAdequate && properties.limits.maxPushConstantsSize >= 256;
     }
 
-    static bool CheckDeviceExtensionSupport(VkPhysicalDevice device, std::vector<const char*> deviceExtensions)
+    static bool mvCheckDeviceExtensionSupport(VkPhysicalDevice device, std::vector<const char*> deviceExtensions)
     {
         uint32_t extensionCount;
         vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
@@ -165,38 +178,10 @@ namespace DearPy3D {
         return requiredExtensions.empty();
     }
 
-    //-----------------------------------------------------------------------------
-    // declarations for public API
-    //-----------------------------------------------------------------------------
-
-    VkInstance GetVkInstance()
-    {
-        return GContext->graphics.instance;
-    }
-
-    VkDevice GetLogicalDevice()
-    {
-        return GContext->graphics.logicalDevice;
-    }
-
-    VkPhysicalDevice GetPhysicalDevice()
-    {
-        return GContext->graphics.physicalDevice;
-    }
-
-    VkCommandBuffer  GetCurrentCommandBuffer()
-    {
-        return GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex];
-    }
-
-    VkInstance mvCreateVulkanInstance(std::vector<const char*> validationLayers)
+    static void mvCreateVulkanInstance()
     {
 
-        bool enableValidationLayers = !validationLayers.empty();
-        GContext->graphics.enableValidationLayers = enableValidationLayers;
-        GContext->graphics.validationLayers = validationLayers;
-
-        if (enableValidationLayers && !CheckValidationLayerSupport(validationLayers))
+        if (GContext->graphics.enableValidationLayers && !mvCheckValidationLayerSupport(GContext->graphics.validationLayers))
             throw std::runtime_error("validation layers requested, but not available!");
 
         VkApplicationInfo appInfo{};
@@ -211,7 +196,7 @@ namespace DearPy3D {
         const char** glfwExtensions;
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
         std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-        if (enableValidationLayers)
+        if (GContext->graphics.enableValidationLayers)
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
         createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
@@ -219,9 +204,9 @@ namespace DearPy3D {
 
         // Setup debug messenger for vulkan instance
         VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
-        if (enableValidationLayers)
+        if (GContext->graphics.enableValidationLayers)
         {
-            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+            createInfo.enabledLayerCount = static_cast<uint32_t>(GContext->graphics.validationLayers.size());
             createInfo.ppEnabledLayerNames = GContext->graphics.validationLayers.data();
             createInfo.pNext = VK_NULL_HANDLE;
 
@@ -238,18 +223,15 @@ namespace DearPy3D {
         }
 
         // create the instance
-        VkInstance instance;
-        if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
+        if (vkCreateInstance(&createInfo, nullptr, &GContext->graphics.instance) != VK_SUCCESS)
             throw std::runtime_error("failed to create instance!");
-
-        if (enableValidationLayers)
-            mvSetupDebugMessenger(instance);
-
-        return instance;
     }
 
-    static void mvSetupDebugMessenger(VkInstance instance)
+    static void mvSetupDebugMessenger()
     {
+
+        if (!GContext->graphics.enableValidationLayers)
+            return;
 
         VkDebugUtilsMessengerCreateInfoEXT createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -258,10 +240,10 @@ namespace DearPy3D {
         createInfo.pfnUserCallback = debugCallback;
         createInfo.pNext = VK_NULL_HANDLE;
 
-        auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+        auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(mvGetVkInstance(), "vkCreateDebugUtilsMessengerEXT");
         if (func != nullptr)
         {
-            VkResult result = func(instance, &createInfo, nullptr, &GContext->graphics.debugMessenger);
+            VkResult result = func(mvGetVkInstance(), &createInfo, nullptr, &GContext->graphics.debugMessenger);
             if (result != VK_SUCCESS)
                 throw std::runtime_error("failed to set up debug messenger!");
         }
@@ -269,48 +251,41 @@ namespace DearPy3D {
             throw std::runtime_error("failed to set up debug messenger!");
     }
 
-    VkSurfaceKHR mvCreateSurface(GLFWwindow* window)
+    static void mvCreateSurface()
     {
-        VkSurfaceKHR surface;
-        if (glfwCreateWindowSurface(GetVkInstance(), window, nullptr, &surface) != VK_SUCCESS)
+        if (glfwCreateWindowSurface(mvGetVkInstance(), GContext->viewport.handle, nullptr, &GContext->graphics.surface) != VK_SUCCESS)
             throw std::runtime_error("failed to create window surface!");
-        return surface;
     }
 
-    VkPhysicalDevice mvCreatePhysicalDevice(VkPhysicalDeviceProperties& properties, std::vector<const char*> deviceExtensions)
+    static void mvCreatePhysicalDevice()
     {
-        GContext->graphics.deviceExtensions = deviceExtensions;
         uint32_t deviceCount = 0;
-        vkEnumeratePhysicalDevices(GetVkInstance(), &deviceCount, nullptr);
+        vkEnumeratePhysicalDevices(mvGetVkInstance(), &deviceCount, nullptr);
 
         if (deviceCount == 0)
             throw std::runtime_error("failed to find GPUs with Vulkan support!");
 
         std::vector<VkPhysicalDevice> devices(deviceCount);
-        vkEnumeratePhysicalDevices(GetVkInstance(), &deviceCount, devices.data());
-
-        VkPhysicalDevice physicalDevice;
+        vkEnumeratePhysicalDevices(mvGetVkInstance(), &deviceCount, devices.data());
 
         for (const auto& device : devices)
         {
-            if (IsDeviceSuitable(device, properties, deviceExtensions))
+            if (mvIsDeviceSuitable(device, GContext->graphics.deviceProperties, GContext->graphics.deviceExtensions))
             {
-                physicalDevice = device;
+                GContext->graphics.physicalDevice = device;
                 break;
             }
         }
 
-        if (physicalDevice == VK_NULL_HANDLE)
+        if (GContext->graphics.physicalDevice == VK_NULL_HANDLE)
             throw std::runtime_error("failed to find a suitable GPU!");
 
-        return physicalDevice;
     }
 
-    VkDevice mvCreateLogicalDevice(VkPhysicalDevice physicalDevice)
+    static void mvCreateLogicalDevice()
     {
-        VkDevice logicalDevice;
 
-        QueueFamilyIndices indices = FindQueueFamilies(GetPhysicalDevice());
+        QueueFamilyIndices indices = mvFindQueueFamilies(mvGetPhysicalDevice());
 
         GContext->graphics.graphicsQueueFamily = indices.graphicsFamily.value();
 
@@ -350,20 +325,19 @@ namespace DearPy3D {
             else
                 createInfo.enabledLayerCount = 0;
 
-            
-            if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &logicalDevice) != VK_SUCCESS)
+
+            if (vkCreateDevice(mvGetPhysicalDevice(), &createInfo, nullptr, &GContext->graphics.logicalDevice) != VK_SUCCESS)
                 throw std::runtime_error("failed to create logical device!");
         }
 
-        vkGetDeviceQueue(logicalDevice, indices.graphicsFamily.value(), 0, &GContext->graphics.graphicsQueue);
-        vkGetDeviceQueue(logicalDevice, indices.presentFamily.value(), 0, &GContext->graphics.presentQueue);
+        vkGetDeviceQueue(mvGetLogicalDevice(), indices.graphicsFamily.value(), 0, &GContext->graphics.graphicsQueue);
+        vkGetDeviceQueue(mvGetLogicalDevice(), indices.presentFamily.value(), 0, &GContext->graphics.presentQueue);
 
-        return logicalDevice;
     }
 
-    void CreateSwapChain(mvGraphicsContext& context, int width, int height)
+    static void mvCreateSwapChain()
     {
-        SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(context.physicalDevice, context.surface);
+        SwapChainSupportDetails swapChainSupport = mvQuerySwapChainSupport(mvGetPhysicalDevice(), GContext->graphics.surface);
 
         // choose swap surface Format
         VkSurfaceFormatKHR surfaceFormat = swapChainSupport.formats[0];
@@ -394,8 +368,8 @@ namespace DearPy3D {
         else
         {
             VkExtent2D actualExtent = {
-                static_cast<uint32_t>(width),
-                static_cast<uint32_t>(height)
+                static_cast<uint32_t>(GContext->viewport.width),
+                static_cast<uint32_t>(GContext->viewport.height)
             };
 
             actualExtent.width = std::max(swapChainSupport.capabilities.minImageExtent.width, std::min(swapChainSupport.capabilities.maxImageExtent.width, actualExtent.width));
@@ -404,22 +378,22 @@ namespace DearPy3D {
             extent = actualExtent;
         }
 
-        context.minImageCount = swapChainSupport.capabilities.minImageCount + 1;
-        if (swapChainSupport.capabilities.maxImageCount > 0 && context.minImageCount > swapChainSupport.capabilities.maxImageCount)
-            context.minImageCount = swapChainSupport.capabilities.maxImageCount;
+        GContext->graphics.minImageCount = swapChainSupport.capabilities.minImageCount + 1;
+        if (swapChainSupport.capabilities.maxImageCount > 0 && GContext->graphics.minImageCount > swapChainSupport.capabilities.maxImageCount)
+            GContext->graphics.minImageCount = swapChainSupport.capabilities.maxImageCount;
 
         {
             VkSwapchainCreateInfoKHR createInfo{};
             createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-            createInfo.surface = context.surface;
-            createInfo.minImageCount = context.minImageCount;
+            createInfo.surface = GContext->graphics.surface;
+            createInfo.minImageCount = GContext->graphics.minImageCount;
             createInfo.imageFormat = surfaceFormat.format;
             createInfo.imageColorSpace = surfaceFormat.colorSpace;
             createInfo.imageExtent = extent;
             createInfo.imageArrayLayers = 1;
             createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-            QueueFamilyIndices indices =FindQueueFamilies(context.physicalDevice);
+            QueueFamilyIndices indices = mvFindQueueFamilies(mvGetPhysicalDevice());
             uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
             if (indices.graphicsFamily != indices.presentFamily)
@@ -438,51 +412,51 @@ namespace DearPy3D {
 
             createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-            if (vkCreateSwapchainKHR(context.logicalDevice, &createInfo, nullptr, &context.swapChain) != VK_SUCCESS)
+            if (vkCreateSwapchainKHR(mvGetLogicalDevice(), &createInfo, nullptr, &GContext->graphics.swapChain) != VK_SUCCESS)
                 throw std::runtime_error("failed to create swap chain!");
         }
 
-        vkGetSwapchainImagesKHR(context.logicalDevice, context.swapChain, &context.minImageCount, nullptr);
-        context.swapChainImages.resize(context.minImageCount);
-        vkGetSwapchainImagesKHR(context.logicalDevice, context.swapChain, &context.minImageCount, context.swapChainImages.data());
+        vkGetSwapchainImagesKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, &GContext->graphics.minImageCount, nullptr);
+        GContext->graphics.swapChainImages.resize(GContext->graphics.minImageCount);
+        vkGetSwapchainImagesKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, &GContext->graphics.minImageCount, GContext->graphics.swapChainImages.data());
 
-        context.swapChainImageFormat = surfaceFormat.format;
-        context.swapChainExtent = extent;
-        context.deletionQueue.pushDeletor([=]() { vkDestroySwapchainKHR(context.logicalDevice, context.swapChain, nullptr); });
+        GContext->graphics.swapChainImageFormat = surfaceFormat.format;
+        GContext->graphics.swapChainExtent = extent;
+        GContext->graphics.deletionQueue.pushDeletor([=]() { vkDestroySwapchainKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, nullptr); });
 
         // creating image views
-        context.swapChainImageViews.resize(context.swapChainImages.size());
-        for (uint32_t i = 0; i < context.swapChainImages.size(); i++)
-            context.swapChainImageViews[i] = CreateImageView(context.swapChainImages[i], context.swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+        GContext->graphics.swapChainImageViews.resize(GContext->graphics.swapChainImages.size());
+        for (uint32_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
+            GContext->graphics.swapChainImageViews[i] = mvCreateImageView(GContext->graphics.swapChainImages[i], GContext->graphics.swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 
-    void CreateMainCommandPool(mvGraphicsContext& context)
+    static void mvCreateMainCommandPool()
     {
-        QueueFamilyIndices queueFamilyIndices = FindQueueFamilies(context.physicalDevice);
+        QueueFamilyIndices queueFamilyIndices = mvFindQueueFamilies(mvGetPhysicalDevice());
 
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-        if (vkCreateCommandPool(context.logicalDevice, &poolInfo, nullptr, &context.commandPool) != VK_SUCCESS)
+        if (vkCreateCommandPool(mvGetLogicalDevice(), &poolInfo, nullptr, &GContext->graphics.commandPool) != VK_SUCCESS)
             throw std::runtime_error("failed to create command pool!");
 
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool = context.commandPool;
+        allocInfo.commandPool = GContext->graphics.commandPool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = (uint32_t)3;
 
-        context.commandBuffers.resize(3);
+        GContext->graphics.commandBuffers.resize(3);
 
-        if (vkAllocateCommandBuffers(context.logicalDevice, &allocInfo, context.commandBuffers.data()) != VK_SUCCESS)
+        if (vkAllocateCommandBuffers(mvGetLogicalDevice(), &allocInfo, GContext->graphics.commandBuffers.data()) != VK_SUCCESS)
             throw std::runtime_error("failed to allocate command buffers!");
 
-        context.deletionQueue.pushDeletor([=]() {vkDestroyCommandPool(context.logicalDevice, context.commandPool, nullptr); });
+        GContext->graphics.deletionQueue.pushDeletor([=]() {vkDestroyCommandPool(mvGetLogicalDevice(), GContext->graphics.commandPool, nullptr); });
     }
 
-    void CreateMainDescriptorPool(VkDescriptorPool* descriptorPool)
+    static void mvCreateMainDescriptorPool()
     {
         VkDescriptorPoolSize poolSizes[] =
         {
@@ -505,14 +479,14 @@ namespace DearPy3D {
         poolInfo.poolSizeCount = 11u;
         poolInfo.pPoolSizes = poolSizes;
 
-        if (vkCreateDescriptorPool(GetLogicalDevice(), &poolInfo, nullptr, descriptorPool) != VK_SUCCESS)
+        if (vkCreateDescriptorPool(mvGetLogicalDevice(), &poolInfo, nullptr, &GContext->graphics.descriptorPool) != VK_SUCCESS)
             throw std::runtime_error("failed to create descriptor pool!");
     }
 
-    void CreateMainRenderPass(VkRenderPass* renderPass, VkFormat format)
+    static void mvCreateMainRenderPass()
     {
         VkAttachmentDescription colorAttachment{};
-        colorAttachment.format = format;
+        colorAttachment.format = GContext->graphics.swapChainImageFormat;
         colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
         colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -563,71 +537,71 @@ namespace DearPy3D {
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies = &dependency;
 
-        if (vkCreateRenderPass(GetLogicalDevice(), &renderPassInfo, nullptr, renderPass) != VK_SUCCESS)
+        if (vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, &GContext->graphics.renderPass) != VK_SUCCESS)
             throw std::runtime_error("failed to create render pass!");
 
         GContext->graphics.deletionQueue.pushDeletor([=]() {
-            vkFreeCommandBuffers(GetLogicalDevice(),
+            vkFreeCommandBuffers(mvGetLogicalDevice(),
                 GContext->graphics.commandPool,
                 static_cast<uint32_t>(GContext->graphics.commandBuffers.size()),
                 GContext->graphics.commandBuffers.data());
-            vkDestroyRenderPass(GetLogicalDevice(), *renderPass, nullptr); }
+            vkDestroyRenderPass(mvGetLogicalDevice(), GContext->graphics.renderPass, nullptr); }
         );
     }
 
-    void CreateMainDepthResources(VkImage* depthImage, VkImageView* depthImageView, VkDeviceMemory* depthImageMemory)
+    static void mvCreateMainDepthResources()
     {
         VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
 
-        CreateImage(GContext->graphics.swapChainExtent.width, GContext->graphics.swapChainExtent.height, depthFormat,
+        mvCreateImage(GContext->graphics.swapChainExtent.width, GContext->graphics.swapChainExtent.height, depthFormat,
             VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            *depthImage, *depthImageMemory);
+            GContext->graphics.depthImage, GContext->graphics.depthImageMemory);
 
-        *depthImageView = CreateImageView(*depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+        GContext->graphics.depthImageView = mvCreateImageView(GContext->graphics.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
         GContext->graphics.deletionQueue.pushDeletor([=]() {
-            vkDestroyImageView(GetLogicalDevice(), *depthImageView, nullptr);
-            vkDestroyImage(GetLogicalDevice(), *depthImage, nullptr);
-            vkFreeMemory(GetLogicalDevice(), *depthImageMemory, nullptr);
+            vkDestroyImageView(mvGetLogicalDevice(), GContext->graphics.depthImageView, nullptr);
+            vkDestroyImage(mvGetLogicalDevice(), GContext->graphics.depthImage, nullptr);
+            vkFreeMemory(mvGetLogicalDevice(), GContext->graphics.depthImageMemory, nullptr);
             });
     }
 
-    void CreateFrameBuffers(VkRenderPass renderPass, std::vector<VkFramebuffer>& frameBuffers, std::vector<VkImageView>& swapChainImageViews, VkImageView depthImageView)
+    static void mvCreateFrameBuffers()
     {
-        frameBuffers.resize(swapChainImageViews.size());
+        GContext->graphics.swapChainFramebuffers.resize(GContext->graphics.swapChainImageViews.size());
 
-        for (size_t i = 0; i < swapChainImageViews.size(); i++)
+        for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
         {
             VkImageView attachments[] = {
-                swapChainImageViews[i],
-                depthImageView
+                GContext->graphics.swapChainImageViews[i],
+                GContext->graphics.depthImageView
             };
 
             VkFramebufferCreateInfo framebufferInfo{};
             framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass = renderPass;
+            framebufferInfo.renderPass = GContext->graphics.renderPass;
             framebufferInfo.attachmentCount = 2;
             framebufferInfo.pAttachments = attachments;
             framebufferInfo.width = GContext->graphics.swapChainExtent.width;
             framebufferInfo.height = GContext->graphics.swapChainExtent.height;
             framebufferInfo.layers = 1;
 
-            if (vkCreateFramebuffer(GetLogicalDevice(), &framebufferInfo, nullptr, &frameBuffers[i]) != VK_SUCCESS)
+            if (vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &GContext->graphics.swapChainFramebuffers[i]) != VK_SUCCESS)
                 throw std::runtime_error("failed to create framebuffer!");
 
             GContext->graphics.deletionQueue.pushDeletor([=]() {
-                vkDestroyFramebuffer(GetLogicalDevice(), frameBuffers[i], nullptr);
-                vkDestroyImageView(GetLogicalDevice(), swapChainImageViews[i], nullptr);
+                vkDestroyFramebuffer(mvGetLogicalDevice(), GContext->graphics.swapChainFramebuffers[i], nullptr);
+                vkDestroyImageView(mvGetLogicalDevice(), GContext->graphics.swapChainImageViews[i], nullptr);
                 });
         }
     }
 
-    void CreateSyncObjects(std::vector<VkSemaphore>& imgAvailSema, std::vector<VkSemaphore>& imgFinishSema, std::vector<VkFence>& inFlightFences, std::vector<VkFence>& imagesInFlight)
+    static void mvCreateSyncObjects()
     {
-        imgAvailSema.resize(GContext->graphics.max_frames_in_flight);
-        imgFinishSema.resize(GContext->graphics.max_frames_in_flight);
-        inFlightFences.resize(GContext->graphics.max_frames_in_flight);
-        imagesInFlight.resize(GContext->graphics.swapChainImages.size(), VK_NULL_HANDLE);
+        GContext->graphics.imageAvailableSemaphores.resize(GContext->graphics.max_frames_in_flight);
+        GContext->graphics.renderFinishedSemaphores.resize(GContext->graphics.max_frames_in_flight);
+        GContext->graphics.inFlightFences.resize(GContext->graphics.max_frames_in_flight);
+        GContext->graphics.imagesInFlight.resize(GContext->graphics.swapChainImages.size(), VK_NULL_HANDLE);
 
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -638,14 +612,55 @@ namespace DearPy3D {
 
         for (size_t i = 0; i < GContext->graphics.max_frames_in_flight; i++)
         {
-            if (vkCreateSemaphore(GetLogicalDevice(), &semaphoreInfo, nullptr, &imgAvailSema[i]) != VK_SUCCESS ||
-                vkCreateSemaphore(GetLogicalDevice(), &semaphoreInfo, nullptr, &imgFinishSema[i]) != VK_SUCCESS ||
-                vkCreateFence(GetLogicalDevice(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS)
+            if (vkCreateSemaphore(mvGetLogicalDevice(), &semaphoreInfo, nullptr, &GContext->graphics.imageAvailableSemaphores[i]) != VK_SUCCESS ||
+                vkCreateSemaphore(mvGetLogicalDevice(), &semaphoreInfo, nullptr, &GContext->graphics.renderFinishedSemaphores[i]) != VK_SUCCESS ||
+                vkCreateFence(mvGetLogicalDevice(), &fenceInfo, nullptr, &GContext->graphics.inFlightFences[i]) != VK_SUCCESS)
                 throw std::runtime_error("failed to create synchronization objects for a frame!");
         }
     }
 
-    void CreateImage(uint32_t width, uint32_t height, VkFormat format,
+    //-----------------------------------------------------------------------------
+    // declarations for public API
+    //-----------------------------------------------------------------------------
+
+    VkInstance mvGetVkInstance()
+    {
+        return GContext->graphics.instance;
+    }
+
+    VkDevice mvGetLogicalDevice()
+    {
+        return GContext->graphics.logicalDevice;
+    }
+
+    VkPhysicalDevice mvGetPhysicalDevice()
+    {
+        return GContext->graphics.physicalDevice;
+    }
+
+    VkCommandBuffer  mvGetCurrentCommandBuffer()
+    {
+        return GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex];
+    }
+
+    void mvSetupGraphicsContext()
+    {
+        mvCreateVulkanInstance();
+        mvSetupDebugMessenger();
+        mvCreateSurface();
+        mvCreatePhysicalDevice();
+        mvCreateLogicalDevice();
+        mvAllocator::Init();
+        mvCreateSwapChain();
+        mvCreateMainCommandPool();
+        mvCreateMainDescriptorPool();
+        mvCreateMainRenderPass();
+        mvCreateMainDepthResources();
+        mvCreateFrameBuffers();
+        mvCreateSyncObjects();
+    }
+
+    void mvCreateImage(uint32_t width, uint32_t height, VkFormat format,
         VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
         VkImage& image, VkDeviceMemory& imageMemory)
     {
@@ -665,24 +680,24 @@ namespace DearPy3D {
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
         imageInfo.flags = 0; // Optional
 
-        if (vkCreateImage(GetLogicalDevice() , &imageInfo, nullptr, &image) != VK_SUCCESS)
+        if (vkCreateImage(mvGetLogicalDevice() , &imageInfo, nullptr, &image) != VK_SUCCESS)
             throw std::runtime_error("failed to create image!");
 
         VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(GetLogicalDevice(), image, &memRequirements);
+        vkGetImageMemoryRequirements(mvGetLogicalDevice(), image, &memRequirements);
 
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = FindMemoryType(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        allocInfo.memoryTypeIndex = mvFindMemoryType(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        if (vkAllocateMemory(GetLogicalDevice(), &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
+        if (vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
             throw std::runtime_error("failed to allocate image memory!");
 
-        vkBindImageMemory(GetLogicalDevice(), image, imageMemory, 0);
+        vkBindImageMemory(mvGetLogicalDevice(), image, imageMemory, 0);
     }
 
-    VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
+    VkImageView mvCreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
     {
         VkImageViewCreateInfo viewInfo{};
         viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -696,13 +711,13 @@ namespace DearPy3D {
         viewInfo.subresourceRange.aspectMask = aspectFlags;
 
         VkImageView imageView;
-        if (vkCreateImageView(GetLogicalDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS)
+        if (vkCreateImageView(mvGetLogicalDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS)
             throw std::runtime_error("failed to create texture image view!");
 
         return imageView;
     }
 
-    std::uint32_t FindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
+    std::uint32_t mvFindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
     {
         VkPhysicalDeviceMemoryProperties memProperties;
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
@@ -716,7 +731,7 @@ namespace DearPy3D {
         throw std::runtime_error("failed to find suitable memory type!");
     }
 
-    void CleanupGraphicsContext()
+    void mvCleanupGraphicsContext()
     {
         
         GContext->graphics.deletionQueue.flush();
@@ -732,17 +747,17 @@ namespace DearPy3D {
 
         if (GContext->graphics.enableValidationLayers)
         {
-            auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(GetVkInstance(), "vkDestroyDebugUtilsMessengerEXT");
+            auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(mvGetVkInstance(), "vkDestroyDebugUtilsMessengerEXT");
             if (func != nullptr)
-                func(GetVkInstance(), GContext->graphics.debugMessenger, nullptr);
+                func(mvGetVkInstance(), GContext->graphics.debugMessenger, nullptr);
         }
 
-        vkDestroySurfaceKHR(GetVkInstance(), GContext->graphics.surface, nullptr);
+        vkDestroySurfaceKHR(mvGetVkInstance(), GContext->graphics.surface, nullptr);
         vkDestroyDevice(GContext->graphics.logicalDevice, nullptr);
-        vkDestroyInstance(GetVkInstance(), nullptr);
+        vkDestroyInstance(mvGetVkInstance(), nullptr);
     }
 
-    void RecreateSwapChain(int width, int height)
+    void mvRecreateSwapChain()
     {
         vkDeviceWaitIdle(GContext->graphics.logicalDevice);
 
@@ -750,14 +765,14 @@ namespace DearPy3D {
 
         mvAllocator::Shutdown();
         mvAllocator::Init();
-        CreateSwapChain(GContext->graphics, width, height);
-        CreateMainCommandPool(GContext->graphics);
-        CreateMainRenderPass(&(GContext->graphics.renderPass), GContext->graphics.swapChainImageFormat);
-        CreateMainDepthResources(&GContext->graphics.depthImage, &GContext->graphics.depthImageView, &GContext->graphics.depthImageMemory);
-        CreateFrameBuffers(GContext->graphics.renderPass, GContext->graphics.swapChainFramebuffers, GContext->graphics.swapChainImageViews, GContext->graphics.depthImageView);
+        mvCreateSwapChain();
+        mvCreateMainCommandPool();
+        mvCreateMainRenderPass();
+        mvCreateMainDepthResources();
+        mvCreateFrameBuffers();
     }
 
-    size_t GetRequiredUniformBufferSize(size_t size)
+    size_t mvGetRequiredUniformBufferSize(size_t size)
     {
         // Calculate required alignment based on minimum device offset alignment
         size_t minUboAlignment = GContext->graphics.deviceProperties.limits.minUniformBufferOffsetAlignment;
@@ -769,20 +784,20 @@ namespace DearPy3D {
         return alignedSize;
     }
 
-    void BeginFrame()
+    void mvBeginFrame()
     {
-        vkWaitForFences(GetLogicalDevice(), 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame], VK_TRUE, UINT64_MAX);
+        vkWaitForFences(mvGetLogicalDevice(), 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame], VK_TRUE, UINT64_MAX);
 
-        vkAcquireNextImageKHR(GetLogicalDevice(), GContext->graphics.swapChain, UINT64_MAX, GContext->graphics.imageAvailableSemaphores[GContext->graphics.currentFrame],
+        vkAcquireNextImageKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, UINT64_MAX, GContext->graphics.imageAvailableSemaphores[GContext->graphics.currentFrame],
             VK_NULL_HANDLE, &GContext->graphics.currentImageIndex);
 
         if (GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex] != VK_NULL_HANDLE)
-            vkWaitForFences(GetLogicalDevice(), 1, &GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex], VK_TRUE, UINT64_MAX);
+            vkWaitForFences(mvGetLogicalDevice(), 1, &GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex], VK_TRUE, UINT64_MAX);
 
         GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex] = GContext->graphics.inFlightFences[GContext->graphics.currentFrame];
     }
 
-    void EndFrame()
+    void mvEndFrame()
     {
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -799,18 +814,18 @@ namespace DearPy3D {
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        vkResetFences(GetLogicalDevice(), 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame]);
+        vkResetFences(mvGetLogicalDevice(), 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame]);
 
         if (vkQueueSubmit(GContext->graphics.graphicsQueue, 1, &submitInfo, GContext->graphics.inFlightFences[GContext->graphics.currentFrame]) != VK_SUCCESS)
             throw std::runtime_error("failed to submit draw command buffer!");
     }
 
-    void Draw(uint32_t vertexCount)
+    void mvDraw(uint32_t vertexCount)
     {
-        vkCmdDrawIndexed(GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex], vertexCount, 1, 0, 0, 0);
+        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), vertexCount, 1, 0, 0, 0);
     }
 
-    void Present()
+    void mvPresent()
     {
 
         VkSemaphore signalSemaphores[] = { GContext->graphics.renderFinishedSemaphores[GContext->graphics.currentFrame] };
@@ -830,7 +845,7 @@ namespace DearPy3D {
         GContext->graphics.currentFrame = (GContext->graphics.currentFrame + 1) % GContext->graphics.max_frames_in_flight;
     }
 
-    VkCommandBuffer BeginSingleTimeCommands()
+    VkCommandBuffer mvBeginSingleTimeCommands()
     {
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -839,7 +854,7 @@ namespace DearPy3D {
         allocInfo.commandBufferCount = 1;
 
         VkCommandBuffer commandBuffer;
-        vkAllocateCommandBuffers(GetLogicalDevice(), &allocInfo, &commandBuffer);
+        vkAllocateCommandBuffers(mvGetLogicalDevice(), &allocInfo, &commandBuffer);
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -850,7 +865,7 @@ namespace DearPy3D {
         return commandBuffer;
     }
 
-    void EndSingleTimeCommands(VkCommandBuffer commandBuffer)
+    void mvEndSingleTimeCommands(VkCommandBuffer commandBuffer)
     {
         vkEndCommandBuffer(commandBuffer);
 
@@ -860,12 +875,12 @@ namespace DearPy3D {
         submitInfo.pCommandBuffers = &commandBuffer;
 
         vkQueueSubmit(GContext->graphics.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkDeviceWaitIdle(GetLogicalDevice());
+        vkDeviceWaitIdle(mvGetLogicalDevice());
 
-        vkFreeCommandBuffers(GetLogicalDevice(), GContext->graphics.commandPool, 1, &commandBuffer);
+        vkFreeCommandBuffers(mvGetLogicalDevice(), GContext->graphics.commandPool, 1, &commandBuffer);
     }
 
-    void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
+    void mvCreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
     {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -873,39 +888,39 @@ namespace DearPy3D {
         bufferInfo.usage = usage;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        if (vkCreateBuffer(GetLogicalDevice(), &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+        if (vkCreateBuffer(mvGetLogicalDevice(), &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to create buffer!");
         }
 
         VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(GetLogicalDevice(), buffer, &memRequirements);
+        vkGetBufferMemoryRequirements(mvGetLogicalDevice(), buffer, &memRequirements);
 
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = FindMemoryType(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, properties);
+        allocInfo.memoryTypeIndex = mvFindMemoryType(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, properties);
 
-        if (vkAllocateMemory(GetLogicalDevice(), &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+        if (vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate buffer memory!");
         }
 
-        vkBindBufferMemory(GetLogicalDevice(), buffer, bufferMemory, 0);
+        vkBindBufferMemory(mvGetLogicalDevice(), buffer, bufferMemory, 0);
     }
 
-    void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+    void mvCopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
     {
-        VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
+        VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
 
         VkBufferCopy copyRegion{};
         copyRegion.size = size;
         vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-        EndSingleTimeCommands(commandBuffer);
+        mvEndSingleTimeCommands(commandBuffer);
     }
 
-    void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
+    void mvTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
     {
-        VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
+        VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.oldLayout = oldLayout;
@@ -970,12 +985,12 @@ namespace DearPy3D {
             1, &barrier
         );
 
-        EndSingleTimeCommands(commandBuffer);
+        mvEndSingleTimeCommands(commandBuffer);
     }
 
-    void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
+    void mvCopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
     {
-        VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
+        VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
 
         VkBufferImageCopy region{};
         region.bufferOffset = 0;
@@ -1003,29 +1018,7 @@ namespace DearPy3D {
             &region
         );
 
-        EndSingleTimeCommands(commandBuffer);
+        mvEndSingleTimeCommands(commandBuffer);
     }
-
-    //VkCommandBuffer mvSwapChain::getCurrentCommandBuffer()
-    //{
-    //    return mvGraphics::GetContext().getLogicalDevice().getCommandBuffers()[_currentImageIndex];
-    //}
-
-    //VkRenderPassBeginInfo mvSwapChain::getMainRenderPassInfo()
-    //{
-    //    VkRenderPassBeginInfo renderPassInfo{};
-    //    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    //    renderPassInfo.renderPass = _renderPass;
-    //    renderPassInfo.framebuffer = _swapChainFramebuffers[_currentImageIndex];
-    //    renderPassInfo.renderArea.offset = { 0, 0 };
-    //    renderPassInfo.renderArea.extent = _swapChainExtent;
-    //    return renderPassInfo;
-    //}
-
-    //uint32_t     getMinImageCount() { return _minImageCount; }
-    //VkRenderPass getRenderPass() { return _renderPass; }
-    //VkExtent2D   getSwapChainExtent() { return _swapChainExtent; }
-    //VkFormat     getSwatChainFormat() const { return _swapChainImageFormat; }
-
 
 }

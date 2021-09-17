@@ -33,7 +33,7 @@ namespace DearPy3D {
         createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
         VkShaderModule shaderModule;
-        if (vkCreateShaderModule(GetLogicalDevice(), &createInfo, nullptr, &_shaderModule) != VK_SUCCESS)
+        if (vkCreateShaderModule(mvGetLogicalDevice(), &createInfo, nullptr, &_shaderModule) != VK_SUCCESS)
             throw std::runtime_error("failed to create shader module!");
 	}
 

@@ -25,36 +25,36 @@ namespace DearPy3D {
 			bufferInfo.usage = usage;
 			bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-			if (vkCreateBuffer(GetLogicalDevice(), &bufferInfo, nullptr, &_buffer) != VK_SUCCESS)
+			if (vkCreateBuffer(mvGetLogicalDevice(), &bufferInfo, nullptr, &_buffer) != VK_SUCCESS)
 				throw std::runtime_error("failed to create buffer!");
 
 			VkMemoryRequirements memRequirements;
-			vkGetBufferMemoryRequirements(GetLogicalDevice(), _buffer, &memRequirements);
+			vkGetBufferMemoryRequirements(mvGetLogicalDevice(), _buffer, &memRequirements);
 
 			VkMemoryAllocateInfo allocInfo{};
 			allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 			allocInfo.allocationSize = memRequirements.size;
-			allocInfo.memoryTypeIndex = FindMemoryType(GetPhysicalDevice(), memRequirements.memoryTypeBits, properties);
+			allocInfo.memoryTypeIndex = mvFindMemoryType(mvGetPhysicalDevice(), memRequirements.memoryTypeBits, properties);
 
-			if (vkAllocateMemory(GetLogicalDevice(), &allocInfo, nullptr, &_bufferMemory) != VK_SUCCESS)
+			if (vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &_bufferMemory) != VK_SUCCESS)
 				throw std::runtime_error("failed to allocate buffer memory!");
 
-			vkBindBufferMemory(GetLogicalDevice(), _buffer, _bufferMemory, 0);
+			vkBindBufferMemory(mvGetLogicalDevice(), _buffer, _bufferMemory, 0);
 
 		}
 
 		void update(const T& data)
 		{
 			void* udata;
-			vkMapMemory(GetLogicalDevice(), _bufferMemory, 0, sizeof(T), 0, &udata);
+			vkMapMemory(mvGetLogicalDevice(), _bufferMemory, 0, sizeof(T), 0, &udata);
 			memcpy(udata, &data, sizeof(T));
-			vkUnmapMemory(GetLogicalDevice(), _bufferMemory);
+			vkUnmapMemory(mvGetLogicalDevice(), _bufferMemory);
 		}
 
 		void cleanup()
 		{
-			vkDestroyBuffer(GetLogicalDevice(), _buffer, nullptr);
-			vkFreeMemory(GetLogicalDevice(), _bufferMemory, nullptr);
+			vkDestroyBuffer(mvGetLogicalDevice(), _buffer, nullptr);
+			vkFreeMemory(mvGetLogicalDevice(), _bufferMemory, nullptr);
 		}
 
 		VkBuffer getBuffer() { return _buffer; }

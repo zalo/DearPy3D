@@ -14,9 +14,9 @@ namespace DearPy3D {
 		// Initialize VulkanMemoryAllocator
 		VmaAllocatorCreateInfo allocatorInfo = {};
 		allocatorInfo.vulkanApiVersion = 0;
-		allocatorInfo.physicalDevice = GetPhysicalDevice();
-		allocatorInfo.device = GetLogicalDevice();
-		allocatorInfo.instance = GetVkInstance();
+		allocatorInfo.physicalDevice = mvGetPhysicalDevice();
+		allocatorInfo.device = mvGetLogicalDevice();
+		allocatorInfo.instance = mvGetVkInstance();
 
 		vmaCreateAllocator(&allocatorInfo, &GetVmaAllocator());
 	}

@@ -17,18 +17,10 @@ int main()
     InitializeViewport(500, 500);
     
     // graphics
-    GContext->graphics.instance = mvCreateVulkanInstance({ "VK_LAYER_KHRONOS_validation" });
-    GContext->graphics.surface = mvCreateSurface(GContext->viewport.handle);
-    GContext->graphics.physicalDevice = mvCreatePhysicalDevice(GContext->graphics.deviceProperties, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
-    GContext->graphics.logicalDevice = mvCreateLogicalDevice(GContext->graphics.physicalDevice);
-    mvAllocator::Init();
-    CreateSwapChain(GContext->graphics, 500, 500);
-    CreateMainCommandPool(GContext->graphics);
-    CreateMainDescriptorPool(&(GContext->graphics.descriptorPool));
-    CreateMainRenderPass(&(GContext->graphics.renderPass), GContext->graphics.swapChainImageFormat);
-    CreateMainDepthResources(&GContext->graphics.depthImage, &GContext->graphics.depthImageView, &GContext->graphics.depthImageMemory);
-    CreateFrameBuffers(GContext->graphics.renderPass, GContext->graphics.swapChainFramebuffers, GContext->graphics.swapChainImageViews, GContext->graphics.depthImageView);
-    CreateSyncObjects(GContext->graphics.imageAvailableSemaphores, GContext->graphics.renderFinishedSemaphores, GContext->graphics.inFlightFences, GContext->graphics.imagesInFlight);
+    GContext->graphics.enableValidationLayers = true;
+    GContext->graphics.validationLayers = { "VK_LAYER_KHRONOS_validation" };
+    GContext->graphics.deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    mvSetupGraphicsContext();
 
     auto renderer = mvRenderer();
     auto imgui = mvImGuiManager(GContext->viewport.handle);
@@ -76,7 +68,9 @@ int main()
             material->cleanup();
             cube1->cleanup();
             quad1->cleanup();
-            RecreateSwapChain(newwidth, newheight);
+            GContext->viewport.width = newwidth;
+            GContext->viewport.height = newheight;
+            mvRecreateSwapChain();
             imgui.resize();
 
             // recreation
@@ -106,7 +100,7 @@ int main()
         // main pass
         //---------------------------------------------------------------------
         
-        auto currentCommandBuffer = GetCurrentCommandBuffer();
+        auto currentCommandBuffer = mvGetCurrentCommandBuffer();
 
         renderer.beginPass(currentCommandBuffer, GContext->graphics.renderPass);
         imgui.beginFrame();
@@ -136,6 +130,6 @@ int main()
     cube1->cleanup();
     quad1->cleanup();
     imgui.cleanup();
-    CleanupGraphicsContext();
+    mvCleanupGraphicsContext();
     DestroyContext();
 }
