@@ -64,23 +64,23 @@ namespace DearPy3D {
         std::vector<VkCommandBuffer>   commandBuffers;
         VkPhysicalDeviceProperties     deviceProperties;
         VkFormat                       swapChainImageFormat;
-        VkSwapchainKHR                 swapChain;
+        VkSwapchainKHR                 swapChain = VK_NULL_HANDLE;
         std::vector<VkImage>           swapChainImages;
         std::vector<VkImageView>       swapChainImageViews;
         std::vector<VkFramebuffer>     swapChainFramebuffers;
-        VkImage                        depthImage;
-        VkDeviceMemory                 depthImageMemory;
-        VkImageView                    depthImageView;
+        VkImage                        depthImage = VK_NULL_HANDLE;
+        VkDeviceMemory                 depthImageMemory = VK_NULL_HANDLE;
+        VkImageView                    depthImageView = VK_NULL_HANDLE;
         std::vector<VkSemaphore>       imageAvailableSemaphores;
         std::vector<VkSemaphore>       renderFinishedSemaphores;
         std::vector<VkFence>           inFlightFences;
         std::vector<VkFence>           imagesInFlight;
-        VkRenderPass                   renderPass;
+        VkRenderPass                   renderPass = VK_NULL_HANDLE;
         VkExtent2D                     swapChainExtent;
         uint32_t                       minImageCount = 0;
         uint32_t                       currentImageIndex = 0;
         size_t                         currentFrame = 0;
-        VkSurfaceKHR                   surface;
+        VkSurfaceKHR                   surface = VK_NULL_HANDLE;
 
         // maybe can remove
         std::vector<const char*> validationLayers;

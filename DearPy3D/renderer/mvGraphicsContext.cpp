@@ -158,6 +158,7 @@ namespace DearPy3D {
         vkGetPhysicalDeviceProperties(device, &properties);
 
         std::cout << "The GPU has a minimum buffer alignment of " << properties.limits.minUniformBufferOffsetAlignment << std::endl;
+        std::cout << "The GPU has a max push constants size of " << properties.limits.maxPushConstantsSize << std::endl;
 
         return extensionsSupported && swapChainAdequate && properties.limits.maxPushConstantsSize >= 256;
     }
@@ -267,7 +268,6 @@ namespace DearPy3D {
 
         std::vector<VkPhysicalDevice> devices(deviceCount);
         vkEnumeratePhysicalDevices(mvGetVkInstance(), &deviceCount, devices.data());
-
         for (const auto& device : devices)
         {
             if (mvIsDeviceSuitable(device, GContext->graphics.deviceProperties, GContext->graphics.deviceExtensions))
@@ -276,10 +276,9 @@ namespace DearPy3D {
                 break;
             }
         }
-
+        
         if (GContext->graphics.physicalDevice == VK_NULL_HANDLE)
             throw std::runtime_error("failed to find a suitable GPU!");
-
     }
 
     static void mvCreateLogicalDevice()
@@ -325,9 +324,14 @@ namespace DearPy3D {
             else
                 createInfo.enabledLayerCount = 0;
 
-
-            if (vkCreateDevice(mvGetPhysicalDevice(), &createInfo, nullptr, &GContext->graphics.logicalDevice) != VK_SUCCESS)
+            std::cout << "here2" << std::endl;
+            auto code = vkCreateDevice(mvGetPhysicalDevice(), &createInfo, nullptr, &GContext->graphics.logicalDevice);
+            if (code != VK_SUCCESS)
+            {
+                std::cout << code<< std::endl;
                 throw std::runtime_error("failed to create logical device!");
+            }
+            std::cout << "here3" << std::endl;
         }
 
         vkGetDeviceQueue(mvGetLogicalDevice(), indices.graphicsFamily.value(), 0, &GContext->graphics.graphicsQueue);
@@ -723,7 +727,8 @@ namespace DearPy3D {
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
         for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) 
+            {
                 return i;
             }
         }

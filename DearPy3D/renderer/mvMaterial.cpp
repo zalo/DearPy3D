@@ -49,7 +49,7 @@ namespace DearPy3D {
 
 		std::vector<VkDescriptorSet> descriptorSets;
 
-		if (vkCreateDescriptorSetLayout(GContext->graphics.logicalDevice, &layoutInfo, nullptr, &descriptorSetLayouts.back()) != VK_SUCCESS)
+		if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &descriptorSetLayouts.back()) != VK_SUCCESS)
 			throw std::runtime_error("failed to create descriptor set layout!");
 
 		//-----------------------------------------------------------------------------
@@ -63,7 +63,7 @@ namespace DearPy3D {
 		allocInfo.descriptorSetCount = 3;
 		allocInfo.pSetLayouts = layouts.data();
 
-		if (vkAllocateDescriptorSets(GContext->graphics.logicalDevice, &allocInfo, descriptorSets.data()) != VK_SUCCESS)
+		if (vkAllocateDescriptorSets(mvGetLogicalDevice(), &allocInfo, descriptorSets.data()) != VK_SUCCESS)
 			throw std::runtime_error("failed to allocate descriptor sets!");
 
 		//-----------------------------------------------------------------------------
@@ -100,7 +100,7 @@ namespace DearPy3D {
 			descriptorWrites[i].pBufferInfo = &materialInfo;
 		}
 
-		vkUpdateDescriptorSets(GContext->graphics.logicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+		vkUpdateDescriptorSets(mvGetLogicalDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 
 		_pipeline = std::make_shared<mvPipeline>();
 		_pipeline->setVertexLayout(vlayout);
@@ -124,7 +124,7 @@ namespace DearPy3D {
 
 	void mvMaterial::cleanup()
 	{
-		vkDeviceWaitIdle(GContext->graphics.logicalDevice);
+		vkDeviceWaitIdle(mvGetLogicalDevice());
 		_deletionQueue.flush();
 	}
 

@@ -71,7 +71,7 @@ namespace DearPy3D {
         ImDrawData* main_draw_data = ImGui::GetDrawData();
 
         // Record dear imgui primitives into command buffer
-        ImGui_ImplVulkan_RenderDrawData(main_draw_data, GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex]);
+        ImGui_ImplVulkan_RenderDrawData(main_draw_data, mvGetCurrentCommandBuffer());
 	}
 
 }

@@ -32,7 +32,6 @@ namespace DearPy3D {
     void mvPipeline::bind(uint32_t index)
     {
 
-        // todo: handle this
         uint32_t uniform_offset = index * GContext->graphics.deviceProperties.limits.minUniformBufferOffsetAlignment;
         vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
             _pipelineLayout, 0, 1, _descriptorSets.data(), 1, &uniform_offset);

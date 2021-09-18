@@ -77,3 +77,11 @@ target_link_libraries(dearpy3dsandbox
 		dearpy3d
 		glfw
 )
+
+set_target_properties(dearpy3dsandbox
+  PROPERTIES
+  CXX_STANDARD 17
+  ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}$<$<CONFIG:Release>:/cmake-build-release/>$<$<CONFIG:Debug>:/cmake-build-debug/>DearSandbox/"
+  LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}$<$<CONFIG:Release>:/cmake-build-release/>$<$<CONFIG:Debug>:/cmake-build-debug/>DearSandbox/"
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}$<$<CONFIG:Release>:/cmake-build-release/>$<$<CONFIG:Debug>:/cmake-build-debug/>DearSandbox/"
+  )

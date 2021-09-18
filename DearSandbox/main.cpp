@@ -8,6 +8,7 @@
 #include "mvMaterial.h"
 #include "mvImGuiManager.h"
 #include "mvContext.h"
+#include <iostream>
 
 using namespace DearPy3D;
 
@@ -21,6 +22,7 @@ int main()
     GContext->graphics.validationLayers = { "VK_LAYER_KHRONOS_validation" };
     GContext->graphics.deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
     mvSetupGraphicsContext();
+    
 
     auto renderer = mvRenderer();
     auto imgui = mvImGuiManager(GContext->viewport.handle);
@@ -78,6 +80,8 @@ int main()
             cube1 = std::make_shared<mvCube>("../../Resources/brickwall.jpg");
             cube1->setPosition(10, 10, 10);
             material = std::make_shared<mvMaterial>();
+
+            GContext->viewport.resized = false;
         }
 
         //---------------------------------------------------------------------
@@ -104,10 +108,6 @@ int main()
 
         renderer.beginPass(currentCommandBuffer, GContext->graphics.renderPass);
         imgui.beginFrame();
-
-        ImGui::Begin("Cool window");
-        ImGui::Button("Press me");
-        ImGui::End();
 
         renderer.setCamera(camera);
 

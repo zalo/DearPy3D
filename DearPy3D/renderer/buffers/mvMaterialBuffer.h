@@ -40,7 +40,7 @@ namespace DearPy3D {
 			int useGlossAlpha = false;
 			int hasAlpha = false;
 			char _pad1[8];
-			char _pad2[192];
+			//char _pad2[192];
 			//-------------------------- ( 16 bytes )
 			// 
 			//-------------------------- ( 4 * 16 = 64 bytes )
