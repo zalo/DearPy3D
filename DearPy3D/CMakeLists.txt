@@ -22,7 +22,6 @@ target_sources(dearpy3d
 
 		# renderer
 		"renderer/mvMaterial.cpp"
-		"renderer/mvRenderer.cpp"
 		"renderer/mvPointLight.cpp"
 		"renderer/mvDeletionQueue.cpp"
 		"renderer/mvAllocator.cpp"
