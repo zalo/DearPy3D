@@ -34,10 +34,12 @@ int main()
     mvCamera camera{};
     camera.pos = glm::vec3{5.0f, 5.0f, -15.0f};
     camera.aspect = GContext->viewport.width/GContext->viewport.height;
-
-    auto quad1 = std::make_shared<mvTexturedQuad>("../../Resources/brickwall.jpg");
-    auto cube1 = std::make_shared<mvCube>("../../Resources/brickwall.jpg");
-    cube1->setPosition(10, 10, 10);
+    
+    mvDrawable quad1 = mvCreateTexturedQuad("../../Resources/brickwall.jpg");
+    mvDrawable cube1 = mvCreateTexturedCube("../../Resources/brickwall.jpg");
+    cube1.pos.x = 10.0f;
+    cube1.pos.y = 10.0f;
+    cube1.pos.z = 10.0f;
 
     auto material = std::make_shared<mvMaterial>();
 
@@ -71,24 +73,30 @@ int main()
                 glfwWaitEvents();
             }
 
-            camera.aspect = newwidth/newheight;
+            camera.aspect = (float)newwidth/(float)newheight;
 
             // cleanup
             material->cleanup();
-            cube1->cleanup();
-            quad1->cleanup();
+            mvCleanupDrawable(cube1);
+            mvCleanupDrawable(quad1);
             GContext->viewport.width = newwidth;
             GContext->viewport.height = newheight;
             mvRecreateSwapChain();
             imgui.resize();
 
             // recreation
-            quad1 = std::make_shared<mvTexturedQuad>("../../Resources/brickwall.jpg");
-            cube1 = std::make_shared<mvCube>("../../Resources/brickwall.jpg");
-            cube1->setPosition(10, 10, 10);
+            auto newquad1 = mvCreateTexturedQuad("../../Resources/brickwall.jpg");
+            auto newcube1 = mvCreateTexturedCube("../../Resources/brickwall.jpg");
+
+            quad1.indexBuffer = newquad1.indexBuffer;
+            quad1.vertexBuffer = newquad1.vertexBuffer;
+            cube1.indexBuffer = newcube1.indexBuffer;
+            cube1.vertexBuffer = newcube1.vertexBuffer;
+
             material = std::make_shared<mvMaterial>();
 
             GContext->viewport.resized = false;
+
         }
 
         //---------------------------------------------------------------------
@@ -120,10 +128,10 @@ int main()
         glm::mat4 projMatrix = mvBuildProjectionMatrix(camera);
 
         material->bind(0, mat1);
-        RenderDrawable(*cube1, material->getPipeline(), 0, {}, viewMatrix, projMatrix);
+        RenderDrawable(cube1, material->getPipeline(), 0, {}, viewMatrix, projMatrix);
 
         material->bind(1, mat2);
-        RenderDrawable(*quad1, material->getPipeline(), 1, {}, viewMatrix, projMatrix);
+        RenderDrawable(quad1, material->getPipeline(), 1, {}, viewMatrix, projMatrix);
 
         imgui.endFrame();
         EndPass(currentCommandBuffer);
@@ -136,8 +144,8 @@ int main()
     }
 
     material->cleanup();
-    cube1->cleanup();
-    quad1->cleanup();
+    mvCleanupDrawable(cube1);
+    mvCleanupDrawable(quad1);
     imgui.cleanup();
     mvCleanupGraphicsContext();
     DestroyContext();
@@ -145,10 +153,16 @@ int main()
 
 void RenderDrawable(mvDrawable& drawable, mvPipeline& pipeline, uint32_t index, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection)
 {
-    drawable.bind();
+    drawable.indexBuffer->bind();
+    drawable.vertexBuffer->bind();
     pipeline.bind(index);
 
-    transforms.model = drawable.getTransform();
+    glm::mat4 localTransform = glm::translate(glm::vec3{drawable.pos.x, drawable.pos.y, drawable.pos.z}) *
+        glm::rotate(drawable.rot.x, glm::vec3{1.0f, 0.0f, 0.0f }) *
+        glm::rotate(drawable.rot.y, glm::vec3{0.0f, 1.0f, 0.0f }) *
+        glm::rotate(drawable.rot.z, glm::vec3{0.0f, 0.0f, 1.0f });
+
+    transforms.model = localTransform;
     transforms.modelView = camera * transforms.model;
     transforms.modelViewProjection = projection * transforms.modelView;
 
@@ -156,7 +170,7 @@ void RenderDrawable(mvDrawable& drawable, mvPipeline& pipeline, uint32_t index, 
         GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex],
         pipeline.getLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
-    mvDraw(drawable.getVertexCount());
+    mvDraw(drawable.indexBuffer->getVertexCount());
 }
 
 void BeginPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass)

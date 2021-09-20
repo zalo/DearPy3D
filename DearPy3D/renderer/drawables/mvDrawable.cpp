@@ -3,21 +3,13 @@
 
 namespace DearPy3D {
 
-	void mvDrawable::cleanup()
-	{
-		vkDeviceWaitIdle(mvGetLogicalDevice());
-		_deletionQueue.flush();
-	}
 
-	void mvDrawable::bind() const
-	{
-		_indexBuffer->bind();
-		_vertexBuffer->bind();
-	}
-
-	uint32_t mvDrawable::getVertexCount() const
-	{
-		return _indexBuffer->getVertexCount();
-	}
-
+    void mvCleanupDrawable(mvDrawable& drawable)
+    {
+        drawable.indexBuffer->cleanup();
+        drawable.vertexBuffer->cleanup();
+        drawable.indexBuffer = nullptr;
+        drawable.vertexBuffer = nullptr;
+    }
+    
 }

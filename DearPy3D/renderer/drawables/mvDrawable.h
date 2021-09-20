@@ -10,29 +10,14 @@
 
 namespace DearPy3D {
 
-	class mvGraphics;
+    struct mvDrawable
+    {
+        std::shared_ptr<mvIndexBuffer>  indexBuffer;
+        std::shared_ptr<mvVertexBuffer> vertexBuffer;
+        glm::vec3 pos;
+        glm::vec3 rot;
+    };
 
-	class mvDrawable
-	{
-
-	public:
-
-		mvDrawable() = default;
-		virtual ~mvDrawable() {}
-
-		void cleanup();
-
-		virtual glm::mat4 getTransform() const = 0;
-
-		void bind() const;
-		uint32_t getVertexCount() const;
-
-	protected:
-
-		mvDeletionQueue                 _deletionQueue;
-		std::shared_ptr<mvIndexBuffer>  _indexBuffer;
-		std::shared_ptr<mvVertexBuffer> _vertexBuffer;
-
-	};
-
+    void mvCleanupDrawable(mvDrawable& drawable);
+        
 }
