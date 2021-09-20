@@ -97,6 +97,12 @@ int main()
 
             GContext->viewport.resized = false;
 
+            // hacky but works
+            // window only seems to repaint if moved, so we move the window
+            // slightly
+            int x, y;
+            glfwGetWindowPos(GContext->viewport.handle, &x, &y);
+            glfwSetWindowPos(GContext->viewport.handle, ++x, y);
         }
 
         //---------------------------------------------------------------------
@@ -153,8 +159,11 @@ int main()
 
 void RenderDrawable(mvDrawable& drawable, mvPipeline& pipeline, uint32_t index, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection)
 {
-    drawable.indexBuffer->bind();
-    drawable.vertexBuffer->bind();
+    vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), drawable.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+    VkBuffer vertexBuffers[] = { drawable.vertexBuffer.buffer };
+    VkDeviceSize offsets[] = { 0 };
+    vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, vertexBuffers, offsets);
+
     pipeline.bind(index);
 
     glm::mat4 localTransform = glm::translate(glm::vec3{drawable.pos.x, drawable.pos.y, drawable.pos.z}) *
@@ -170,7 +179,7 @@ void RenderDrawable(mvDrawable& drawable, mvPipeline& pipeline, uint32_t index, 
         GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex],
         pipeline.getLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
-    mvDraw(drawable.indexBuffer->getVertexCount());
+    mvDraw(drawable.indexBuffer.indices.size());
 }
 
 void BeginPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass)

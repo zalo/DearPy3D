@@ -42,7 +42,7 @@ target_sources(dearpy3d
 		"renderer/buffers/mvMaterialBuffer.cpp"
 
 		# bindables
-		"renderer/bindables/mvTexture.cpp"
+		"renderer/mvTexture.cpp"
 		
 		# drawables
 		"renderer/drawables/mvDrawable.cpp"

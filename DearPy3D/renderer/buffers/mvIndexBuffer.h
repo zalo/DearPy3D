@@ -6,30 +6,14 @@
 
 namespace DearPy3D {
 
-	//-----------------------------------------------------------------------------
-	// forward declarations
-	//-----------------------------------------------------------------------------
-	class mvGraphics;
-
-	//-----------------------------------------------------------------------------
-	// mvIndexBuffer
-	//-----------------------------------------------------------------------------
-	class mvIndexBuffer
+	struct mvIndexBuffer
 	{
-
-	public:
-
-		mvIndexBuffer(const std::vector<uint16_t>& ibuf);
-		void cleanup();
-		void bind();
-		uint32_t getVertexCount();
-
-	private:
-
-		std::vector<uint16_t> _indices;
-		VkBuffer _indexBuffer;
-		VmaAllocation _memoryAllocation;
-
+		std::vector<uint16_t> indices;
+		VkBuffer              buffer           = VK_NULL_HANDLE;
+		VmaAllocation         memoryAllocation = VK_NULL_HANDLE;
 	};
+
+	mvIndexBuffer mvCreateIndexBuffer(const std::vector<uint16_t>& ibuf);
+	void          mvCleanupIndexBuffer(mvIndexBuffer& buffer);
 
 }

@@ -793,7 +793,7 @@ namespace DearPy3D {
     {
         vkWaitForFences(mvGetLogicalDevice(), 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame], VK_TRUE, UINT64_MAX);
 
-        vkAcquireNextImageKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, UINT64_MAX, GContext->graphics.imageAvailableSemaphores[GContext->graphics.currentFrame],
+        VkResult result = vkAcquireNextImageKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, UINT64_MAX, GContext->graphics.imageAvailableSemaphores[GContext->graphics.currentFrame],
             VK_NULL_HANDLE, &GContext->graphics.currentImageIndex);
 
         if (GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex] != VK_NULL_HANDLE)
@@ -845,7 +845,7 @@ namespace DearPy3D {
         presentInfo.pSwapchains = swapChains;
         presentInfo.pImageIndices = &GContext->graphics.currentImageIndex;
 
-        vkQueuePresentKHR(GContext->graphics.presentQueue, &presentInfo);
+        VkResult result = vkQueuePresentKHR(GContext->graphics.presentQueue, &presentInfo);
 
         GContext->graphics.currentFrame = (GContext->graphics.currentFrame + 1) % GContext->graphics.max_frames_in_flight;
     }

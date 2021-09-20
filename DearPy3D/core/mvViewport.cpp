@@ -50,7 +50,7 @@ namespace DearPy3D {
 		GContext->viewport.handle = glfwCreateWindow(width, height, "Dear Py3D", nullptr, nullptr);
 		glfwSetCursorPosCallback(GContext->viewport.handle, mouse_callback);
 		glfwSetKeyCallback(GContext->viewport.handle, key_callback);
-		glfwSetFramebufferSizeCallback(GContext->viewport.handle, framebufferResizeCallback);
+		glfwSetWindowSizeCallback(GContext->viewport.handle, framebufferResizeCallback);
 
 		GContext->viewport.width = width;
 		GContext->viewport.height = height;

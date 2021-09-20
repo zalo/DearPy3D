@@ -19,7 +19,7 @@ namespace DearPy3D {
 		vlayout.append(ElementType::Texture2D);
 
 		_sampler = std::make_shared<mvSampler>();
-		_texture = std::make_shared<mvTexture>("../../Resources/brickwall.jpg");
+		_texture = mvCreateTexture("../../Resources/brickwall.jpg");
 
 		//-----------------------------------------------------------------------------
 		// create descriptor set layout
@@ -75,7 +75,7 @@ namespace DearPy3D {
 		{
 			VkDescriptorImageInfo imageInfo{};
 			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imageInfo.imageView = _texture->getImageView();
+			imageInfo.imageView = _texture.textureImageView;
 			imageInfo.sampler = _sampler->getSampler();
 
 			descriptorWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -112,7 +112,7 @@ namespace DearPy3D {
 
 		_deletionQueue.pushDeletor([=]() {
 			_sampler->cleanup();
-			_texture->cleanup();
+			mvCleanupTexture(_texture);
 			_materialBuffer->cleanup();
 			});
 	}

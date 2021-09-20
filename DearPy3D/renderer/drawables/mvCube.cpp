@@ -69,8 +69,8 @@ namespace DearPy3D {
 
         mvDrawable drawable{};
         
-        drawable.vertexBuffer = std::make_shared<mvVertexBuffer>(vertices);
-        drawable.indexBuffer = std::make_shared<mvIndexBuffer>(indices);
+        drawable.vertexBuffer = mvCreateVertexBuffer(vertices);
+        drawable.indexBuffer = mvCreateIndexBuffer(indices);
 
         return drawable;
     }

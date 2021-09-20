@@ -7,8 +7,10 @@
 
 namespace DearPy3D {
 
-	mvTexture::mvTexture(const std::string& file)
+	mvTexture mvCreateTexture(const std::string& file)
 	{
+        mvTexture texture{};
+
         int texWidth, texHeight, texChannels;
         stbi_uc* pixels = stbi_load(file.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         VkDeviceSize imageSize = texWidth * texHeight * 4;
@@ -31,22 +33,24 @@ namespace DearPy3D {
 
         mvCreateImage(texWidth, texHeight,
             VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            _textureImage, _textureImageMemory);
+            texture.textureImage, texture.textureImageMemory);
 
-        mvTransitionImageLayout(_textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        mvCopyBufferToImage(stagingBuffer, _textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-        mvTransitionImageLayout(_textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        mvTransitionImageLayout(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        mvCopyBufferToImage(stagingBuffer, texture.textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+        mvTransitionImageLayout(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         vkDestroyBuffer(mvGetLogicalDevice(), stagingBuffer, nullptr);
         vkFreeMemory(mvGetLogicalDevice(), stagingBufferMemory, nullptr);
 
-        _textureImageView = mvCreateImageView(_textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+        texture.textureImageView = mvCreateImageView(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+
+        return texture;
 	}
 
-    void mvTexture::cleanup()
+    void mvCleanupTexture(mvTexture& texture)
     {
-        vkDestroyImageView(mvGetLogicalDevice(), _textureImageView, nullptr);
-        vkDestroyImage(mvGetLogicalDevice(), _textureImage, nullptr);
-        vkFreeMemory(mvGetLogicalDevice(), _textureImageMemory, nullptr);
+        vkDestroyImageView(mvGetLogicalDevice(), texture.textureImageView, nullptr);
+        vkDestroyImage(mvGetLogicalDevice(), texture.textureImage, nullptr);
+        vkFreeMemory(mvGetLogicalDevice(), texture.textureImageMemory, nullptr);
     }
 }
