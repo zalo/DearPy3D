@@ -9,31 +9,17 @@
 
 namespace DearPy3D {
 
-	class mvTexture;
-	class mvSampler;
-	class mvDrawable;
-
-	class mvMaterial
+	struct mvMaterial
 	{
-
-	public:
-
-		mvMaterial();
-
-		void bind(uint32_t index, mvMaterialBuffer::mvMaterialData data);
-		void cleanup();
-		const mvPipeline& getPipeline() const { return _pipeline; }
-		void setOffsetIndex(uint32_t index) { _offsetIndex = index; }
-
-	private:
-
-		mvDeletionQueue                    _deletionQueue;
-		mvPipeline                         _pipeline;
-		mvTexture                          _texture;
-		mvSampler                          _sampler;
-		uint32_t                           _offsetIndex = 0u;
-		std::shared_ptr<mvMaterialBuffer>  _materialBuffer;
-
+		mvPipeline        pipeline;
+		mvTexture         texture;
+		mvSampler         sampler;
+		uint32_t          offsetIndex = 0u;
+		mvMaterialBuffer  materialBuffer;
 	};
+
+	mvMaterial mvCreateMaterial();
+	void       mvCleanupMaterial(mvMaterial& material);
+	void       mvBind           (mvMaterial& material, uint32_t index, mvMaterialData data);
 
 }

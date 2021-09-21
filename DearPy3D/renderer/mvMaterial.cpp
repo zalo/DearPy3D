@@ -6,10 +6,11 @@
 
 namespace DearPy3D {
 
-	mvMaterial::mvMaterial()
+	mvMaterial mvCreateMaterial()
 	{
+		mvMaterial material{};
 
-		_materialBuffer = std::make_shared<mvMaterialBuffer>();
+		material.materialBuffer = mvCreateMaterialBuffer();
 
 		auto vlayout = mvCreateVertexLayout(
 			{
@@ -20,8 +21,8 @@ namespace DearPy3D {
 				mvVertexElementType::Texture2D 
 			}
 		);
-		_texture = mvCreateTexture("../../Resources/brickwall.jpg");
-		_sampler = mvCreateSampler();
+		material.texture = mvCreateTexture("../../Resources/brickwall.jpg");
+		material.sampler = mvCreateSampler();
 
 		//-----------------------------------------------------------------------------
 		// create descriptor set layout
@@ -77,8 +78,8 @@ namespace DearPy3D {
 		{
 			VkDescriptorImageInfo imageInfo{};
 			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imageInfo.imageView = _texture.textureImageView;
-			imageInfo.sampler = _sampler.textureSampler;
+			imageInfo.imageView = material.texture.textureImageView;
+			imageInfo.sampler = material.sampler.textureSampler;
 
 			descriptorWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[i].dstSet = descriptorSets[i];
@@ -89,9 +90,9 @@ namespace DearPy3D {
 			descriptorWrites[i].pImageInfo = &imageInfo;
 
 			VkDescriptorBufferInfo materialInfo;
-			materialInfo.buffer = _materialBuffer->_buffer[i];
+			materialInfo.buffer = material.materialBuffer.buffer[i];
 			materialInfo.offset = 0;
-			materialInfo.range = sizeof(mvMaterialBuffer::mvMaterialData);
+			materialInfo.range = sizeof(mvMaterialData);
 
 			descriptorWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[i].dstSet = descriptorSets[i];
@@ -104,29 +105,27 @@ namespace DearPy3D {
 
 		vkUpdateDescriptorSets(mvGetLogicalDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 
-		_pipeline.layout = vlayout;
-		_pipeline.vertexShader = mvCreateShader("../../DearPy3D/shaders/vs_shader.vert.spv");
-		_pipeline.fragShader = mvCreateShader("../../DearPy3D/shaders/ps_shader.frag.spv");
-		_pipeline.descriptorSetLayouts = descriptorSetLayouts;
-		_pipeline.descriptorSets = descriptorSets;
-		mvFinalizePipeline(_pipeline);
+		material.pipeline.layout = vlayout;
+		material.pipeline.vertexShader = mvCreateShader("../../DearPy3D/shaders/vs_shader.vert.spv");
+		material.pipeline.fragShader = mvCreateShader("../../DearPy3D/shaders/ps_shader.frag.spv");
+		material.pipeline.descriptorSetLayouts = descriptorSetLayouts;
+		material.pipeline.descriptorSets = descriptorSets;
+		mvFinalizePipeline(material.pipeline);
 
-		_deletionQueue.pushDeletor([=]() {
-			mvCleanupSampler(_sampler);
-			mvCleanupTexture(_texture);
-			_materialBuffer->cleanup();
-			});
+		return material;
 	}
 
-	void mvMaterial::bind(uint32_t index, mvMaterialBuffer::mvMaterialData data)
+	void mvBind(mvMaterial& material, uint32_t index, mvMaterialData data)
 	{
-		_materialBuffer->bind(data, index);
+		mvBind(material.materialBuffer, data, index);
 	}
 
-	void mvMaterial::cleanup()
+	void mvCleanupMaterial(mvMaterial& material)
 	{
 		vkDeviceWaitIdle(mvGetLogicalDevice());
-		_deletionQueue.flush();
+		mvCleanupSampler(material.sampler);
+		mvCleanupTexture(material.texture);
+		mvCleanupMaterialBuffer(material.materialBuffer);
 	}
 
 }

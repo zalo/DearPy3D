@@ -1,7 +1,7 @@
-#include "mvBuffer.h"
-#include "mvMath.h"#pragma once
+#pragma once
+
+#include "mvMath.h"
 #include <string>
-#include "mvBuffer.h"
 #include "mvMath.h"
 #include "mvDrawable.h"
 

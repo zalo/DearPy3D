@@ -185,13 +185,13 @@ namespace DearPy3D {
         pipeline.vertexShader.shaderModule = VK_NULL_HANDLE;
         pipeline.fragShader.shaderModule = VK_NULL_HANDLE;
 
-        GContext->graphics.deletionQueue.pushDeletor([&]() {
+        GContext->graphics.deletionQueue.pushDeletor([=]() {
             vkDestroyPipeline(mvGetLogicalDevice(), pipeline.pipeline, nullptr);
             vkDestroyPipelineLayout(mvGetLogicalDevice(), pipeline.pipelineLayout, nullptr);
             for(auto descriptorSetLayout : pipeline.descriptorSetLayouts)
                 vkDestroyDescriptorSetLayout(mvGetLogicalDevice(), descriptorSetLayout, nullptr);
-            pipeline.descriptorSetLayouts.clear();
-            pipeline.descriptorSets.clear();
+            //pipeline.descriptorSetLayouts.clear();
+            //pipeline.descriptorSets.clear();
             });
 	}
 

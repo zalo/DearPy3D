@@ -28,8 +28,7 @@ int main()
     GContext->graphics.validationLayers = { "VK_LAYER_KHRONOS_validation" };
     GContext->graphics.deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
     mvSetupGraphicsContext();
-    
-    auto imgui = mvImGuiManager(GContext->viewport.handle);
+    mvSetupImGui(GContext->viewport.handle);
 
     mvCamera camera{};
     camera.pos = glm::vec3{5.0f, 5.0f, -15.0f};
@@ -41,10 +40,10 @@ int main()
     cube1.pos.y = 10.0f;
     cube1.pos.z = 10.0f;
 
-    auto material = std::make_shared<mvMaterial>();
+    mvMaterial material = mvCreateMaterial();
 
-    auto mat1 = mvMaterialBuffer::mvMaterialData{};
-    auto mat2 = mvMaterialBuffer::mvMaterialData{};
+    auto mat1 = mvMaterialData{};
+    auto mat2 = mvMaterialData{};
     mat1.materialColor = glm::vec4{ 1.0f, 1.0f, 0.0f, 1.0f };
     mat2.materialColor = glm::vec4{ 0.0f, 1.0f, 0.0f, 1.0f };
 
@@ -76,24 +75,24 @@ int main()
             camera.aspect = (float)newwidth/(float)newheight;
 
             // cleanup
-            material->cleanup();
+            mvCleanupMaterial(material);
             mvCleanupDrawable(cube1);
             mvCleanupDrawable(quad1);
             GContext->viewport.width = newwidth;
             GContext->viewport.height = newheight;
             mvRecreateSwapChain();
-            imgui.resize();
+            mvResizeImGui();
 
             // recreation
             auto newquad1 = mvCreateTexturedQuad("../../Resources/brickwall.jpg");
             auto newcube1 = mvCreateTexturedCube("../../Resources/brickwall.jpg");
-
+            
             quad1.indexBuffer = newquad1.indexBuffer;
             quad1.vertexBuffer = newquad1.vertexBuffer;
             cube1.indexBuffer = newcube1.indexBuffer;
             cube1.vertexBuffer = newcube1.vertexBuffer;
 
-            material = std::make_shared<mvMaterial>();
+            material = mvCreateMaterial();
 
             GContext->viewport.resized = false;
 
@@ -128,18 +127,18 @@ int main()
         auto currentCommandBuffer = mvGetCurrentCommandBuffer();
 
         BeginPass(currentCommandBuffer, GContext->graphics.renderPass);
-        imgui.beginFrame();
+        mvBeginImGuiFrame();
 
         glm::mat4 viewMatrix = mvBuildCameraMatrix(camera);
         glm::mat4 projMatrix = mvBuildProjectionMatrix(camera);
 
-        material->bind(0, mat1);
-        RenderDrawable(cube1, material->getPipeline(), 0, {}, viewMatrix, projMatrix);
+        mvBind(material, 0, mat1);
+        RenderDrawable(cube1, material.pipeline, 0, {}, viewMatrix, projMatrix);
 
-        material->bind(1, mat2);
-        RenderDrawable(quad1, material->getPipeline(), 1, {}, viewMatrix, projMatrix);
+        mvBind(material, 1, mat2);
+        RenderDrawable(quad1, material.pipeline, 1, {}, viewMatrix, projMatrix);
 
-        imgui.endFrame();
+        mvEndImGuiFrame();
         EndPass(currentCommandBuffer);
 
         //---------------------------------------------------------------------
@@ -149,10 +148,10 @@ int main()
         mvPresent();
     }
 
-    material->cleanup();
+    mvCleanupMaterial(material);
     mvCleanupDrawable(cube1);
     mvCleanupDrawable(quad1);
-    imgui.cleanup();
+    mvCleanupImGui();
     mvCleanupGraphicsContext();
     DestroyContext();
 }

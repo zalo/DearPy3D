@@ -324,14 +324,12 @@ namespace DearPy3D {
             else
                 createInfo.enabledLayerCount = 0;
 
-            std::cout << "here2" << std::endl;
             auto code = vkCreateDevice(mvGetPhysicalDevice(), &createInfo, nullptr, &GContext->graphics.logicalDevice);
             if (code != VK_SUCCESS)
             {
                 std::cout << code<< std::endl;
                 throw std::runtime_error("failed to create logical device!");
             }
-            std::cout << "here3" << std::endl;
         }
 
         vkGetDeviceQueue(mvGetLogicalDevice(), indices.graphicsFamily.value(), 0, &GContext->graphics.graphicsQueue);

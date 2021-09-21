@@ -5,7 +5,7 @@
 
 namespace DearPy3D {
 
-	mvImGuiManager::mvImGuiManager(GLFWwindow* window)
+    void mvSetupImGui(GLFWwindow* window)
 	{
 
         // Setup Dear ImGui context
@@ -44,27 +44,27 @@ namespace DearPy3D {
 
 	}
 
-	void mvImGuiManager::cleanup()
+    void mvCleanupImGui()
 	{
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
 	}
 
-    void mvImGuiManager::resize()
+    void mvResizeImGui()
     {
         vkDeviceWaitIdle(mvGetLogicalDevice());
         ImGui_ImplVulkan_SetMinImageCount(GContext->graphics.minImageCount);
     }
 
-	void mvImGuiManager::beginFrame() const
+    void mvBeginImGuiFrame()
 	{
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 	}
 
-	void mvImGuiManager::endFrame() const
+    void mvEndImGuiFrame()
 	{
         ImGui::Render();
 

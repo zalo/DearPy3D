@@ -5,10 +5,13 @@
 
 namespace DearPy3D {
 
-	mvMaterialBuffer::mvMaterialBuffer()
+	mvMaterialBuffer mvCreateMaterialBuffer()
 	{
-		_buffer.resize(3);
-		_bufferMemory.resize(3);
+
+		mvMaterialBuffer material{};
+
+		material.buffer.resize(3);
+		material.bufferMemory.resize(3);
 		for (int i = 0; i < 3; i++)
 		{
 			VkBufferCreateInfo bufferInfo{};
@@ -17,11 +20,11 @@ namespace DearPy3D {
 			bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 			bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-			if (vkCreateBuffer(mvGetLogicalDevice(), &bufferInfo, nullptr, &_buffer[i]) != VK_SUCCESS)
+			if (vkCreateBuffer(mvGetLogicalDevice(), &bufferInfo, nullptr, &material.buffer[i]) != VK_SUCCESS)
 				throw std::runtime_error("failed to create buffer!");
 
 			VkMemoryRequirements memRequirements;
-			vkGetBufferMemoryRequirements(mvGetLogicalDevice(), _buffer[i], &memRequirements);
+			vkGetBufferMemoryRequirements(mvGetLogicalDevice(), material.buffer[i], &memRequirements);
 
 			VkMemoryAllocateInfo allocInfo{};
 			allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -29,29 +32,31 @@ namespace DearPy3D {
 			allocInfo.memoryTypeIndex = mvFindMemoryType(mvGetPhysicalDevice(), 
 				memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-			if (vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &_bufferMemory[i]) != VK_SUCCESS)
+			if (vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &material.bufferMemory[i]) != VK_SUCCESS)
 				throw std::runtime_error("failed to allocate buffer memory!");
 
-			vkBindBufferMemory(mvGetLogicalDevice(), _buffer[i], _bufferMemory[i], 0);
+			vkBindBufferMemory(mvGetLogicalDevice(), material.buffer[i], material.bufferMemory[i], 0);
 		}
+
+		return material;
 	}
 
-	void mvMaterialBuffer::bind(mvMaterialData data, uint32_t index)
+	void mvBind(mvMaterialBuffer& material, mvMaterialData data, uint32_t index)
 	{
 		size_t offset_size = mvGetRequiredUniformBufferSize(sizeof(mvMaterialData));
 		auto cindex = GContext->graphics.currentImageIndex;
 		void* udata;
-		vkMapMemory(mvGetLogicalDevice(), _bufferMemory[cindex], offset_size * index, offset_size, 0, &udata);
+		vkMapMemory(mvGetLogicalDevice(), material.bufferMemory[cindex], offset_size * index, offset_size, 0, &udata);
 		memcpy(udata, &data, sizeof(mvMaterialData));
-		vkUnmapMemory(mvGetLogicalDevice(), _bufferMemory[cindex]);
+		vkUnmapMemory(mvGetLogicalDevice(), material.bufferMemory[cindex]);
 	}
 
-	void mvMaterialBuffer::cleanup()
+	void mvCleanupMaterialBuffer(mvMaterialBuffer& material)
 	{
 		for (int i = 0; i < 3; i++)
 		{
-			vkDestroyBuffer(mvGetLogicalDevice(), _buffer[i], nullptr);
-			vkFreeMemory(mvGetLogicalDevice(), _bufferMemory[i], nullptr);
+			vkDestroyBuffer(mvGetLogicalDevice(), material.buffer[i], nullptr);
+			vkFreeMemory(mvGetLogicalDevice(), material.bufferMemory[i], nullptr);
 		}
 	}
 }
