@@ -1,6 +1,5 @@
 #include "mvPointLight.h"
 #include "mvContext.h"
-#include "mvGraphicsContext.h"
 
 namespace DearPy3D {
 

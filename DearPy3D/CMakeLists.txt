@@ -15,20 +15,20 @@ target_sources(dearpy3d
 		"core/mvTimer.cpp"
 
 		# geometry
-		"geometry/Sphere.cpp"
+		"geometry/mvSphere.cpp"
 
 		# utilities
 		"utilities/mvImporter.cpp"
 
 		# renderer
+		"renderer/mvRenderer.cpp"
 		"renderer/mvMaterial.cpp"
 		"renderer/mvPointLight.cpp"
 		"renderer/mvDeletionQueue.cpp"
 		"renderer/mvAllocator.cpp"
 		"renderer/mvObjMaterial.cpp"
-		"renderer/mvGraphicsContext.cpp"
+		"renderer/mvGraphics.cpp"
 		"renderer/mvCamera.cpp"
-		"renderer/mvImGuiManager.cpp"
 
 		# pipeline
 		"renderer/pipeline/mvPipeline.cpp"
