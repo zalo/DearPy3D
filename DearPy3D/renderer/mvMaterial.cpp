@@ -11,13 +11,15 @@ namespace DearPy3D {
 
 		_materialBuffer = std::make_shared<mvMaterialBuffer>();
 
-		auto vlayout = mvVertexLayout();
-		vlayout.append(ElementType::Position3D);
-		vlayout.append(ElementType::Normal);
-		vlayout.append(ElementType::Tangent);
-		vlayout.append(ElementType::Bitangent);
-		vlayout.append(ElementType::Texture2D);
-
+		auto vlayout = mvCreateVertexLayout(
+			{
+				mvVertexElementType::Position3D,
+				mvVertexElementType::Normal,
+				mvVertexElementType::Tangent,
+				mvVertexElementType::Bitangent,
+				mvVertexElementType::Texture2D 
+			}
+		);
 		_sampler = std::make_shared<mvSampler>();
 		_texture = mvCreateTexture("../../Resources/brickwall.jpg");
 

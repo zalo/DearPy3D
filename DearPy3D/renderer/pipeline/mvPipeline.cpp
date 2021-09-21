@@ -55,8 +55,8 @@ namespace DearPy3D {
         inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-        auto attributeDescriptions = _layout.getAttributeDescriptions();
-        auto bindingDescriptions = _layout.getBindingDescriptions();
+        auto attributeDescriptions = _layout.attributeDescriptions;
+        auto bindingDescriptions = _layout.bindingDescriptions;
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
