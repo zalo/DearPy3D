@@ -5,26 +5,12 @@
 
 namespace DearPy3D {
 
-	//-----------------------------------------------------------------------------
-	// forward declarations
-	//-----------------------------------------------------------------------------
-	class mvGraphics;
-
-	//-----------------------------------------------------------------------------
-	// mvSampler
-	//-----------------------------------------------------------------------------
-	class mvSampler
+	struct mvSampler
 	{
-
-	public:
-
-		mvSampler();
-		void cleanup();
-		VkSampler getSampler() { return _textureSampler; }
-
-	private:
-
-		VkSampler _textureSampler;
+		VkSampler textureSampler;
 	};
+
+	mvSampler mvCreateSampler();
+	void      mvCleanupSampler(mvSampler& sampler);
 
 }

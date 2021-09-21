@@ -16,7 +16,7 @@ using namespace DearPy3D;
 // forward declarations
 void BeginPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass);
 void EndPass(VkCommandBuffer commandBuffer);
-void RenderDrawable(mvDrawable& drawable, mvPipeline& pipeline, uint32_t index, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection);
+void RenderDrawable(const mvDrawable& drawable, const mvPipeline& pipeline, uint32_t index, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection);
 
 int main() 
 {
@@ -157,14 +157,14 @@ int main()
     DestroyContext();
 }
 
-void RenderDrawable(mvDrawable& drawable, mvPipeline& pipeline, uint32_t index, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection)
+void RenderDrawable(const mvDrawable& drawable, const mvPipeline& pipeline, uint32_t index, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection)
 {
     vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), drawable.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
     VkBuffer vertexBuffers[] = { drawable.vertexBuffer.buffer };
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, vertexBuffers, offsets);
 
-    pipeline.bind(index);
+    mvBind(pipeline, index);
 
     glm::mat4 localTransform = glm::translate(glm::vec3{drawable.pos.x, drawable.pos.y, drawable.pos.z}) *
         glm::rotate(drawable.rot.x, glm::vec3{1.0f, 0.0f, 0.0f }) *
@@ -177,7 +177,7 @@ void RenderDrawable(mvDrawable& drawable, mvPipeline& pipeline, uint32_t index, 
 
     vkCmdPushConstants(
         GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex],
-        pipeline.getLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
+        pipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
     mvDraw(drawable.indexBuffer.indices.size());
 }

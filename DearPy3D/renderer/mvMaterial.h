@@ -5,6 +5,7 @@
 #include "mvDeletionQueue.h"
 #include "mvMaterialBuffer.h"
 #include "mvTexture.h"
+#include "mvSampler.h"
 
 namespace DearPy3D {
 
@@ -21,15 +22,15 @@ namespace DearPy3D {
 
 		void bind(uint32_t index, mvMaterialBuffer::mvMaterialData data);
 		void cleanup();
-		mvPipeline& getPipeline() const { return *_pipeline; }
+		const mvPipeline& getPipeline() const { return _pipeline; }
 		void setOffsetIndex(uint32_t index) { _offsetIndex = index; }
 
 	private:
 
 		mvDeletionQueue                    _deletionQueue;
-		std::shared_ptr<mvPipeline>        _pipeline;
+		mvPipeline                         _pipeline;
 		mvTexture                          _texture;
-		std::shared_ptr<mvSampler>         _sampler;
+		mvSampler                          _sampler;
 		uint32_t                           _offsetIndex = 0u;
 		std::shared_ptr<mvMaterialBuffer>  _materialBuffer;
 

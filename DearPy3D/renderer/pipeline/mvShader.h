@@ -5,27 +5,12 @@
 
 namespace DearPy3D {
 
-	//---------------------------------------------------------------------
-	// forward declarations
-	//---------------------------------------------------------------------
-	class mvGraphics;
-
-	//---------------------------------------------------------------------
-	// mvShader
-	//---------------------------------------------------------------------
-	class mvShader
+	struct mvShader
 	{
-
-	public:
-
-		mvShader(const std::string& file);
-
-		VkShaderModule getShaderModule() const;
-
-	private:
-
-		VkShaderModule _shaderModule = VK_NULL_HANDLE;
-
+		std::string    file;
+		VkShaderModule shaderModule = VK_NULL_HANDLE;
 	};
+
+	mvShader mvCreateShader(const std::string& file);
 
 }

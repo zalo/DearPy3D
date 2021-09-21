@@ -20,8 +20,8 @@ namespace DearPy3D {
 				mvVertexElementType::Texture2D 
 			}
 		);
-		_sampler = std::make_shared<mvSampler>();
 		_texture = mvCreateTexture("../../Resources/brickwall.jpg");
+		_sampler = mvCreateSampler();
 
 		//-----------------------------------------------------------------------------
 		// create descriptor set layout
@@ -78,7 +78,7 @@ namespace DearPy3D {
 			VkDescriptorImageInfo imageInfo{};
 			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			imageInfo.imageView = _texture.textureImageView;
-			imageInfo.sampler = _sampler->getSampler();
+			imageInfo.sampler = _sampler.textureSampler;
 
 			descriptorWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[i].dstSet = descriptorSets[i];
@@ -104,16 +104,15 @@ namespace DearPy3D {
 
 		vkUpdateDescriptorSets(mvGetLogicalDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 
-		_pipeline = std::make_shared<mvPipeline>();
-		_pipeline->setVertexLayout(vlayout);
-		_pipeline->setVertexShader("../../DearPy3D/shaders/vs_shader.vert.spv");
-		_pipeline->setFragmentShader("../../DearPy3D/shaders/ps_shader.frag.spv");
-		_pipeline->setDescriptorSetLayouts(descriptorSetLayouts);
-		_pipeline->setDescriptorSets(descriptorSets);
-		_pipeline->finalize();
+		_pipeline.layout = vlayout;
+		_pipeline.vertexShader = mvCreateShader("../../DearPy3D/shaders/vs_shader.vert.spv");
+		_pipeline.fragShader = mvCreateShader("../../DearPy3D/shaders/ps_shader.frag.spv");
+		_pipeline.descriptorSetLayouts = descriptorSetLayouts;
+		_pipeline.descriptorSets = descriptorSets;
+		mvFinalizePipeline(_pipeline);
 
 		_deletionQueue.pushDeletor([=]() {
-			_sampler->cleanup();
+			mvCleanupSampler(_sampler);
 			mvCleanupTexture(_texture);
 			_materialBuffer->cleanup();
 			});
