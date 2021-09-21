@@ -1,14 +1,16 @@
 #include "mvVertexBuffer.h"
 #include <stdexcept>
-#include "mvGraphics.h"
+#include "mvContext.h"
 
 namespace DearPy3D {
 
-    mvVertexBuffer::mvVertexBuffer(const std::vector<float>& vbuf)
-        :
-        _vertices(vbuf)
+    mvVertexBuffer mvCreateVertexBuffer(const std::vector<float>& vbuf)
 	{
-        VkDeviceSize bufferSize = sizeof(float) * _vertices.size();
+
+        mvVertexBuffer buffer{};
+        buffer.vertices = vbuf;
+
+        VkDeviceSize bufferSize = sizeof(float) * buffer.vertices.size();
 
         auto allocator = mvAllocator();
 
@@ -24,7 +26,7 @@ namespace DearPy3D {
             VMA_MEMORY_USAGE_CPU_TO_GPU, stagingBuffer);
 
         float* data = allocator.mapMemory<float>(stagingBufferAllocation);
-        memcpy(data, _vertices.data(), (size_t)bufferSize);
+        memcpy(data, buffer.vertices.data(), (size_t)bufferSize);
         allocator.unmapMemory(stagingBufferAllocation);
 
         VkBufferCreateInfo indexBufferInfo{};
@@ -32,20 +34,20 @@ namespace DearPy3D {
         indexBufferInfo.size = bufferSize;
         indexBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
-        _memoryAllocation = allocator.allocateBuffer(indexBufferInfo, VMA_MEMORY_USAGE_GPU_ONLY, _vertexBuffer);
+        buffer.memoryAllocation = allocator.allocateBuffer(indexBufferInfo, VMA_MEMORY_USAGE_GPU_ONLY, buffer.buffer);
 
-        VkCommandBuffer copyCmd = mvGraphics::GetContext().getLogicalDevice().beginSingleTimeCommands();
+        VkCommandBuffer copyCmd = mvBeginSingleTimeCommands();
 
         VkBufferCopy copyRegion = {};
         copyRegion.size = bufferSize;
         vkCmdCopyBuffer(
             copyCmd,
             stagingBuffer,
-            _vertexBuffer,
+            buffer.buffer,
             1,
             &copyRegion);
 
-        mvGraphics::GetContext().getLogicalDevice().endSingleTimeCommands(copyCmd);
+        mvEndSingleTimeCommands(copyCmd);
 
         allocator.destroyBuffer(stagingBuffer, stagingBufferAllocation);
 
@@ -53,19 +55,14 @@ namespace DearPy3D {
         //info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
         //info.pObjectName = "vertex buffer man";
         //vkSetDebugUtilsObjectNameEXT(graphics.getDevice(), &info);
+
+        return buffer;
 	}
 
-    void mvVertexBuffer::bind()
-    {
-        VkBuffer vertexBuffers[] = { _vertexBuffer };
-        VkDeviceSize offsets[] = { 0 };
-        vkCmdBindVertexBuffers(mvGraphics::GetContext().getSwapChain().getCurrentCommandBuffer(), 0, 1, vertexBuffers, offsets);
-    }
-
-    void mvVertexBuffer::cleanup()
+    void mvCleanupVertexBuffer(mvVertexBuffer& buffer)
     {
         auto allocator = mvAllocator();
-        vkDestroyBuffer(mvGraphics::GetContext().getLogicalDevice(), _vertexBuffer, nullptr);
-        allocator.free(_memoryAllocation);
+        vkDestroyBuffer(mvGetLogicalDevice(), buffer.buffer, nullptr);
+        allocator.free(buffer.memoryAllocation);
     }
 }

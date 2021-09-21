@@ -8,8 +8,10 @@ target_sources(dearpy3d
 
 	PRIVATE
 
+		"mvContext.cpp"
+
 		# core
-		"core/mvWindow.cpp"
+		"core/mvViewport.cpp"
 		"core/mvTimer.cpp"
 
 		# geometry
@@ -20,17 +22,13 @@ target_sources(dearpy3d
 
 		# renderer
 		"renderer/mvMaterial.cpp"
-		"renderer/mvRenderer.cpp"
 		"renderer/mvPointLight.cpp"
 		"renderer/mvDeletionQueue.cpp"
 		"renderer/mvAllocator.cpp"
 		"renderer/mvObjMaterial.cpp"
-		"renderer/mvGraphics.cpp"
+		"renderer/mvGraphicsContext.cpp"
 		"renderer/mvCamera.cpp"
 		"renderer/mvImGuiManager.cpp"
-		"renderer/mvPhysicalDevice.cpp"
-		"renderer/mvLogicalDevice.cpp"
-		"renderer/mvSwapChain.cpp"
 
 		# pipeline
 		"renderer/pipeline/mvPipeline.cpp"
@@ -44,7 +42,7 @@ target_sources(dearpy3d
 		"renderer/buffers/mvMaterialBuffer.cpp"
 
 		# bindables
-		"renderer/bindables/mvTexture.cpp"
+		"renderer/mvTexture.cpp"
 		
 		# drawables
 		"renderer/drawables/mvDrawable.cpp"
@@ -70,6 +68,7 @@ target_include_directories(dearpy3d
 
 	PRIVATE
 
+		"."
 		"core/"
 		"geometry/"
 		"utilities/"

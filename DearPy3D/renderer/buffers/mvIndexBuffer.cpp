@@ -1,14 +1,15 @@
 #include "mvIndexBuffer.h"
 #include <stdexcept>
-#include "mvGraphics.h"
+#include "mvContext.h"
 
 namespace DearPy3D {
 
-	mvIndexBuffer::mvIndexBuffer(const std::vector<uint16_t>& ibuf)
+	mvIndexBuffer mvCreateIndexBuffer(const std::vector<uint16_t>& ibuf)
 	{
-        _indices = ibuf;
+        mvIndexBuffer buffer{};
+        buffer.indices = ibuf;
 
-        VkDeviceSize bufferSize = sizeof(_indices[0]) * _indices.size();
+        VkDeviceSize bufferSize = sizeof(buffer.indices[0]) * buffer.indices.size();
 
         auto allocator = mvAllocator();
 
@@ -24,7 +25,7 @@ namespace DearPy3D {
             VMA_MEMORY_USAGE_CPU_TO_GPU, stagingBuffer);
 
         uint16_t* data = allocator.mapMemory<uint16_t>(stagingBufferAllocation);
-        memcpy(data, _indices.data(), (size_t)bufferSize);
+        memcpy(data, buffer.indices.data(), (size_t)bufferSize);
         allocator.unmapMemory(stagingBufferAllocation);
 
         VkBufferCreateInfo indexBufferInfo{};
@@ -32,39 +33,31 @@ namespace DearPy3D {
         indexBufferInfo.size = bufferSize;
         indexBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 
-        _memoryAllocation = allocator.allocateBuffer(indexBufferInfo, VMA_MEMORY_USAGE_GPU_ONLY, _indexBuffer);
+        buffer.memoryAllocation = allocator.allocateBuffer(indexBufferInfo, VMA_MEMORY_USAGE_GPU_ONLY, buffer.buffer);
 
-        VkCommandBuffer copyCmd = mvGraphics::GetContext().getLogicalDevice().beginSingleTimeCommands();
+        VkCommandBuffer copyCmd = mvBeginSingleTimeCommands();
 
         VkBufferCopy copyRegion = {};
         copyRegion.size = bufferSize;
         vkCmdCopyBuffer(
             copyCmd,
             stagingBuffer,
-            _indexBuffer,
+            buffer.buffer,
             1,
             &copyRegion);
 
-        mvGraphics::GetContext().getLogicalDevice().endSingleTimeCommands(copyCmd);
+        mvEndSingleTimeCommands(copyCmd);
 
         allocator.destroyBuffer(stagingBuffer, stagingBufferAllocation);
+
+        return buffer;
 	}
 
-    uint32_t mvIndexBuffer::getVertexCount()
-    {
-        return _indices.size();
-    }
-
-    void mvIndexBuffer::bind()
-    {
-        vkCmdBindIndexBuffer(mvGraphics::GetContext().getSwapChain().getCurrentCommandBuffer(), _indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-    }
-
-    void mvIndexBuffer::cleanup()
+    void mvCleanupIndexBuffer(mvIndexBuffer& buffer)
     {
         auto allocator = mvAllocator();
-        vkDestroyBuffer(mvGraphics::GetContext().getLogicalDevice(), _indexBuffer, nullptr);
-        allocator.free(_memoryAllocation);
+        vkDestroyBuffer(mvGetLogicalDevice(), buffer.buffer, nullptr);
+        allocator.free(buffer.memoryAllocation);
     }
 
 }

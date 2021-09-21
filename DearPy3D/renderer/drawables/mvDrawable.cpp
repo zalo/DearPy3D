@@ -1,23 +1,20 @@
 #include "mvDrawable.h"
-#include "mvGraphics.h"
+#include "mvContext.h"
 
 namespace DearPy3D {
 
-	void mvDrawable::cleanup()
-	{
-		vkDeviceWaitIdle(mvGraphics::GetContext().getLogicalDevice());
-		_deletionQueue.flush();
-	}
 
-	void mvDrawable::bind() const
-	{
-		_indexBuffer->bind();
-		_vertexBuffer->bind();
-	}
+    void mvCleanupDrawable(mvDrawable& drawable)
+    {
+        mvCleanupIndexBuffer(drawable.indexBuffer);
+        drawable.indexBuffer.buffer = VK_NULL_HANDLE;
+        drawable.indexBuffer.memoryAllocation = VK_NULL_HANDLE;
+        drawable.indexBuffer.indices.clear();
 
-	uint32_t mvDrawable::getVertexCount() const
-	{
-		return _indexBuffer->getVertexCount();
-	}
-
+        mvCleanupVertexBuffer(drawable.vertexBuffer);
+        drawable.vertexBuffer.buffer = VK_NULL_HANDLE;
+        drawable.vertexBuffer.memoryAllocation = VK_NULL_HANDLE;
+        drawable.vertexBuffer.vertices.clear();
+    }
+    
 }

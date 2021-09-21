@@ -1,7 +1,7 @@
 #include "mvShader.h"
 #include <fstream>
 #include <stdexcept>
-#include "mvGraphics.h"
+#include "mvContext.h"
 
 static std::vector<char> readFile(const std::string& filename)
 {
@@ -23,8 +23,11 @@ static std::vector<char> readFile(const std::string& filename)
 
 namespace DearPy3D {
 
-	mvShader::mvShader(const std::string& file)
+    mvShader mvCreateShader(const std::string& file)
 	{
+        mvShader shader{};
+        shader.file = file;
+
         auto shaderCode = readFile(file);
 
         VkShaderModuleCreateInfo createInfo{};
@@ -33,13 +36,10 @@ namespace DearPy3D {
         createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
         VkShaderModule shaderModule;
-        if (vkCreateShaderModule(mvGraphics::GetContext().getLogicalDevice(), &createInfo, nullptr, &_shaderModule) != VK_SUCCESS)
+        if (vkCreateShaderModule(mvGetLogicalDevice(), &createInfo, nullptr, &shader.shaderModule) != VK_SUCCESS)
             throw std::runtime_error("failed to create shader module!");
-	}
 
-    VkShaderModule mvShader::getShaderModule() const
-    {
-        return _shaderModule;
-    }
+        return shader;
+	}
 
 }

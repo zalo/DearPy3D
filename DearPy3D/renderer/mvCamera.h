@@ -4,33 +4,20 @@
 
 namespace DearPy3D {
 
-	class mvGraphics;
+   static constexpr float CameraTravelSpeed = 12.0f;
+   static constexpr float CameraRotationSpeed = 0.004f;
 
-	class mvCamera 
-	{
+    struct mvCamera
+    {
+        glm::vec3 pos;
+        float pitch = 0.0f;
+        float yaw = 0.0f;
+        float aspect = 1.0f;
+    };
 
-	public:
-
-		mvCamera(float width, float height, glm::vec3 homePos = { 0.0f,0.0f, 0.0f });
-
-		void rotate(float dx, float dy);
-		void translate(float dx, float dy, float dz);
-		void updateProjection(float width, float height);
-
-		glm::mat4 getMatrix() const;
-		glm::mat4 getProjection() const;
-
-	private:
-
-		glm::vec3 _pos;
-		float     _pitch = 0.0f;
-		float     _yaw = 0.0f;
-		float     _width = 0.0f;
-		float     _height = 0.0f;
-
-		static constexpr float s_travelSpeed = 12.0f;
-		static constexpr float s_rotationSpeed = 0.004f;
-
-	};
+    glm::mat4 mvBuildCameraMatrix    (const mvCamera& camera);
+    glm::mat4 mvBuildProjectionMatrix(const mvCamera& camera);
+    void      mvRotateCamera         (mvCamera& camera, float dx, float dy);
+    void      mvTranslateCamera      (mvCamera& camera, float dx, float dy, float dz);
 
 }

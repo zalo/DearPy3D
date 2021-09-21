@@ -1,11 +1,11 @@
 #include "mvImGuiManager.h"
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
-#include "mvGraphics.h"
+#include "mvContext.h"
 
 namespace DearPy3D {
 
-	mvImGuiManager::mvImGuiManager(GLFWwindow* window)
+    void mvSetupImGui(GLFWwindow* window)
 	{
 
         // Setup Dear ImGui context
@@ -20,58 +20,58 @@ namespace DearPy3D {
         // Setup Platform/Renderer backends
         ImGui_ImplGlfw_InitForVulkan(window, true);
         ImGui_ImplVulkan_InitInfo init_info = {};
-        init_info.Instance = mvGraphics::GetContext().getInstance();
-        init_info.PhysicalDevice = mvGraphics::GetContext().getPhysicalDevice();
-        init_info.Device = mvGraphics::GetContext().getLogicalDevice();
-        init_info.QueueFamily = mvGraphics::GetContext().getLogicalDevice().getGraphicsQueueFamily();
-        init_info.Queue = mvGraphics::GetContext().getLogicalDevice().getGraphicsQueue();
+        init_info.Instance = mvGetVkInstance();
+        init_info.PhysicalDevice = mvGetPhysicalDevice();
+        init_info.Device = mvGetLogicalDevice();
+        init_info.QueueFamily = GContext->graphics.graphicsQueueFamily;
+        init_info.Queue = GContext->graphics.graphicsQueue;
         init_info.PipelineCache = nullptr;
-        init_info.DescriptorPool = mvGraphics::GetContext().getDescriptorPool();
+        init_info.DescriptorPool = GContext->graphics.descriptorPool;
         init_info.Allocator = nullptr;
-        init_info.MinImageCount = mvGraphics::GetContext().getSwapChain().getMinImageCount();
-        init_info.ImageCount = mvGraphics::GetContext().getSwapChain().getMinImageCount();
+        init_info.MinImageCount = GContext->graphics.minImageCount;
+        init_info.ImageCount = GContext->graphics.minImageCount;
         init_info.CheckVkResultFn = nullptr;
-        ImGui_ImplVulkan_Init(&init_info, mvGraphics::GetContext().getSwapChain().getRenderPass());
+        ImGui_ImplVulkan_Init(&init_info, GContext->graphics.renderPass);
 
         // Upload Fonts
         {
             // Use any command queue
-            VkCommandBuffer command_buffer = mvGraphics::GetContext().getLogicalDevice().beginSingleTimeCommands();
+            VkCommandBuffer command_buffer = mvBeginSingleTimeCommands();
             ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
-            mvGraphics::GetContext().getLogicalDevice().endSingleTimeCommands(command_buffer);
+            mvEndSingleTimeCommands(command_buffer);
             ImGui_ImplVulkan_DestroyFontUploadObjects();
         }
 
 	}
 
-	void mvImGuiManager::cleanup()
+    void mvCleanupImGui()
 	{
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
 	}
 
-    void mvImGuiManager::resize()
+    void mvResizeImGui()
     {
-        vkDeviceWaitIdle(mvGraphics::GetContext().getLogicalDevice());
-        ImGui_ImplVulkan_SetMinImageCount(mvGraphics::GetContext().getSwapChain().getMinImageCount());
+        vkDeviceWaitIdle(mvGetLogicalDevice());
+        ImGui_ImplVulkan_SetMinImageCount(GContext->graphics.minImageCount);
     }
 
-	void mvImGuiManager::beginFrame() const
+    void mvBeginImGuiFrame()
 	{
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 	}
 
-	void mvImGuiManager::endFrame() const
+    void mvEndImGuiFrame()
 	{
         ImGui::Render();
 
         ImDrawData* main_draw_data = ImGui::GetDrawData();
 
         // Record dear imgui primitives into command buffer
-        ImGui_ImplVulkan_RenderDrawData(main_draw_data, mvGraphics::GetContext().getSwapChain().getCurrentCommandBuffer());
+        ImGui_ImplVulkan_RenderDrawData(main_draw_data, mvGetCurrentCommandBuffer());
 	}
 
 }

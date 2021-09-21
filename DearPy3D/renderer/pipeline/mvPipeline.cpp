@@ -1,52 +1,20 @@
 #include "mvPipeline.h"
 #include <stdexcept>
-#include "mvGraphics.h"
+#include "mvContext.h"
 
 namespace DearPy3D {
 
-	void mvPipeline::setVertexLayout(mvVertexLayout layout)
-	{
-		_layout = layout;
-	}
-
-	void mvPipeline::setVertexShader(const std::string& file)
-	{
-        _vertexShader = std::make_unique<mvShader>(file);
-	}
-
-	void mvPipeline::setFragmentShader(const std::string& file)
-	{
-		_fragShader = std::make_unique<mvShader>(file);
-	}
-
-    void mvPipeline::setDescriptorSetLayouts(std::vector<VkDescriptorSetLayout> layouts)
-    {
-        _descriptorSetLayouts = layouts;
-    }
-
-    void mvPipeline::setDescriptorSets(std::vector<VkDescriptorSet> descriptorSets)
-    {
-        _descriptorSets = descriptorSets;
-    }
-
-    void mvPipeline::bind(uint32_t index)
+    void mvBind(const mvPipeline& pipeline, uint32_t index)
     {
 
-        // todo: handle this
-        uint32_t uniform_offset = index * 256;
-        vkCmdBindDescriptorSets(mvGraphics::GetContext().getSwapChain().getCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
-            _pipelineLayout, 0, 1, _descriptorSets.data(), 1, &uniform_offset);
+        uint32_t uniform_offset = index * GContext->graphics.deviceProperties.limits.minUniformBufferOffsetAlignment;
+        vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
+            pipeline.pipelineLayout, 0, 1, pipeline.descriptorSets.data(), 1, &uniform_offset);
 
-        vkCmdBindPipeline(mvGraphics::GetContext().getSwapChain().getCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
+        vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
     }
 
-    void mvPipeline::finish()
-    {
-        vkDestroyPipeline(mvGraphics::GetContext().getLogicalDevice(), _pipeline, nullptr);
-        vkDestroyPipelineLayout(mvGraphics::GetContext().getLogicalDevice(), _pipelineLayout, nullptr);
-    }
-
-	void mvPipeline::finalize()
+	void mvFinalizePipeline(mvPipeline& pipeline)
 	{
         //---------------------------------------------------------------------
         // input assembler stage
@@ -56,8 +24,8 @@ namespace DearPy3D {
         inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-        auto attributeDescriptions = _layout.getAttributeDescriptions();
-        auto bindingDescriptions = _layout.getBindingDescriptions();
+        auto attributeDescriptions = pipeline.layout.attributeDescriptions;
+        auto bindingDescriptions = pipeline.layout.bindingDescriptions;
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -72,7 +40,7 @@ namespace DearPy3D {
         VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
         vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-        vertShaderStageInfo.module = _vertexShader->getShaderModule();
+        vertShaderStageInfo.module = pipeline.vertexShader.shaderModule;
         vertShaderStageInfo.pName = "main";
 
         //---------------------------------------------------------------------
@@ -90,14 +58,14 @@ namespace DearPy3D {
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
-        viewport.width = (float)mvGraphics::GetContext().getSwapChain().getSwapChainExtent().width;
-        viewport.height = (float)mvGraphics::GetContext().getSwapChain().getSwapChainExtent().height;
+        viewport.width = (float)GContext->graphics.swapChainExtent.width;
+        viewport.height = (float)GContext->graphics.swapChainExtent.height;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 
         VkRect2D scissor{};
         scissor.offset = { 0, 0 };
-        scissor.extent = mvGraphics::GetContext().getSwapChain().getSwapChainExtent();
+        scissor.extent = GContext->graphics.swapChainExtent;
 
         VkPipelineViewportStateCreateInfo viewportState{};
         viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -122,7 +90,7 @@ namespace DearPy3D {
         VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
         fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-        fragShaderStageInfo.module = _fragShader->getShaderModule();
+        fragShaderStageInfo.module = pipeline.fragShader.shaderModule;
         fragShaderStageInfo.pName = "main";
 
         VkPipelineDepthStencilStateCreateInfo depthStencil{};
@@ -178,12 +146,12 @@ namespace DearPy3D {
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = _descriptorSetLayouts.size();
+        pipelineLayoutInfo.setLayoutCount = pipeline.descriptorSetLayouts.size();
         pipelineLayoutInfo.pPushConstantRanges = &push_constant;
         pipelineLayoutInfo.pushConstantRangeCount = 1;
-        pipelineLayoutInfo.pSetLayouts = _descriptorSetLayouts.data();
+        pipelineLayoutInfo.pSetLayouts = pipeline.descriptorSetLayouts.data();
 
-        if (vkCreatePipelineLayout(mvGraphics::GetContext().getLogicalDevice(), &pipelineLayoutInfo, nullptr, &_pipelineLayout) != VK_SUCCESS)
+        if (vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipeline.pipelineLayout) != VK_SUCCESS)
             throw std::runtime_error("failed to create pipeline layout!");
 
         //---------------------------------------------------------------------
@@ -202,28 +170,28 @@ namespace DearPy3D {
         pipelineInfo.pRasterizationState = &rasterizer;
         pipelineInfo.pMultisampleState = &multisampling;
         pipelineInfo.pColorBlendState = &colorBlending;
-        pipelineInfo.layout = _pipelineLayout;
-        pipelineInfo.renderPass = mvGraphics::GetContext().getSwapChain().getMainRenderPassInfo().renderPass;
+        pipelineInfo.layout = pipeline.pipelineLayout;
+        pipelineInfo.renderPass = GContext->graphics.renderPass;
         pipelineInfo.subpass = 0;
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineInfo.pDepthStencilState = &depthStencil;
 
-        if (vkCreateGraphicsPipelines(mvGraphics::GetContext().getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline) != VK_SUCCESS)
+        if (vkCreateGraphicsPipelines(mvGetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.pipeline) != VK_SUCCESS)
             throw std::runtime_error("failed to create graphics pipeline!");
 
         // no longer need this
-        vkDestroyShaderModule(mvGraphics::GetContext().getLogicalDevice(), _vertexShader->getShaderModule(), nullptr);
-        vkDestroyShaderModule(mvGraphics::GetContext().getLogicalDevice(), _fragShader->getShaderModule(), nullptr);
-        _vertexShader = nullptr;
-        _fragShader = nullptr;
+        vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.vertexShader.shaderModule, nullptr);
+        vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.fragShader.shaderModule, nullptr);
+        pipeline.vertexShader.shaderModule = VK_NULL_HANDLE;
+        pipeline.fragShader.shaderModule = VK_NULL_HANDLE;
 
-        mvGraphics::GetContext().getDeletionQueue().pushDeletor([=]() {
-            vkDestroyPipeline(mvGraphics::GetContext().getLogicalDevice(), _pipeline, nullptr);
-            vkDestroyPipelineLayout(mvGraphics::GetContext().getLogicalDevice(), _pipelineLayout, nullptr);
-            for(auto descriptorSetLayout : _descriptorSetLayouts)
-                vkDestroyDescriptorSetLayout(mvGraphics::GetContext().getLogicalDevice(), descriptorSetLayout, nullptr);
-            _descriptorSetLayouts.clear();
-            _descriptorSets.clear();
+        GContext->graphics.deletionQueue.pushDeletor([=]() {
+            vkDestroyPipeline(mvGetLogicalDevice(), pipeline.pipeline, nullptr);
+            vkDestroyPipelineLayout(mvGetLogicalDevice(), pipeline.pipelineLayout, nullptr);
+            for(auto descriptorSetLayout : pipeline.descriptorSetLayouts)
+                vkDestroyDescriptorSetLayout(mvGetLogicalDevice(), descriptorSetLayout, nullptr);
+            //pipeline.descriptorSetLayouts.clear();
+            //pipeline.descriptorSets.clear();
             });
 	}
 

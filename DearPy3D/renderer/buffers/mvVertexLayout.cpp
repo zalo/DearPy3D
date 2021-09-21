@@ -2,98 +2,97 @@
 
 namespace DearPy3D {
 
-	mvVertexElement::mvVertexElement(ElementType type)
+	struct mvVertexElement
 	{
-		_type = type;
-		switch (type)
+		int                 itemCount = 0;
+		size_t              size = 0;
+		size_t              offset = 0;
+		VkFormat            format = VK_FORMAT_UNDEFINED;
+		mvVertexElementType type;
+	};
+
+	mvVertexLayout mvCreateVertexLayout(std::vector<mvVertexElementType> elements)
+	{
+		std::vector<mvVertexElement> velements;
+		size_t stride = 0;
+		size_t size = 0;
+
+		for (auto& element : elements)
 		{
+			mvVertexElement newelement;
+			newelement.type = element;
+			switch (element)
+			{
 
-		case ElementType::Position2D:
-			_format = VK_FORMAT_R32G32_SFLOAT;
-			_itemCount = 2;
-			_size = sizeof(float) * 2;
-			break;
+			case mvVertexElementType::Position2D:
+				newelement.format = VK_FORMAT_R32G32_SFLOAT;
+				newelement.itemCount = 2;
+				newelement.size = sizeof(float) * 2;
+				break;
 
-		case ElementType::Position3D:
-			_format = VK_FORMAT_R32G32B32_SFLOAT;
-			_itemCount = 3;
-			_size = sizeof(float) * 3;
-			break;
+			case mvVertexElementType::Position3D:
+				newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
+				newelement.itemCount = 3;
+				newelement.size = sizeof(float) * 3;
+				break;
 
-		case ElementType::Tangent:
-			_format = VK_FORMAT_R32G32B32_SFLOAT;
-			_itemCount = 3;
-			_size = sizeof(float) * 3;
-			break;
+			case mvVertexElementType::Tangent:
+				newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
+				newelement.itemCount = 3;
+				newelement.size = sizeof(float) * 3;
+				break;
 
-		case ElementType::Bitangent:
-			_format = VK_FORMAT_R32G32B32_SFLOAT;
-			_itemCount = 3;
-			_size = sizeof(float) * 3;
-			break;
+			case mvVertexElementType::Bitangent:
+				newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
+				newelement.itemCount = 3;
+				newelement.size = sizeof(float) * 3;
+				break;
 
-		case ElementType::Normal:
-			_format = VK_FORMAT_R32G32B32_SFLOAT;
-			_itemCount = 3;
-			_size = sizeof(float) * 3;
-			break;
+			case mvVertexElementType::Normal:
+				newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
+				newelement.itemCount = 3;
+				newelement.size = sizeof(float) * 3;
+				break;
 
-		case ElementType::Texture2D:
-			_format = VK_FORMAT_R32G32_SFLOAT;
-			_itemCount = 2;
-			_size = sizeof(float) * 2;
-			break;
+			case mvVertexElementType::Texture2D:
+				newelement.format = VK_FORMAT_R32G32_SFLOAT;
+				newelement.itemCount = 2;
+				newelement.size = sizeof(float) * 2;
+				break;
 
-		case ElementType::Color:
-			_format = VK_FORMAT_R32G32B32_SFLOAT;
-			_itemCount = 3;
-			_size = sizeof(float) * 3;
-			break;
+			case mvVertexElementType::Color:
+				newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
+				newelement.itemCount = 3;
+				newelement.size = sizeof(float) * 3;
+				break;
 
+			}
+
+			newelement.offset = stride;
+			stride += newelement.size;
+			velements.push_back(newelement);
 		}
-	}
 
-	void mvVertexLayout::append(ElementType type)
-	{
-		for (const auto& element : _elements)
-		{
-			if (element._type == type)
-				return;
-		}
-		_elements.emplace_back(type);
-		_elements.back()._offset = _stride;
-		_stride += _elements.back()._size;
-		_size += _elements.back()._size;
-	}
+		mvVertexLayout vertexLayout{};
 
-	std::vector<VkVertexInputBindingDescription> mvVertexLayout::getBindingDescriptions() const
-	{
-		std::vector<VkVertexInputBindingDescription> descriptions;
 		VkVertexInputBindingDescription description{};
 		description.binding = 0;
-		description.stride = _stride;
+		description.stride = stride;
 		description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		descriptions.push_back(description);
-		return descriptions;
-	}
-
-	std::vector<VkVertexInputAttributeDescription> mvVertexLayout::getAttributeDescriptions() const
-	{
-		std::vector<VkVertexInputAttributeDescription> descriptions;
+		vertexLayout.bindingDescriptions.push_back(description);
 
 		int index = 0;
-		for (const auto& element : _elements)
+		for (const auto& element : velements)
 		{
 			VkVertexInputAttributeDescription description{};
 			description.binding = 0;
 			description.location = index++;
-			description.format = element._format;
-			description.offset = element._offset;
+			description.format = element.format;
+			description.offset = element.offset;
 
-			descriptions.push_back(description);
+			vertexLayout.attributeDescriptions.push_back(description);
 		}
 
-		return descriptions;
+		return vertexLayout;
 	}
-
 }

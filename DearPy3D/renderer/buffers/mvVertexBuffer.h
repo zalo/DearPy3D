@@ -7,29 +7,14 @@
 
 namespace DearPy3D {
 
-	//---------------------------------------------------------------------
-	// forward declarations
-	//---------------------------------------------------------------------
-	class mvGraphics;
-
-	//---------------------------------------------------------------------
-	// mvVertexBuffer
-	//---------------------------------------------------------------------
-	class mvVertexBuffer
+	struct mvVertexBuffer
 	{
-
-	public:
-
-		mvVertexBuffer(const std::vector<float>& vbuf);
-		void cleanup();
-		void bind();
-
-	private:
-
-		std::vector<float> _vertices;
-		VkBuffer           _vertexBuffer;
-		VmaAllocation      _memoryAllocation;
-
+		std::vector<float> vertices;
+		VkBuffer           buffer = VK_NULL_HANDLE;
+		VmaAllocation      memoryAllocation = VK_NULL_HANDLE;
 	};
+
+	mvVertexBuffer mvCreateVertexBuffer(const std::vector<float>& ibuf);
+	void           mvCleanupVertexBuffer(mvVertexBuffer& buffer);
 
 }

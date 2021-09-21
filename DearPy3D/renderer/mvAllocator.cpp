@@ -1,5 +1,5 @@
 #include "mvAllocator.h"
-#include "mvGraphics.h"
+#include "mvContext.h"
 
 namespace DearPy3D {
 
@@ -14,12 +14,11 @@ namespace DearPy3D {
 		// Initialize VulkanMemoryAllocator
 		VmaAllocatorCreateInfo allocatorInfo = {};
 		allocatorInfo.vulkanApiVersion = 0;
-		allocatorInfo.physicalDevice = mvGraphics::GetContext().getPhysicalDevice();
-		allocatorInfo.device = mvGraphics::GetContext().getLogicalDevice();
-		allocatorInfo.instance = mvGraphics::GetContext().getInstance();
+		allocatorInfo.physicalDevice = mvGetPhysicalDevice();
+		allocatorInfo.device = mvGetLogicalDevice();
+		allocatorInfo.instance = mvGetVkInstance();
 
 		vmaCreateAllocator(&allocatorInfo, &GetVmaAllocator());
-
 	}
 
 	void mvAllocator::Shutdown()
