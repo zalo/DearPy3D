@@ -41,7 +41,7 @@ namespace DearPy3D {
 		GContext->viewport.resized = true;
 	}
 
-	void InitializeViewport(int width, int height)
+	void mvInitializeViewport(int width, int height)
 	{
 		glfwInit();
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -57,7 +57,7 @@ namespace DearPy3D {
 		GContext->viewport.running = true;
 	}
 
-	void ProcessViewportEvents()
+	void mvProcessViewportEvents()
 	{
 		GContext->viewport.deltaX = 0.0;
 		GContext->viewport.deltaY = 0.0;

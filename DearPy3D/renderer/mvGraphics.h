@@ -28,10 +28,7 @@ namespace DearPy3D {
     void mvRecreateSwapChain();
     void mvCleanupGraphicsContext();
 
-    void mvBeginFrame();
-    void mvEndFrame();
     void mvDraw(uint32_t vertexCount);
-    void mvPresent();
 
     // resource utilities
     void          mvCreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
@@ -47,7 +44,7 @@ namespace DearPy3D {
     VkCommandBuffer mvBeginSingleTimeCommands();
     void            mvEndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
-    struct mvGraphicsContext
+    struct mvGraphics
     {
         mvDeletionQueue                deletionQueue;
         const int                      max_frames_in_flight = 2;

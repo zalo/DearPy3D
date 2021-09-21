@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include "mvViewport.h"
-#include "mvGraphicsContext.h"
+#include "mvGraphics.h"
 
 namespace DearPy3D {
 
@@ -26,9 +26,9 @@ namespace DearPy3D {
 
     struct mvContext
     {
-        mvIO              IO;
-        mvViewport        viewport;
-        mvGraphicsContext graphics;
+        mvIO       IO;
+        mvViewport viewport;
+        mvGraphics graphics;
     };
 
     void CreateContext();

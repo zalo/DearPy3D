@@ -4,8 +4,8 @@
 
 namespace DearPy3D {
 
-	void InitializeViewport(int width, int height);
-	void ProcessViewportEvents();
+	void mvInitializeViewport(int width, int height);
+	void mvProcessViewportEvents();
 
 	struct mvViewport
 	{

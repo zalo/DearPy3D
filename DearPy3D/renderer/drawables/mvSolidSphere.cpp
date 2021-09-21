@@ -1,7 +1,7 @@
 #include "mvSolidSphere.h"
 #include "mvTexture.h"
 #include "mvSampler.h"
-#include "Sphere.h"
+#include "mvSphere.h"
 #include <chrono>
 
 namespace DearPy3D {
@@ -12,7 +12,7 @@ namespace DearPy3D {
         std::vector<float> vertices;
         std::vector<uint16_t> indices;
         std::vector<float> normals;
-        Sphere sphere(0.25f);
+        mvSphere sphere = mvCreateSphere(0.25f);
 
         vertices = sphere.vertices;
         indices = sphere.indices;

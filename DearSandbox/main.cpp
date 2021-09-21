@@ -1,34 +1,22 @@
-#include "mvGraphicsContext.h"
+#include "mvContext.h"
 #include "mvTexturedQuad.h"
 #include "mvCube.h"
 #include "mvCamera.h"
 #include "mvTimer.h"
 #include "mvPointLight.h"
 #include "mvMaterial.h"
-#include "mvImGuiManager.h"
 #include "mvContext.h"
 #include <iostream>
-#include <array>
 #include "mvMath.h"
+#include "mvRenderer.h"
 
 using namespace DearPy3D;
-
-// forward declarations
-void BeginPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass);
-void EndPass(VkCommandBuffer commandBuffer);
-void RenderDrawable(const mvDrawable& drawable, const mvPipeline& pipeline, uint32_t index, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection);
 
 int main() 
 {
     CreateContext();
-    InitializeViewport(500, 500);
     
-    // graphics
-    GContext->graphics.enableValidationLayers = true;
-    GContext->graphics.validationLayers = { "VK_LAYER_KHRONOS_validation" };
-    GContext->graphics.deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-    mvSetupGraphicsContext();
-    mvSetupImGui(GContext->viewport.handle);
+    Renderer::mvStartRenderer();
 
     mvCamera camera{};
     camera.pos = glm::vec3{5.0f, 5.0f, -15.0f};
@@ -56,7 +44,7 @@ int main()
     {
         const auto dt = timer.mark() * 1.0f;
 
-        ProcessViewportEvents();
+        mvProcessViewportEvents();
 
         //---------------------------------------------------------------------
         // handle window resizing
@@ -80,8 +68,7 @@ int main()
             mvCleanupDrawable(quad1);
             GContext->viewport.width = newwidth;
             GContext->viewport.height = newheight;
-            mvRecreateSwapChain();
-            mvResizeImGui();
+            Renderer::mvResize();
 
             // recreation
             auto newquad1 = mvCreateTexturedQuad("../../Resources/brickwall.jpg");
@@ -118,7 +105,7 @@ int main()
         //---------------------------------------------------------------------
         // wait for fences and acquire next image
         //---------------------------------------------------------------------
-        mvBeginFrame();
+        Renderer::mvBeginFrame();
 
         //---------------------------------------------------------------------
         // main pass
@@ -126,90 +113,30 @@ int main()
         
         auto currentCommandBuffer = mvGetCurrentCommandBuffer();
 
-        BeginPass(currentCommandBuffer, GContext->graphics.renderPass);
-        mvBeginImGuiFrame();
+        Renderer::mvBeginPass(currentCommandBuffer, GContext->graphics.renderPass);
 
         glm::mat4 viewMatrix = mvBuildCameraMatrix(camera);
         glm::mat4 projMatrix = mvBuildProjectionMatrix(camera);
 
         mvBind(material, 0, mat1);
-        RenderDrawable(cube1, material.pipeline, 0, {}, viewMatrix, projMatrix);
+        Renderer::mvRenderDrawable(cube1, material.pipeline, 0, {}, viewMatrix, projMatrix);
 
         mvBind(material, 1, mat2);
-        RenderDrawable(quad1, material.pipeline, 1, {}, viewMatrix, projMatrix);
+        Renderer::mvRenderDrawable(quad1, material.pipeline, 1, {}, viewMatrix, projMatrix);
 
-        mvEndImGuiFrame();
-        EndPass(currentCommandBuffer);
+        Renderer::mvEndPass(currentCommandBuffer);
 
         //---------------------------------------------------------------------
         // submit command buffers & present
         //---------------------------------------------------------------------
-        mvEndFrame();
-        mvPresent();
+        Renderer::mvEndFrame();
+        Renderer::mvPresent();
     }
 
     mvCleanupMaterial(material);
     mvCleanupDrawable(cube1);
     mvCleanupDrawable(quad1);
-    mvCleanupImGui();
-    mvCleanupGraphicsContext();
+    Renderer::mvStopRenderer();
     DestroyContext();
 }
 
-void RenderDrawable(const mvDrawable& drawable, const mvPipeline& pipeline, uint32_t index, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection)
-{
-    vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), drawable.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
-    VkBuffer vertexBuffers[] = { drawable.vertexBuffer.buffer };
-    VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, vertexBuffers, offsets);
-
-    mvBind(pipeline, index);
-
-    glm::mat4 localTransform = glm::translate(glm::vec3{drawable.pos.x, drawable.pos.y, drawable.pos.z}) *
-        glm::rotate(drawable.rot.x, glm::vec3{1.0f, 0.0f, 0.0f }) *
-        glm::rotate(drawable.rot.y, glm::vec3{0.0f, 1.0f, 0.0f }) *
-        glm::rotate(drawable.rot.z, glm::vec3{0.0f, 0.0f, 1.0f });
-
-    transforms.model = localTransform;
-    transforms.modelView = camera * transforms.model;
-    transforms.modelViewProjection = projection * transforms.modelView;
-
-    vkCmdPushConstants(
-        GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex],
-        pipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
-
-    mvDraw(drawable.indexBuffer.indices.size());
-}
-
-void BeginPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass)
-{
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
-        throw std::runtime_error("failed to begin recording command buffer!");
-
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = renderPass;
-    renderPassInfo.framebuffer = GContext->graphics.swapChainFramebuffers[GContext->graphics.currentImageIndex];
-    renderPassInfo.renderArea.offset = { 0, 0 };
-    renderPassInfo.renderArea.extent = GContext->graphics.swapChainExtent;
-
-    std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
-    clearValues[1].depthStencil = { 1.0f, 0 };
-
-    renderPassInfo.clearValueCount = 2;
-    renderPassInfo.pClearValues = clearValues.data();
-
-    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-}
-
-void EndPass(VkCommandBuffer commandBuffer)
-{
-    vkCmdEndRenderPass(commandBuffer);
-
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
-        throw std::runtime_error("failed to record command buffer!");
-}
