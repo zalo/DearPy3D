@@ -6,15 +6,15 @@ namespace DearPy3D {
 
     void mvCleanupDrawable(mvDrawable& drawable)
     {
-        mvCleanupIndexBuffer(drawable.indexBuffer);
+        mvCleanupBuffer(drawable.indexBuffer);
         drawable.indexBuffer.buffer = VK_NULL_HANDLE;
         drawable.indexBuffer.memoryAllocation = VK_NULL_HANDLE;
-        drawable.indexBuffer.indices.clear();
+        drawable.indexBuffer.count = 0u;
 
-        mvCleanupVertexBuffer(drawable.vertexBuffer);
+        mvCleanupBuffer(drawable.vertexBuffer);
         drawable.vertexBuffer.buffer = VK_NULL_HANDLE;
         drawable.vertexBuffer.memoryAllocation = VK_NULL_HANDLE;
-        drawable.vertexBuffer.vertices.clear();
+        drawable.vertexBuffer.count = 0u;
     }
     
 }

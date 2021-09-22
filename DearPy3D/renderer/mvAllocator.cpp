@@ -1,77 +1,80 @@
 #include "mvAllocator.h"
 #include "mvContext.h"
 
+static VmaAllocator gallocator;
+
 namespace DearPy3D {
 
-	VmaAllocator& mvAllocator::GetVmaAllocator()
-	{
-		static VmaAllocator allocator;
-		return allocator;
-	}
+    void mvInitializeAllocator()
+    {   
+        // Initialize VulkanMemoryAllocator
+        VmaAllocatorCreateInfo allocatorInfo = {};
+        allocatorInfo.vulkanApiVersion = 0;
+        allocatorInfo.physicalDevice = mvGetPhysicalDevice();
+        allocatorInfo.device = mvGetLogicalDevice();
+        allocatorInfo.instance = mvGetVkInstance();
 
-	void mvAllocator::Init()
-	{
-		// Initialize VulkanMemoryAllocator
-		VmaAllocatorCreateInfo allocatorInfo = {};
-		allocatorInfo.vulkanApiVersion = 0;
-		allocatorInfo.physicalDevice = mvGetPhysicalDevice();
-		allocatorInfo.device = mvGetLogicalDevice();
-		allocatorInfo.instance = mvGetVkInstance();
+        vmaCreateAllocator(&allocatorInfo, &gallocator);
+    }
 
-		vmaCreateAllocator(&allocatorInfo, &GetVmaAllocator());
-	}
+    void mvShutdownAllocator()
+    {
+        vmaDestroyAllocator(gallocator);
+    }
 
-	void mvAllocator::Shutdown()
-	{
-		vmaDestroyAllocator(GetVmaAllocator());
-	}
+    VmaAllocation mvAllocateBuffer(VkBufferCreateInfo bufferCreateInfo, VmaMemoryUsage usage, VkBuffer& outBuffer)
+    {
+        VmaAllocationCreateInfo allocCreateInfo = {};
+        allocCreateInfo.usage = usage;
 
-	VmaAllocation mvAllocator::allocateBuffer(VkBufferCreateInfo bufferCreateInfo, VmaMemoryUsage usage, VkBuffer& outBuffer)
-	{
-		VmaAllocationCreateInfo allocCreateInfo = {};
-		allocCreateInfo.usage = usage;
+        VmaAllocation allocation;
+        vmaCreateBuffer(gallocator, &bufferCreateInfo, &allocCreateInfo, &outBuffer, &allocation, nullptr);
 
-		VmaAllocation allocation;
-		vmaCreateBuffer(GetVmaAllocator(), &bufferCreateInfo, &allocCreateInfo, &outBuffer, &allocation, nullptr);
+        //VmaAllocationInfo allocInfo{};
+        //vmaGetAllocationInfo(GetVmaAllocator(), allocation, &allocInfo);
 
-		//VmaAllocationInfo allocInfo{};
-		//vmaGetAllocationInfo(GetVmaAllocator(), allocation, &allocInfo);
+        return allocation;
+    }
 
-		return allocation;
-	}
+    VmaAllocation mvAllocateImage(VkImageCreateInfo imageCreateInfo, VmaMemoryUsage usage, VkImage& outImage)
+    {
+        VmaAllocationCreateInfo allocCreateInfo = {};
+        allocCreateInfo.usage = usage;
 
-	VmaAllocation mvAllocator::allocateImage(VkImageCreateInfo imageCreateInfo, VmaMemoryUsage usage, VkImage& outImage)
-	{
-		VmaAllocationCreateInfo allocCreateInfo = {};
-		allocCreateInfo.usage = usage;
+        VmaAllocation allocation;
+        vmaCreateImage(gallocator, &imageCreateInfo, &allocCreateInfo, &outImage, &allocation, nullptr);
 
-		VmaAllocation allocation;
-		vmaCreateImage(GetVmaAllocator(), &imageCreateInfo, &allocCreateInfo, &outImage, &allocation, nullptr);
+        //VmaAllocationInfo allocInfo;
+        //vmaGetAllocationInfo(GetVmaAllocator(), allocation, &allocInfo);
 
-		//VmaAllocationInfo allocInfo;
-		//vmaGetAllocationInfo(GetVmaAllocator(), allocation, &allocInfo);
+        return allocation;
+    }
 
-		return allocation;
-	}
+    void mvFree(VmaAllocation allocation)
+    {
+        vmaFreeMemory(gallocator, allocation);
+    }
 
-	void mvAllocator::free(VmaAllocation allocation)
-	{
-		vmaFreeMemory(GetVmaAllocator(), allocation);
-	}
+    void mvDestroyImage(VkImage image, VmaAllocation allocation)
+    {
+        vmaDestroyImage(gallocator, image, allocation);
+    }
 
-	void mvAllocator::destroyImage(VkImage image, VmaAllocation allocation)
-	{
-		vmaDestroyImage(GetVmaAllocator(), image, allocation);
-	}
+    void mvDestroyBuffer(VkBuffer buffer, VmaAllocation allocation)
+    {
+        vmaDestroyBuffer(gallocator, buffer, allocation);
+    }
 
-	void mvAllocator::destroyBuffer(VkBuffer buffer, VmaAllocation allocation)
-	{
-		vmaDestroyBuffer(GetVmaAllocator(), buffer, allocation);
-	}
-
-	void mvAllocator::unmapMemory(VmaAllocation allocation)
-	{
-		vmaUnmapMemory(GetVmaAllocator(), allocation);
-	}
+    void* mvMapMemory(VmaAllocation allocation)
+    {
+        void* mappedMemory;
+        vmaMapMemory(gallocator, allocation, (void**)&mappedMemory);
+        return mappedMemory;
+    }
+    
+    void mvUnmapMemory(VmaAllocation allocation)
+    {
+        vmaUnmapMemory(gallocator, allocation);
+    }
 
 }

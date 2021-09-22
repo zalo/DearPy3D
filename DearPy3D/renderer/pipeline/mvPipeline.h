@@ -19,6 +19,6 @@ namespace DearPy3D {
 	};
 
 	void mvFinalizePipeline(mvPipeline& pipeline);
-	void mvBind(const mvPipeline& pipeline, uint32_t index);
+	void mvBind            (const mvPipeline& pipeline, uint32_t index);
 
 }

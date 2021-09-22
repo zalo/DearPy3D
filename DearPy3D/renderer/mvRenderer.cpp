@@ -176,7 +176,7 @@ namespace DearPy3D {
                 GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex],
                 pipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
-            mvDraw(drawable.indexBuffer.indices.size());
+            mvDraw(drawable.indexBuffer.count);
         }
 
         void mvBeginPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass)

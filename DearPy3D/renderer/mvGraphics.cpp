@@ -652,7 +652,7 @@ namespace DearPy3D {
         mvCreateSurface();
         mvCreatePhysicalDevice();
         mvCreateLogicalDevice();
-        mvAllocator::Init();
+        mvInitializeAllocator();
         mvCreateSwapChain();
         mvCreateMainCommandPool();
         mvCreateMainDescriptorPool();
@@ -738,7 +738,7 @@ namespace DearPy3D {
     {
         
         GContext->graphics.deletionQueue.flush();
-        mvAllocator::Shutdown();
+        mvShutdownAllocator();
         vkDestroyDescriptorPool(GContext->graphics.logicalDevice, GContext->graphics.descriptorPool, nullptr);
 
         for (size_t i = 0; i < GContext->graphics.max_frames_in_flight; i++)
@@ -766,8 +766,8 @@ namespace DearPy3D {
 
         GContext->graphics.deletionQueue.flush();
 
-        mvAllocator::Shutdown();
-        mvAllocator::Init();
+        mvShutdownAllocator();
+        mvInitializeAllocator();
         mvCreateSwapChain();
         mvCreateMainCommandPool();
         mvCreateMainRenderPass();

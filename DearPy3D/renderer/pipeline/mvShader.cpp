@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include "mvContext.h"
 
-static std::vector<char> readFile(const std::string& filename)
+static std::vector<char> ReadFile(const std::string& filename)
 {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
@@ -28,7 +28,7 @@ namespace DearPy3D {
         mvShader shader{};
         shader.file = file;
 
-        auto shaderCode = readFile(file);
+        auto shaderCode = ReadFile(file);
 
         VkShaderModuleCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

@@ -42,10 +42,8 @@ namespace DearPy3D {
         }
 
         mvDrawable drawable{};
-
-        drawable.vertexBuffer = mvCreateVertexBuffer(vertices);
-        drawable.indexBuffer = mvCreateIndexBuffer(indices);
-
+        drawable.vertexBuffer = mvCreateBuffer(vertices.data(), vertices.size(), sizeof(float), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        drawable.indexBuffer = mvCreateBuffer(indices.data(), indices.size(), sizeof(uint16_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
         return drawable;
 
     }
