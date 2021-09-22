@@ -3,11 +3,43 @@
 #include <memory>
 #include "mvPipeline.h"
 #include "mvDeletionQueue.h"
-#include "mvMaterialBuffer.h"
 #include "mvTexture.h"
 #include "mvSampler.h"
+#include "mvBuffer.h"
+#include "mvMath.h"
 
 namespace DearPy3D {
+
+	struct mvMaterialData
+	{
+		glm::vec4 materialColor = { 0.45f, 0.45f, 0.85f, 1.0f };
+		//-------------------------- ( 16 bytes )
+
+		glm::vec3 specularColor = { 0.18f, 0.18f, 0.18f };
+		float specularGloss = 8.0f;
+		//-------------------------- ( 16 bytes )
+
+		float normalMapWeight = 1.0f;
+		int useTextureMap = false;
+		int useNormalMap = false;
+		int useSpecularMap = false;
+		//-------------------------- ( 16 bytes )
+
+		int useGlossAlpha = false;
+		int hasAlpha = false;
+		char _pad1[8];
+		//-------------------------- ( 16 bytes )
+		
+		char _pad2[192];
+		//-------------------------- ( 16 bytes )
+		// 
+		//-------------------------- ( 4 * 16 = 64 bytes )
+	};
+
+	struct mvMaterialBuffer
+	{
+		std::vector<mvBuffer> buffers;
+	};
 
 	struct mvMaterial
 	{
@@ -18,8 +50,7 @@ namespace DearPy3D {
 		mvMaterialBuffer  materialBuffer;
 	};
 
-	mvMaterial mvCreateMaterial();
+	mvMaterial mvCreateMaterial(std::vector<mvMaterialData> materialData);
 	void       mvCleanupMaterial(mvMaterial& material);
-	void       mvBind           (mvMaterial& material, uint32_t index, mvMaterialData data);
 
 }

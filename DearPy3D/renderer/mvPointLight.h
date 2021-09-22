@@ -17,8 +17,8 @@ namespace DearPy3D {
         //-------------------------- ( 16 bytes )
 
         float attConst = 1.0f;
-        float attLin = 0.045f;
-        float attQuad = 0.0075f;
+        float attLin   = 0.045f;
+        float attQuad  = 0.0075f;
         char _pad1[4];
         //-------------------------- ( 16 bytes )
 

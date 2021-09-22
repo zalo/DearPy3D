@@ -31,7 +31,6 @@ target_sources(dearpy3d
 		"renderer/mvCamera.cpp"
 		"renderer/mvBuffer.cpp"
 		"renderer/mvVertexLayout.cpp"
-		"renderer/mvMaterialBuffer.cpp"
 		"renderer/mvPipeline.cpp"
 		"renderer/mvShader.cpp"
 		"renderer/mvSampler.cpp"

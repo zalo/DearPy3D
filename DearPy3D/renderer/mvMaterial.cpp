@@ -6,11 +6,15 @@
 
 namespace DearPy3D {
 
-	mvMaterial mvCreateMaterial()
+	mvMaterial mvCreateMaterial(std::vector<mvMaterialData> materialData)
 	{
 		mvMaterial material{};
-
-		material.materialBuffer = mvCreateMaterialBuffer();
+		auto blah = mvGetRequiredUniformBufferSize(sizeof(mvMaterialData));
+		for (size_t i = 0; i < 3; i++)
+			material.materialBuffer.buffers.push_back(mvCreateBuffer(
+				materialData.data(), 
+				materialData.size(), 
+				mvGetRequiredUniformBufferSize(sizeof(mvMaterialData)), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT));
 
 		auto vlayout = mvCreateVertexLayout(
 			{
@@ -90,9 +94,9 @@ namespace DearPy3D {
 			descriptorWrites[i].pImageInfo = &imageInfo;
 
 			VkDescriptorBufferInfo materialInfo;
-			materialInfo.buffer = material.materialBuffer.buffer[i];
+			materialInfo.buffer = material.materialBuffer.buffers[i].buffer;
 			materialInfo.offset = 0;
-			materialInfo.range = sizeof(mvMaterialData);
+			materialInfo.range = mvGetRequiredUniformBufferSize(sizeof(mvMaterialData));
 
 			descriptorWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[i].dstSet = descriptorSets[i];
@@ -115,17 +119,13 @@ namespace DearPy3D {
 		return material;
 	}
 
-	void mvBind(mvMaterial& material, uint32_t index, mvMaterialData data)
-	{
-		mvBind(material.materialBuffer, data, index);
-	}
-
 	void mvCleanupMaterial(mvMaterial& material)
 	{
 		vkDeviceWaitIdle(mvGetLogicalDevice());
 		mvCleanupSampler(material.sampler);
 		mvCleanupTexture(material.texture);
-		mvCleanupMaterialBuffer(material.materialBuffer);
+		for(auto& buffer : material.materialBuffer.buffers)
+			mvCleanupBuffer(buffer);
 	}
 
 }

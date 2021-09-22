@@ -22,17 +22,26 @@ int main()
     camera.aspect = GContext->viewport.width/GContext->viewport.height;
     
     mvMesh quad1 = mvCreateTexturedQuad("../../Resources/brickwall.jpg");
+    quad1.pos.x = 5.0f;
+    quad1.pos.y = 5.0f;
+    quad1.pos.z = 5.0f;
     mvMesh cube1 = mvCreateTexturedCube("../../Resources/brickwall.jpg");
     cube1.pos.x = 10.0f;
     cube1.pos.y = 10.0f;
     cube1.pos.z = 10.0f;
-
-    mvMaterial material = mvCreateMaterial();
+    mvMesh cube2 = mvCreateTexturedCube("../../Resources/brickwall.jpg");
+    cube2.pos.x = -10.0f;
+    cube2.pos.y = 10.0f;
+    cube2.pos.z = 10.0f;
 
     auto mat1 = mvMaterialData{};
     auto mat2 = mvMaterialData{};
-    mat1.materialColor = glm::vec4{ 1.0f, 1.0f, 0.0f, 1.0f };
+    auto mat3 = mvMaterialData{};
+    mat1.materialColor = glm::vec4{ 1.0f, 0.0f, 0.0f, 1.0f };
     mat2.materialColor = glm::vec4{ 0.0f, 1.0f, 0.0f, 1.0f };
+    mat3.materialColor = glm::vec4{ 0.0f, 0.0f, 1.0f, 1.0f };
+
+    mvMaterial material = mvCreateMaterial({mat1, mat2, mat3});
 
     //---------------------------------------------------------------------
     // main loop
@@ -64,6 +73,7 @@ int main()
             // cleanup
             mvCleanupMaterial(material);
             mvCleanupMesh(cube1);
+            mvCleanupMesh(cube2);
             mvCleanupMesh(quad1);
             GContext->viewport.width = newwidth;
             GContext->viewport.height = newheight;
@@ -72,13 +82,16 @@ int main()
             // recreation
             auto newquad1 = mvCreateTexturedQuad("../../Resources/brickwall.jpg");
             auto newcube1 = mvCreateTexturedCube("../../Resources/brickwall.jpg");
+            auto newcube2 = mvCreateTexturedCube("../../Resources/brickwall.jpg");
             
             quad1.indexBuffer = newquad1.indexBuffer;
             quad1.vertexBuffer = newquad1.vertexBuffer;
             cube1.indexBuffer = newcube1.indexBuffer;
             cube1.vertexBuffer = newcube1.vertexBuffer;
+            cube2.indexBuffer = newcube2.indexBuffer;
+            cube2.vertexBuffer = newcube2.vertexBuffer;
 
-            material = mvCreateMaterial();
+            material = mvCreateMaterial({ mat1, mat2, mat3 });
 
             GContext->viewport.resized = false;
 
@@ -117,11 +130,9 @@ int main()
         glm::mat4 viewMatrix = mvBuildCameraMatrix(camera);
         glm::mat4 projMatrix = mvBuildProjectionMatrix(camera);
 
-        mvBind(material, 0, mat1);
         Renderer::mvRenderMesh(cube1, material.pipeline, 0, {}, viewMatrix, projMatrix);
-
-        mvBind(material, 1, mat2);
-        Renderer::mvRenderMesh(quad1, material.pipeline, 1, {}, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(cube2, material.pipeline, 1, {}, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(quad1, material.pipeline, 2, {}, viewMatrix, projMatrix);
 
         Renderer::mvEndPass(currentCommandBuffer);
 
@@ -134,6 +145,7 @@ int main()
 
     mvCleanupMaterial(material);
     mvCleanupMesh(cube1);
+    mvCleanupMesh(cube2);
     mvCleanupMesh(quad1);
     Renderer::mvStopRenderer();
     DestroyContext();
