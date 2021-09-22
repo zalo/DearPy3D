@@ -1,7 +1,7 @@
 #pragma once
 
 #include "mvMath.h"
-#include "mvSolidSphere.h"
+#include "mvMesh.h"
 #include "mvBuffer.h"
 
 namespace DearPy3D {
@@ -27,7 +27,7 @@ namespace DearPy3D {
 
     struct mvPointLight
     {
-        mvDrawable            mesh;
+        mvMesh                mesh;
         std::vector<mvBuffer> buffer;
         PointLightInfo        info = {};
     };

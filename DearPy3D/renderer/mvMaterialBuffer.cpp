@@ -1,7 +1,7 @@
 #include "mvMaterialBuffer.h"
 #include <stdexcept>
 #include "mvContext.h"
-#include "mvDrawable.h"
+#include "mvMesh.h"
 
 namespace DearPy3D {
 

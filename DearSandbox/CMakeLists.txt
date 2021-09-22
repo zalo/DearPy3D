@@ -47,10 +47,6 @@ target_include_directories(dearpy3dsandbox
 		"../DearPy3D/"
 		"../DearPy3D/core/"
 		"../DearPy3D/renderer/"
-		"../DearPy3D/renderer/drawables/"
-		"../DearPy3D/renderer/bindables/"
-		"../DearPy3D/renderer/buffers/"
-		"../DearPy3D/renderer/pipeline/"
 
 	    "$ENV{VK_SDK_PATH}/Include/"
 		"../Dependencies/glfw/include/"

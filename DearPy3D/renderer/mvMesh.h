@@ -9,7 +9,7 @@
 
 namespace DearPy3D {
 
-    struct mvDrawable
+    struct mvMesh
     {
         mvBuffer  indexBuffer;
         mvBuffer  vertexBuffer;
@@ -17,6 +17,9 @@ namespace DearPy3D {
         glm::vec3 rot;
     };
 
-    void mvCleanupDrawable(mvDrawable& drawable);
+    mvMesh mvCreateTexturedCube(const std::string& path);
+    mvMesh mvCreateSolidSphere();
+    mvMesh mvCreateTexturedQuad(const std::string& path);
+    void   mvCleanupMesh(mvMesh& drawable);
         
 }

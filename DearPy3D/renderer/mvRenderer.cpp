@@ -154,7 +154,7 @@ namespace DearPy3D {
             GContext->graphics.currentFrame = (GContext->graphics.currentFrame + 1) % GContext->graphics.max_frames_in_flight;
         }
 
-        void mvRenderDrawable(const mvDrawable& drawable, const mvPipeline& pipeline, uint32_t index, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection)
+        void mvRenderMesh(const mvMesh& drawable, const mvPipeline& pipeline, uint32_t index, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection)
         {
             vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), drawable.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
             VkBuffer vertexBuffers[] = { drawable.vertexBuffer.buffer };

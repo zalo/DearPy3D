@@ -29,25 +29,14 @@ target_sources(dearpy3d
 		"renderer/mvObjMaterial.cpp"
 		"renderer/mvGraphics.cpp"
 		"renderer/mvCamera.cpp"
-
-		# pipeline
-		"renderer/pipeline/mvPipeline.cpp"
-		"renderer/pipeline/mvShader.cpp"
-		"renderer/pipeline/mvSampler.cpp"
-		
-		# buffers
-		"renderer/buffers/mvBuffer.cpp"
-		"renderer/buffers/mvVertexLayout.cpp"
-		"renderer/buffers/mvMaterialBuffer.cpp"
-
-		# bindables
+		"renderer/mvBuffer.cpp"
+		"renderer/mvVertexLayout.cpp"
+		"renderer/mvMaterialBuffer.cpp"
+		"renderer/mvPipeline.cpp"
+		"renderer/mvShader.cpp"
+		"renderer/mvSampler.cpp"
 		"renderer/mvTexture.cpp"
-		
-		# drawables
-		"renderer/drawables/mvDrawable.cpp"
-		"renderer/drawables/mvTexturedQuad.cpp"
-		"renderer/drawables/mvCube.cpp"
-		"renderer/drawables/mvSolidSphere.cpp"
+		"renderer/mvMesh.cpp"
 
 		# Vulkan Memory Allocator
 		"../Dependencies/VulkanMemoryAllocator/vk_mem_alloc.cpp"
@@ -73,9 +62,6 @@ target_include_directories(dearpy3d
 		"utilities/"
 		"renderer/"
 		"renderer/drawables/"
-		"renderer/bindables/"
-		"renderer/buffers/"
-		"renderer/pipeline/"
 
 	    "$ENV{VK_SDK_PATH}/Include/"
 		"../Dependencies/glfw/include/"

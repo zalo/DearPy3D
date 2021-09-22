@@ -1,12 +1,10 @@
-#include "mvCube.h"
+#include "mvMesh.h"
 #include "mvContext.h"
-#include "mvTexture.h"
-#include "mvSampler.h"
-#include <chrono>
+#include "mvSphere.h"
 
 namespace DearPy3D {
 
-    mvDrawable mvCreateTexturedCube(const std::string& path)
+    mvMesh mvCreateTexturedCube(const std::string& path)
     {
 
         static const float side = 1.0f;
@@ -67,10 +65,104 @@ namespace DearPy3D {
             vertices[14 * indices[i + 2] + 5] = n[2];
         }
 
-        mvDrawable drawable{};
+        mvMesh drawable{};
         drawable.vertexBuffer = mvCreateBuffer(vertices.data(), vertices.size(), sizeof(float), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
         drawable.indexBuffer = mvCreateBuffer(indices.data(), indices.size(), sizeof(uint16_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
         return drawable;
     }
 
+    mvMesh mvCreateSolidSphere()
+    {
+
+        std::vector<float> vertices;
+        std::vector<uint16_t> indices;
+        std::vector<float> normals;
+        mvSphere sphere = mvCreateSphere(0.25f);
+
+        vertices = sphere.vertices;
+        indices = sphere.indices;
+        normals = sphere.normals;
+
+        std::vector<float> nverticies;
+        for (int i = 0; i < vertices.size(); i = i + 3)
+        {
+            nverticies.push_back(vertices[i]);
+            nverticies.push_back(vertices[i + 1]);
+            nverticies.push_back(vertices[i + 2]);
+            nverticies.push_back(normals[i]);
+            nverticies.push_back(normals[i + 1]);
+            nverticies.push_back(normals[i + 2]);
+
+            nverticies.push_back(0.0f);
+            nverticies.push_back(0.0f);
+            nverticies.push_back(0.0f);
+            nverticies.push_back(0.0f);
+            nverticies.push_back(0.0f);
+            nverticies.push_back(0.0f);
+            nverticies.push_back(0.0f);
+            nverticies.push_back(0.0f);
+        }
+
+        mvMesh drawable{};
+        drawable.vertexBuffer = mvCreateBuffer(vertices.data(), vertices.size(), sizeof(float), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        drawable.indexBuffer = mvCreateBuffer(indices.data(), indices.size(), sizeof(uint16_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+        return drawable;
+    }
+
+    mvMesh mvCreateTexturedQuad(const std::string& path)
+    {
+
+        // initialize vertices
+        auto vertices = std::vector<float>
+        {
+            -1.0f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+             1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+             1.0f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+        };
+
+        // initialize indexes
+        auto indices = std::vector<uint16_t>{ 0u, 2u, 1u, 0u, 1u, 3u };
+
+        for (size_t i = 0; i < indices.size(); i += 3)
+        {
+            auto v0 = vertices[14 * indices[i]];
+            auto v1 = vertices[14 * indices[i + 1]];
+            auto v2 = vertices[14 * indices[i + 2]];
+            const auto p0 = glm::vec3{ v0, vertices[14 * indices[i] + 1], vertices[14 * indices[i] + 2] };
+            const auto p1 = glm::vec3{ v1, vertices[14 * indices[i + 1] + 1], vertices[14 * indices[i + 1] + 2] };
+            const auto p2 = glm::vec3{ v2, vertices[14 * indices[i + 2] + 1], vertices[14 * indices[i + 2] + 2] };
+
+            const auto n = glm::normalize(glm::cross(p1 - p0, p2 - p0));
+            vertices[14 * indices[i] + 3] = n[0];
+            vertices[14 * indices[i] + 4] = n[1];
+            vertices[14 * indices[i] + 5] = n[2];
+            vertices[14 * indices[i + 1] + 3] = n[0];
+            vertices[14 * indices[i + 1] + 4] = n[1];
+            vertices[14 * indices[i + 1] + 5] = n[2];
+            vertices[14 * indices[i + 2] + 3] = n[0];
+            vertices[14 * indices[i + 2] + 4] = n[1];
+            vertices[14 * indices[i + 2] + 5] = n[2];
+        }
+
+        mvMesh drawable{};
+        drawable.vertexBuffer = mvCreateBuffer(vertices.data(), vertices.size(), sizeof(float), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        drawable.indexBuffer = mvCreateBuffer(indices.data(), indices.size(), sizeof(uint16_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+        return drawable;
+
+    }
+
+    void mvCleanupMesh(mvMesh& drawable)
+    {
+        mvCleanupBuffer(drawable.indexBuffer);
+        drawable.indexBuffer.buffer = VK_NULL_HANDLE;
+        drawable.indexBuffer.memoryAllocation = VK_NULL_HANDLE;
+        drawable.indexBuffer.count = 0u;
+
+        mvCleanupBuffer(drawable.vertexBuffer);
+        drawable.vertexBuffer.buffer = VK_NULL_HANDLE;
+        drawable.vertexBuffer.memoryAllocation = VK_NULL_HANDLE;
+        drawable.vertexBuffer.count = 0u;
+    }
+    
 }

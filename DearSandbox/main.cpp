@@ -1,6 +1,5 @@
 #include "mvContext.h"
-#include "mvTexturedQuad.h"
-#include "mvCube.h"
+#include "mvMesh.h"
 #include "mvCamera.h"
 #include "mvTimer.h"
 #include "mvPointLight.h"
@@ -22,8 +21,8 @@ int main()
     camera.pos = glm::vec3{5.0f, 5.0f, -15.0f};
     camera.aspect = GContext->viewport.width/GContext->viewport.height;
     
-    mvDrawable quad1 = mvCreateTexturedQuad("../../Resources/brickwall.jpg");
-    mvDrawable cube1 = mvCreateTexturedCube("../../Resources/brickwall.jpg");
+    mvMesh quad1 = mvCreateTexturedQuad("../../Resources/brickwall.jpg");
+    mvMesh cube1 = mvCreateTexturedCube("../../Resources/brickwall.jpg");
     cube1.pos.x = 10.0f;
     cube1.pos.y = 10.0f;
     cube1.pos.z = 10.0f;
@@ -64,8 +63,8 @@ int main()
 
             // cleanup
             mvCleanupMaterial(material);
-            mvCleanupDrawable(cube1);
-            mvCleanupDrawable(quad1);
+            mvCleanupMesh(cube1);
+            mvCleanupMesh(quad1);
             GContext->viewport.width = newwidth;
             GContext->viewport.height = newheight;
             Renderer::mvResize();
@@ -119,10 +118,10 @@ int main()
         glm::mat4 projMatrix = mvBuildProjectionMatrix(camera);
 
         mvBind(material, 0, mat1);
-        Renderer::mvRenderDrawable(cube1, material.pipeline, 0, {}, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(cube1, material.pipeline, 0, {}, viewMatrix, projMatrix);
 
         mvBind(material, 1, mat2);
-        Renderer::mvRenderDrawable(quad1, material.pipeline, 1, {}, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(quad1, material.pipeline, 1, {}, viewMatrix, projMatrix);
 
         Renderer::mvEndPass(currentCommandBuffer);
 
@@ -134,8 +133,8 @@ int main()
     }
 
     mvCleanupMaterial(material);
-    mvCleanupDrawable(cube1);
-    mvCleanupDrawable(quad1);
+    mvCleanupMesh(cube1);
+    mvCleanupMesh(quad1);
     Renderer::mvStopRenderer();
     DestroyContext();
 }
