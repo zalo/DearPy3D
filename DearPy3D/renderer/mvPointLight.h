@@ -22,13 +22,21 @@ namespace DearPy3D {
         char _pad1[4];
         //-------------------------- ( 16 bytes )
 
-        //-------------------------- ( 4*16 = 64 bytes )
+        char _pad2[192];
+        //-------------------------- ( 192 bytes )
+
+        //-------------------------- ( 4*16 + 192 = 256 bytes )
+    };
+
+    struct mvPointLightBuffer
+    {
+        std::vector<mvBuffer> buffers;
     };
 
     struct mvPointLight
     {
         mvMesh                mesh;
-        std::vector<mvBuffer> buffer;
+        mvPointLightBuffer    buffer;
         PointLightInfo        info = {};
     };
 

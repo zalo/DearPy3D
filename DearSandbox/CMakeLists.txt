@@ -29,7 +29,6 @@ set_property(TARGET dearpy3dsandbox PROPERTY CXX_STANDARD 17)
 if(MV_NO_SHADERS)
 else()
 	add_shader(ps_shader.frag)
-	add_shader(ps_solid.frag)
 	add_shader(vs_shader.vert)
 endif()
 

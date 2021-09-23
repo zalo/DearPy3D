@@ -11,23 +11,6 @@ layout(location = 0) out vec4 outColor;
 
 layout(set = 0, binding = 0) uniform sampler2D texSampler;
 
-//layout(binding = 2) uniform mvPointLight 
-//{
-//    vec3 viewLightPos;
-//    //-------------------------- ( 16 bytes )
-//    
-//    vec3 diffuseColor;
-//    float diffuseIntensity;
-//    //-------------------------- ( 16 bytes )
-//    
-//    float attConst;
-//    float attLin;
-//    float attQuad;
-//    //-------------------------- ( 16 bytes )
-//    
-//    //-------------------------- ( 4*16 = 64 bytes )
-//} pointlight;
-
 layout(set = 0, binding = 1) uniform mvPhongMaterial
 {
     vec3 materialColor;
@@ -50,6 +33,23 @@ layout(set = 0, binding = 1) uniform mvPhongMaterial
     //-------------------------- ( 16 bytes )
     //-------------------------- ( 4 * 16 = 64 bytes )
 };
+
+//layout(set = 0, binding = 2) uniform mvPointLight 
+//{
+//    vec3 viewLightPos;
+//    //-------------------------- ( 16 bytes )
+//    
+//    vec3 diffuseColor;
+//    float diffuseIntensity;
+//    //-------------------------- ( 16 bytes )
+//    
+//    float attConst;
+//    float attLin;
+//    float attQuad;
+//    //-------------------------- ( 16 bytes )
+//    
+//    //-------------------------- ( 4*16 = 64 bytes )
+//} pointlight;
 
 float Attenuate(float attConst, float attLin, float attQuad, in float distFragToL)
 {
@@ -100,6 +100,5 @@ void main()
 //         
 //    outColor = clamp((vec4(diffuse, 1.0) + vec4(0.04, 0.04, 0.04, 1.0)) * materialColor + vec4(specularReflected, 1.0), 0.0, 1.0);   
 //
-      //outColor = texture(texSampler, inTexCoord);
-      outColor = vec4(materialColor, 1.0);
+    outColor = texture(texSampler, inTexCoord);
 }

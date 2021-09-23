@@ -31,10 +31,10 @@ namespace DearPy3D {
     //    light.info.viewLightPos = posCopy;
     //}
 
-    void mvCleanupPointLight(mvPointLight& light)
-    {
-        for (auto& item : light.buffer)
-            mvCleanupBuffer(item);
-        mvCleanupMesh(light.mesh);
-    }
+    //void mvCleanupPointLight(mvPointLight& light)
+    //{
+    //    for (auto& item : light.buffer)
+    //        mvCleanupBuffer(item);
+    //    mvCleanupMesh(light.mesh);
+    //}
 }

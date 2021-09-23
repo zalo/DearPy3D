@@ -132,12 +132,28 @@ int main()
         ImGui::GetForegroundDrawList()->AddText(ImVec2(45, 45),
             ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(io.Framerate) + " FPS").c_str());
 
+        ImGui::Begin("Settings");
+        if(ImGui::Button("Change Material"))
+        {
+            auto newmat1 = mvMaterialData{};
+            auto newmat2 = mvMaterialData{};
+            auto newmat3 = mvMaterialData{};
+            newmat1.materialColor = glm::vec4{ 1.0f, 1.0f, 0.0f, 1.0f };
+            newmat2.materialColor = glm::vec4{ 0.0f, 1.0f, 1.0f, 1.0f };
+            newmat3.materialColor = glm::vec4{ 1.0f, 0.0f, 1.0f, 1.0f };
+
+            std::vector<mvMaterialData> newmaterials = {newmat1, newmat2, newmat3};
+
+            mvUpdateBuffer(material.materialBuffer.buffers[GContext->graphics.currentImageIndex], newmaterials.data());
+        }
+        ImGui::End();
+
         glm::mat4 viewMatrix = mvBuildCameraMatrix(camera);
         glm::mat4 projMatrix = mvBuildProjectionMatrix(camera);
 
-        Renderer::mvRenderMesh(cube1, material.pipeline, {}, viewMatrix, projMatrix);
-        Renderer::mvRenderMesh(cube2, material.pipeline, {}, viewMatrix, projMatrix);
-        Renderer::mvRenderMesh(quad1, material.pipeline, {}, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(cube1, material, {}, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(cube2, material, {}, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(quad1, material, {}, viewMatrix, projMatrix);
 
         Renderer::mvEndPass(currentCommandBuffer);
 

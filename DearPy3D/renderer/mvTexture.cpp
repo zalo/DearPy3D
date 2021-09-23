@@ -7,8 +7,8 @@
 
 namespace DearPy3D {
 
-	mvTexture mvCreateTexture(const std::string& file)
-	{
+    mvTexture mvCreateTexture(const std::string& file)
+    {
         mvTexture texture{};
 
         int texWidth, texHeight, texChannels;
@@ -45,7 +45,7 @@ namespace DearPy3D {
         texture.textureImageView = mvCreateImageView(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 
         return texture;
-	}
+    }
 
     void mvCleanupTexture(mvTexture& texture)
     {
@@ -53,4 +53,5 @@ namespace DearPy3D {
         vkDestroyImage(mvGetLogicalDevice(), texture.textureImage, nullptr);
         vkFreeMemory(mvGetLogicalDevice(), texture.textureImageMemory, nullptr);
     }
+
 }

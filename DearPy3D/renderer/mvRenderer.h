@@ -15,6 +15,6 @@ namespace DearPy3D {
 		void mvPresent();
 		void mvBeginPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass);
 		void mvEndPass(VkCommandBuffer commandBuffer);
-		void mvRenderMesh(const mvMesh& drawable, mvPipeline& pipeline, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection);
+		void mvRenderMesh(const mvMesh& drawable, mvMaterial& material, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection);
 	}
 }

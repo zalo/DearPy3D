@@ -9,7 +9,7 @@ namespace DearPy3D {
 
         // if the last image index is different, reset uniform
         // offset counter. This is a temp. solution.
-        static uint32_t lastImageIndex = GContext->graphics.currentImageIndex;
+        static uint32_t lastImageIndex = 100; // fake value for first run
 
         if (lastImageIndex == GContext->graphics.currentImageIndex)
             pipeline._index++;
