@@ -154,14 +154,14 @@ namespace DearPy3D {
             GContext->graphics.currentFrame = (GContext->graphics.currentFrame + 1) % GContext->graphics.max_frames_in_flight;
         }
 
-        void mvRenderMesh(const mvMesh& drawable, const mvPipeline& pipeline, uint32_t index, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection)
+        void mvRenderMesh(const mvMesh& drawable, mvPipeline& pipeline, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection)
         {
             vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), drawable.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
             VkBuffer vertexBuffers[] = { drawable.vertexBuffer.buffer };
             VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, vertexBuffers, offsets);
 
-            mvBind(pipeline, index);
+            mvBind(pipeline);
 
             glm::mat4 localTransform = glm::translate(glm::vec3{ drawable.pos.x, drawable.pos.y, drawable.pos.z }) *
                 glm::rotate(drawable.rot.x, glm::vec3{ 1.0f, 0.0f, 0.0f }) *

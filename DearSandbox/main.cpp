@@ -1,3 +1,4 @@
+#include <imgui.h>
 #include "mvContext.h"
 #include "mvMesh.h"
 #include "mvCamera.h"
@@ -122,17 +123,21 @@ int main()
         //---------------------------------------------------------------------
         // main pass
         //---------------------------------------------------------------------
-        
+
         auto currentCommandBuffer = mvGetCurrentCommandBuffer();
 
         Renderer::mvBeginPass(currentCommandBuffer, GContext->graphics.renderPass);
 
+        ImGuiIO& io = ImGui::GetIO();
+        ImGui::GetForegroundDrawList()->AddText(ImVec2(45, 45),
+            ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(io.Framerate) + " FPS").c_str());
+
         glm::mat4 viewMatrix = mvBuildCameraMatrix(camera);
         glm::mat4 projMatrix = mvBuildProjectionMatrix(camera);
 
-        Renderer::mvRenderMesh(cube1, material.pipeline, 0, {}, viewMatrix, projMatrix);
-        Renderer::mvRenderMesh(cube2, material.pipeline, 1, {}, viewMatrix, projMatrix);
-        Renderer::mvRenderMesh(quad1, material.pipeline, 2, {}, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(cube1, material.pipeline, {}, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(cube2, material.pipeline, {}, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(quad1, material.pipeline, {}, viewMatrix, projMatrix);
 
         Renderer::mvEndPass(currentCommandBuffer);
 

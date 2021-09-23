@@ -16,9 +16,10 @@ namespace DearPy3D {
 		std::vector<VkDescriptorSet>       descriptorSets;
 		VkPipelineLayout                   pipelineLayout = VK_NULL_HANDLE;
 		VkPipeline                         pipeline = VK_NULL_HANDLE;
+		uint32_t                           _index = 0u; // uniform offset index
 	};
 
 	void mvFinalizePipeline(mvPipeline& pipeline);
-	void mvBind            (const mvPipeline& pipeline, uint32_t index);
+	void mvBind            (mvPipeline& pipeline);
 
 }

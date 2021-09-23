@@ -4,10 +4,22 @@
 
 namespace DearPy3D {
 
-    void mvBind(const mvPipeline& pipeline, uint32_t index)
+    void mvBind(mvPipeline& pipeline)
     {
 
-        uint32_t uniform_offset = index * GContext->graphics.deviceProperties.limits.minUniformBufferOffsetAlignment;
+        // if the last image index is different, reset uniform
+        // offset counter. This is a temp. solution.
+        static uint32_t lastImageIndex = GContext->graphics.currentImageIndex;
+
+        if (lastImageIndex == GContext->graphics.currentImageIndex)
+            pipeline._index++;
+        else
+        {
+            pipeline._index = 0u;
+            lastImageIndex = GContext->graphics.currentImageIndex;
+        }
+
+        uint32_t uniform_offset = pipeline._index * GContext->graphics.deviceProperties.limits.minUniformBufferOffsetAlignment;
         vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
             pipeline.pipelineLayout, 0, 1, pipeline.descriptorSets.data(), 1, &uniform_offset);
 
