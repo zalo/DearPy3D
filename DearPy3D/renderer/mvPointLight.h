@@ -36,7 +36,7 @@ namespace DearPy3D {
     struct mvPointLight
     {
         mvPointLightBuffer    buffer;
-        VkDescriptorSet       descriptorSets[MV_MAX_FRAMES_IN_FLIGHT+1];
+        VkDescriptorSet*      descriptorSets;
         VkDescriptorSetLayout descriptorSetLayout;
         mvPointLightInfo      info;
     };

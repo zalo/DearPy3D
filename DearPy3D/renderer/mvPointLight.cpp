@@ -7,10 +7,10 @@ namespace DearPy3D {
     {
 
         mvPointLight light;
-
+        light.descriptorSets = new VkDescriptorSet[GContext->graphics.swapChainImages.size()];
         light.info.viewLightPos = glm::vec4(pos, 1.0f);
 
-        for (size_t i = 0; i < MV_MAX_FRAMES_IN_FLIGHT+1; i++)
+        for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
             light.buffer.buffers.push_back(mvCreateDynamicBuffer(
                 &light.info, 
                 1, 
@@ -39,11 +39,11 @@ namespace DearPy3D {
         //-----------------------------------------------------------------------------
         // allocate descriptor sets
         //-----------------------------------------------------------------------------
-        std::vector<VkDescriptorSetLayout> layouts(MV_MAX_FRAMES_IN_FLIGHT+1, light.descriptorSetLayout);
+        std::vector<VkDescriptorSetLayout> layouts(GContext->graphics.swapChainImages.size(), light.descriptorSetLayout);
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = GContext->graphics.descriptorPool;
-        allocInfo.descriptorSetCount = MV_MAX_FRAMES_IN_FLIGHT+1;
+        allocInfo.descriptorSetCount = GContext->graphics.swapChainImages.size();
         allocInfo.pSetLayouts = layouts.data();
 
         if (vkAllocateDescriptorSets(mvGetLogicalDevice(), &allocInfo, light.descriptorSets) != VK_SUCCESS)
@@ -53,7 +53,7 @@ namespace DearPy3D {
         // update descriptor sets
         //-----------------------------------------------------------------------------
 
-        for (int i = 0; i < MV_MAX_FRAMES_IN_FLIGHT+1; i++)
+        for (int i = 0; i < GContext->graphics.swapChainImages.size(); i++)
         {
             std::vector<VkWriteDescriptorSet> descriptorWrites;
             descriptorWrites.resize(1);
@@ -100,6 +100,7 @@ namespace DearPy3D {
 
     void mvCleanupPointLight(mvPointLight& light)
     {
+        delete[] light.descriptorSets;
         for (auto& item : light.buffer.buffers)
             mvCleanupBuffer(item);
     }

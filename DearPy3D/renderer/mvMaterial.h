@@ -50,7 +50,7 @@ namespace DearPy3D {
         uint32_t              offsetIndex = 0u;
         mvMaterialBuffer      materialBuffer;
         VkDescriptorSetLayout descriptorSetLayout;
-        VkDescriptorSet       descriptorSets[MV_MAX_FRAMES_IN_FLIGHT+1];
+        VkDescriptorSet*      descriptorSets;
 
         uint32_t              _index          = 0u;   // uniform offset index
         uint32_t              _lastImageIndex = 100u; // fake value for first run

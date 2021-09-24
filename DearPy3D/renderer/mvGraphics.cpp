@@ -448,9 +448,9 @@ namespace DearPy3D {
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.commandPool = GContext->graphics.commandPool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = (uint32_t)(MV_MAX_FRAMES_IN_FLIGHT+1);
+        allocInfo.commandBufferCount = (uint32_t)(GContext->graphics.swapChainImages.size());
 
-        GContext->graphics.commandBuffers.resize(MV_MAX_FRAMES_IN_FLIGHT+1);
+        GContext->graphics.commandBuffers.resize(GContext->graphics.swapChainImages.size());
 
         if (vkAllocateCommandBuffers(mvGetLogicalDevice(), &allocInfo, GContext->graphics.commandBuffers.data()) != VK_SUCCESS)
             throw std::runtime_error("failed to allocate command buffers!");

@@ -9,12 +9,13 @@ namespace DearPy3D {
     mvMaterial mvCreateMaterial(std::vector<mvMaterialData> materialData, const char* vertexShader, const char* pixelShader)
     {
         mvMaterial material{};
+        material.descriptorSets = new VkDescriptorSet[GContext->graphics.swapChainImages.size()];
         material.pipeline.vertexShader = mvCreateShader(vertexShader);
         material.pipeline.fragShader = mvCreateShader(pixelShader);
         material.texture = mvCreateTexture("../../Resources/brickwall.jpg");
         material.sampler = mvCreateSampler();
 
-        for (size_t i = 0; i < MV_MAX_FRAMES_IN_FLIGHT+1; i++)
+        for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
             material.materialBuffer.buffers.push_back(mvCreateDynamicBuffer(
                 materialData.data(), 
                 materialData.size(), 
@@ -60,11 +61,11 @@ namespace DearPy3D {
         //-----------------------------------------------------------------------------
         // allocate descriptor sets
         //-----------------------------------------------------------------------------
-        std::vector<VkDescriptorSetLayout> layouts(3, material.descriptorSetLayout);
+        std::vector<VkDescriptorSetLayout> layouts(GContext->graphics.swapChainImages.size(), material.descriptorSetLayout);
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = GContext->graphics.descriptorPool;
-        allocInfo.descriptorSetCount = MV_MAX_FRAMES_IN_FLIGHT+1;
+        allocInfo.descriptorSetCount = GContext->graphics.swapChainImages.size();
         allocInfo.pSetLayouts = layouts.data();
 
         if (vkAllocateDescriptorSets(mvGetLogicalDevice(), &allocInfo, material.descriptorSets) != VK_SUCCESS)
@@ -74,7 +75,7 @@ namespace DearPy3D {
         // update descriptor sets
         //-----------------------------------------------------------------------------
 
-        for (int i = 0; i < MV_MAX_FRAMES_IN_FLIGHT+1; i++)
+        for (int i = 0; i < GContext->graphics.swapChainImages.size(); i++)
         {
             std::vector<VkWriteDescriptorSet> descriptorWrites;
             descriptorWrites.resize(2);
@@ -119,6 +120,7 @@ namespace DearPy3D {
         vkDeviceWaitIdle(mvGetLogicalDevice());
         mvCleanupSampler(material.sampler);
         mvCleanupTexture(material.texture);
+        delete[] material.descriptorSets;
         for(auto& buffer : material.materialBuffer.buffers)
             mvCleanupBuffer(buffer);
     }
