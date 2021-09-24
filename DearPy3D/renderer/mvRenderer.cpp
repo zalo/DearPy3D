@@ -85,6 +85,7 @@ namespace DearPy3D {
         void mvStartRenderer()
         {
             mvInitializeViewport(500, 500);
+            GContext->IO.shaderDirectory = "../../DearPy3D/shaders/";
             GContext->graphics.enableValidationLayers = true;
             GContext->graphics.validationLayers = { "VK_LAYER_KHRONOS_validation" };
             GContext->graphics.deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
@@ -156,12 +157,26 @@ namespace DearPy3D {
 
         void mvRenderMesh(const mvMesh& drawable, mvMaterial& material, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection)
         {
-            vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), drawable.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
-            VkBuffer vertexBuffers[] = { drawable.vertexBuffer.buffer };
-            VkDeviceSize offsets[] = { 0 };
-            vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, vertexBuffers, offsets);
+            // if the last image index is different, reset uniform
+            // offset counter. This is a temp. solution.
+            static uint32_t lastImageIndex = 100; // fake value for first run
+            static VkDeviceSize offsets = { 0 };
 
-            mvBind(material.pipeline);
+            // if the last image index is different, reset uniform
+            // offset counter. This is a temp. solution.
+            if (material._lastImageIndex == GContext->graphics.currentImageIndex)
+                material._index++;
+            else
+            {
+                material._index = 0u;
+                material._lastImageIndex = GContext->graphics.currentImageIndex;
+            }
+
+            uint32_t material_uniform_offset = material._index * GContext->graphics.deviceProperties.limits.minUniformBufferOffsetAlignment;
+            vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline.pipelineLayout, 0, 1, &material.descriptorSets[GContext->graphics.currentImageIndex], 1, &material_uniform_offset);
+            vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), drawable.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &drawable.vertexBuffer.buffer, &offsets);
+            vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline.pipeline);
 
             glm::mat4 localTransform = glm::translate(glm::vec3{ drawable.pos.x, drawable.pos.y, drawable.pos.z }) *
                 glm::rotate(drawable.rot.x, glm::vec3{ 1.0f, 0.0f, 0.0f }) *

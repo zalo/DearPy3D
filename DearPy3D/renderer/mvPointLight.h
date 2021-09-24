@@ -6,7 +6,7 @@
 
 namespace DearPy3D {
 
-    struct PointLightInfo
+    struct mvPointLightInfo
     {
 
         glm::vec4 viewLightPos = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -35,13 +35,13 @@ namespace DearPy3D {
 
     struct mvPointLight
     {
-        mvMesh                mesh;
         mvPointLightBuffer    buffer;
-        PointLightInfo        info = {};
+        VkDescriptorSet       descriptorSets[3];
+        VkDescriptorSetLayout descriptorSetLayout;
     };
 
     mvPointLight mvCreatePointLight (glm::vec3 pos = { 0.0f,0.0f,0.5f });
-    void         mvBind             (mvPointLight& light, glm::mat4 view);
+    void         mvBind             (mvPointLight& light, VkPipelineLayout pipelineLayout);
     void         mvCleanupPointLight(mvPointLight& light);
 
 }

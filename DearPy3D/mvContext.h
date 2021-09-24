@@ -21,7 +21,7 @@ namespace DearPy3D {
 
     struct mvIO
     {
-
+        std::string shaderDirectory;
     };
 
     struct mvContext

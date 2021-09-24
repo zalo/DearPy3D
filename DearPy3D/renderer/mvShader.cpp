@@ -28,7 +28,7 @@ namespace DearPy3D {
         mvShader shader{};
         shader.file = file;
 
-        auto shaderCode = ReadFile(file);
+        auto shaderCode = ReadFile(GContext->IO.shaderDirectory + file);
 
         VkShaderModuleCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

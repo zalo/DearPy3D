@@ -4,29 +4,7 @@
 
 namespace DearPy3D {
 
-    void mvBind(mvPipeline& pipeline)
-    {
-
-        // if the last image index is different, reset uniform
-        // offset counter. This is a temp. solution.
-        static uint32_t lastImageIndex = 100; // fake value for first run
-
-        if (lastImageIndex == GContext->graphics.currentImageIndex)
-            pipeline._index++;
-        else
-        {
-            pipeline._index = 0u;
-            lastImageIndex = GContext->graphics.currentImageIndex;
-        }
-
-        uint32_t uniform_offset = pipeline._index * GContext->graphics.deviceProperties.limits.minUniformBufferOffsetAlignment;
-        vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
-            pipeline.pipelineLayout, 0, 1, &pipeline.descriptorSets[GContext->graphics.currentImageIndex], 1, &uniform_offset);
-
-        vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
-    }
-
-	void mvFinalizePipeline(mvPipeline& pipeline)
+	void mvFinalizePipeline(mvPipeline& pipeline, std::vector<VkDescriptorSetLayout> descriptorSetLayouts)
 	{
         //---------------------------------------------------------------------
         // input assembler stage
@@ -158,10 +136,10 @@ namespace DearPy3D {
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = pipeline.descriptorSetLayouts.size();
+        pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
         pipelineLayoutInfo.pPushConstantRanges = &push_constant;
         pipelineLayoutInfo.pushConstantRangeCount = 1;
-        pipelineLayoutInfo.pSetLayouts = pipeline.descriptorSetLayouts.data();
+        pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
 
         if (vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipeline.pipelineLayout) != VK_SUCCESS)
             throw std::runtime_error("failed to create pipeline layout!");
@@ -200,7 +178,7 @@ namespace DearPy3D {
         GContext->graphics.deletionQueue.pushDeletor([=]() {
             vkDestroyPipeline(mvGetLogicalDevice(), pipeline.pipeline, nullptr);
             vkDestroyPipelineLayout(mvGetLogicalDevice(), pipeline.pipelineLayout, nullptr);
-            for(auto descriptorSetLayout : pipeline.descriptorSetLayouts)
+            for(auto descriptorSetLayout : descriptorSetLayouts)
                 vkDestroyDescriptorSetLayout(mvGetLogicalDevice(), descriptorSetLayout, nullptr);
             //pipeline.descriptorSetLayouts.clear();
             //pipeline.descriptorSets.clear();

@@ -43,14 +43,19 @@ namespace DearPy3D {
 
     struct mvMaterial
     {
-        mvPipeline        pipeline;
-        mvTexture         texture;
-        mvSampler         sampler;
-        uint32_t          offsetIndex = 0u;
-        mvMaterialBuffer  materialBuffer;
+        mvPipeline            pipeline;
+        mvTexture             texture;
+        mvSampler             sampler;
+        uint32_t              offsetIndex = 0u;
+        mvMaterialBuffer      materialBuffer;
+        VkDescriptorSetLayout descriptorSetLayout;
+        VkDescriptorSet       descriptorSets[3];
+
+        uint32_t              _index          = 0u;   // uniform offset index
+        uint32_t              _lastImageIndex = 100u; // fake value for first run
     };
 
-    mvMaterial mvCreateMaterial(std::vector<mvMaterialData> materialData);
+    mvMaterial mvCreateMaterial (std::vector<mvMaterialData> materialData, const char* vertexShader, const char* pixelShader);
     void       mvCleanupMaterial(mvMaterial& material);
 
 }

@@ -6,10 +6,14 @@
 
 namespace DearPy3D {
 
-    mvMaterial mvCreateMaterial(std::vector<mvMaterialData> materialData)
+    mvMaterial mvCreateMaterial(std::vector<mvMaterialData> materialData, const char* vertexShader, const char* pixelShader)
     {
         mvMaterial material{};
-        auto blah = mvGetRequiredUniformBufferSize(sizeof(mvMaterialData));
+        material.pipeline.vertexShader = mvCreateShader(vertexShader);
+        material.pipeline.fragShader = mvCreateShader(pixelShader);
+        material.texture = mvCreateTexture("../../Resources/brickwall.jpg");
+        material.sampler = mvCreateSampler();
+
         for (size_t i = 0; i < 3; i++)
             material.materialBuffer.buffers.push_back(mvCreateDynamicBuffer(
                 materialData.data(), 
@@ -25,8 +29,7 @@ namespace DearPy3D {
                 mvVertexElementType::Texture2D 
             }
         );
-        material.texture = mvCreateTexture("../../Resources/brickwall.jpg");
-        material.sampler = mvCreateSampler();
+        material.pipeline.layout = vlayout;
 
         //-----------------------------------------------------------------------------
         // create descriptor set layout
@@ -51,26 +54,20 @@ namespace DearPy3D {
         layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
         layoutInfo.pBindings = bindings.data();
 
-        std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
-        descriptorSetLayouts.resize(1);
-
-        std::vector<VkDescriptorSet> descriptorSets;
-
-        if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &descriptorSetLayouts.back()) != VK_SUCCESS)
+        if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &material.descriptorSetLayout) != VK_SUCCESS)
             throw std::runtime_error("failed to create descriptor set layout!");
 
         //-----------------------------------------------------------------------------
         // allocate descriptor sets
         //-----------------------------------------------------------------------------
-        descriptorSets.resize(3);
-        std::vector<VkDescriptorSetLayout> layouts(3, descriptorSetLayouts[0]);
+        std::vector<VkDescriptorSetLayout> layouts(3, material.descriptorSetLayout);
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = GContext->graphics.descriptorPool;
         allocInfo.descriptorSetCount = 3;
         allocInfo.pSetLayouts = layouts.data();
 
-        if (vkAllocateDescriptorSets(mvGetLogicalDevice(), &allocInfo, descriptorSets.data()) != VK_SUCCESS)
+        if (vkAllocateDescriptorSets(mvGetLogicalDevice(), &allocInfo, material.descriptorSets) != VK_SUCCESS)
             throw std::runtime_error("failed to allocate descriptor sets!");
 
         //-----------------------------------------------------------------------------
@@ -88,7 +85,7 @@ namespace DearPy3D {
             imageInfo.sampler = material.sampler.textureSampler;
 
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].dstSet = descriptorSets[i];
+            descriptorWrites[0].dstSet = material.descriptorSets[i];
             descriptorWrites[0].dstBinding = 0;
             descriptorWrites[0].dstArrayElement = 0;
             descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -101,26 +98,18 @@ namespace DearPy3D {
             materialInfo.range = mvGetRequiredUniformBufferSize(sizeof(mvMaterialData));
 
             descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[1].dstSet = descriptorSets[i];
+            descriptorWrites[1].dstSet = material.descriptorSets[i];
             descriptorWrites[1].dstBinding = 1;
             descriptorWrites[1].dstArrayElement = 0;
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pBufferInfo = &materialInfo;
 
-
             vkUpdateDescriptorSets(mvGetLogicalDevice(),
                 static_cast<uint32_t>(descriptorWrites.size()),
                 descriptorWrites.data(), 0, nullptr);
 
         }
-
-        material.pipeline.layout = vlayout;
-        material.pipeline.vertexShader = mvCreateShader("../../DearPy3D/shaders/vs_shader.vert.spv");
-        material.pipeline.fragShader = mvCreateShader("../../DearPy3D/shaders/ps_shader.frag.spv");
-        material.pipeline.descriptorSetLayouts = descriptorSetLayouts;
-        material.pipeline.descriptorSets = descriptorSets;
-        mvFinalizePipeline(material.pipeline);
 
         return material;
     }

@@ -30,19 +30,19 @@ int main()
     cube1.pos.x = 10.0f;
     cube1.pos.y = 10.0f;
     cube1.pos.z = 10.0f;
-    mvMesh cube2 = mvCreateTexturedCube("../../Resources/brickwall.jpg");
-    cube2.pos.x = -10.0f;
-    cube2.pos.y = 10.0f;
-    cube2.pos.z = 10.0f;
+    mvMesh lightSphere = mvCreateSolidSphere();
+    lightSphere.pos.y = 10.0f;
 
     auto mat1 = mvMaterialData{};
     auto mat2 = mvMaterialData{};
     auto mat3 = mvMaterialData{};
-    mat1.materialColor = glm::vec4{ 1.0f, 0.0f, 0.0f, 1.0f };
+    mat1.materialColor = glm::vec4{ 1.0f, 1.0f, 1.0f, 1.0f };
     mat2.materialColor = glm::vec4{ 0.0f, 1.0f, 0.0f, 1.0f };
-    mat3.materialColor = glm::vec4{ 0.0f, 0.0f, 1.0f, 1.0f };
+    mat3.materialColor = glm::vec4{ 1.0f, 0.0f, 0.0f, 1.0f };
 
-    mvMaterial material = mvCreateMaterial({mat1, mat2, mat3});
+    mvMaterial material = mvCreateMaterial({mat1, mat2, mat3}, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mvPointLight light = mvCreatePointLight(glm::vec3{1.0f, 0.0f, 0.0f});
+    mvFinalizePipeline(material.pipeline, {material.descriptorSetLayout, light.descriptorSetLayout});
 
     //---------------------------------------------------------------------
     // main loop
@@ -74,7 +74,7 @@ int main()
             // cleanup
             mvCleanupMaterial(material);
             mvCleanupMesh(cube1);
-            mvCleanupMesh(cube2);
+            mvCleanupMesh(lightSphere);
             mvCleanupMesh(quad1);
             GContext->viewport.width = newwidth;
             GContext->viewport.height = newheight;
@@ -83,16 +83,16 @@ int main()
             // recreation
             auto newquad1 = mvCreateTexturedQuad("../../Resources/brickwall.jpg");
             auto newcube1 = mvCreateTexturedCube("../../Resources/brickwall.jpg");
-            auto newcube2 = mvCreateTexturedCube("../../Resources/brickwall.jpg");
+            auto newlightsphere = mvCreateSolidSphere();
             
             quad1.indexBuffer = newquad1.indexBuffer;
             quad1.vertexBuffer = newquad1.vertexBuffer;
             cube1.indexBuffer = newcube1.indexBuffer;
             cube1.vertexBuffer = newcube1.vertexBuffer;
-            cube2.indexBuffer = newcube2.indexBuffer;
-            cube2.vertexBuffer = newcube2.vertexBuffer;
+            lightSphere.indexBuffer = newlightsphere.indexBuffer;
+            lightSphere.vertexBuffer = newlightsphere.vertexBuffer;
 
-            material = mvCreateMaterial({ mat1, mat2, mat3 });
+            material = mvCreateMaterial({ mat1, mat2, mat3 }, "vs_shader.vert.spv", "ps_shader.frag.spv");
 
             GContext->viewport.resized = false;
 
@@ -151,10 +151,12 @@ int main()
         glm::mat4 viewMatrix = mvBuildCameraMatrix(camera);
         glm::mat4 projMatrix = mvBuildProjectionMatrix(camera);
 
-        Renderer::mvRenderMesh(cube1, material, {}, viewMatrix, projMatrix);
-        Renderer::mvRenderMesh(cube2, material, {}, viewMatrix, projMatrix);
-        Renderer::mvRenderMesh(quad1, material, {}, viewMatrix, projMatrix);
+        mvBind(light, material.pipeline.pipelineLayout);
+        Renderer::mvRenderMesh(lightSphere, material, {}, viewMatrix, projMatrix);
 
+        Renderer::mvRenderMesh(cube1, material, {}, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(quad1, material, {}, viewMatrix, projMatrix);
+        
         Renderer::mvEndPass(currentCommandBuffer);
 
         //---------------------------------------------------------------------
@@ -165,8 +167,9 @@ int main()
     }
 
     mvCleanupMaterial(material);
+    mvCleanupPointLight(light);
     mvCleanupMesh(cube1);
-    mvCleanupMesh(cube2);
+    mvCleanupMesh(lightSphere);
     mvCleanupMesh(quad1);
     Renderer::mvStopRenderer();
     DestroyContext();
