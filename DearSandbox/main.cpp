@@ -148,7 +148,7 @@ int main()
         mvBind(light, viewMatrix, material.pipeline.pipelineLayout);
         Renderer::mvRenderMesh(lightCube, material, {}, viewMatrix, projMatrix);
 
-        glm::mat4 extratransform = glm::translate(glm::vec3{ 0.0f, 10.0f, 0.0f });
+        glm::mat4 extratransform = glm::translate(glm::vec3{ 0.0f, 0.0f, 0.0f });
         Renderer::mvRenderMesh(cube1, material, extratransform, viewMatrix, projMatrix);
         Renderer::mvRenderMesh(quad1, material, extratransform, viewMatrix, projMatrix);
         
