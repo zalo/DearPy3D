@@ -26,22 +26,23 @@ int main()
     quad1.pos.x = 5.0f;
     quad1.pos.y = 5.0f;
     quad1.pos.z = 5.0f;
-    mvMesh cube1 = mvCreateTexturedCube("../../Resources/brickwall.jpg");
+    mvMesh cube1 = mvCreateTexturedCube("../../Resources/brickwall.jpg", 3.0f);
     cube1.pos.x = 10.0f;
     cube1.pos.y = 10.0f;
-    cube1.pos.z = 10.0f;
-    mvMesh lightSphere = mvCreateSolidSphere();
-    lightSphere.pos.y = 10.0f;
+    cube1.pos.z = 20.0f;
+    mvMesh lightCube = mvCreateTexturedCube("../../Resources/brickwall.jpg", 0.25f);
+    lightCube.pos.y = 10.0f;
 
     auto mat1 = mvMaterialData{};
     auto mat2 = mvMaterialData{};
     auto mat3 = mvMaterialData{};
     mat1.materialColor = glm::vec4{ 1.0f, 1.0f, 1.0f, 1.0f };
+    mat1.doLighting = false;
     mat2.materialColor = glm::vec4{ 0.0f, 1.0f, 0.0f, 1.0f };
     mat3.materialColor = glm::vec4{ 1.0f, 0.0f, 0.0f, 1.0f };
 
     mvMaterial material = mvCreateMaterial({mat1, mat2, mat3}, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    mvPointLight light = mvCreatePointLight(glm::vec3{1.0f, 0.0f, 0.0f});
+    mvPointLight light = mvCreatePointLight(glm::vec3{0.0f, 10.0f, 0.0f});
     mvFinalizePipeline(material.pipeline, {material.descriptorSetLayout, light.descriptorSetLayout});
 
     //---------------------------------------------------------------------
@@ -52,6 +53,7 @@ int main()
     while (GContext->viewport.running)
     {
         const auto dt = timer.mark() * 1.0f;
+        quad1.rot.z += dt;
 
         mvProcessViewportEvents();
 
@@ -73,8 +75,9 @@ int main()
 
             // cleanup
             mvCleanupMaterial(material);
+            mvCleanupPointLight(light);
             mvCleanupMesh(cube1);
-            mvCleanupMesh(lightSphere);
+            mvCleanupMesh(lightCube);
             mvCleanupMesh(quad1);
             GContext->viewport.width = newwidth;
             GContext->viewport.height = newheight;
@@ -82,17 +85,19 @@ int main()
 
             // recreation
             auto newquad1 = mvCreateTexturedQuad("../../Resources/brickwall.jpg");
-            auto newcube1 = mvCreateTexturedCube("../../Resources/brickwall.jpg");
-            auto newlightsphere = mvCreateSolidSphere();
+            auto newcube1 = mvCreateTexturedCube("../../Resources/brickwall.jpg", 3.0f);
+            auto newlightcube = mvCreateTexturedCube("../../Resources/brickwall.jpg", 0.25f);
             
             quad1.indexBuffer = newquad1.indexBuffer;
             quad1.vertexBuffer = newquad1.vertexBuffer;
             cube1.indexBuffer = newcube1.indexBuffer;
             cube1.vertexBuffer = newcube1.vertexBuffer;
-            lightSphere.indexBuffer = newlightsphere.indexBuffer;
-            lightSphere.vertexBuffer = newlightsphere.vertexBuffer;
+            lightCube.indexBuffer = newlightcube.indexBuffer;
+            lightCube.vertexBuffer = newlightcube.vertexBuffer;
 
+            light = mvCreatePointLight(glm::vec3{ 0.0f, 10.0f, 0.0f });
             material = mvCreateMaterial({ mat1, mat2, mat3 }, "vs_shader.vert.spv", "ps_shader.frag.spv");
+            mvFinalizePipeline(material.pipeline, { material.descriptorSetLayout, light.descriptorSetLayout });
 
             GContext->viewport.resized = false;
 
@@ -132,30 +137,20 @@ int main()
         ImGui::GetForegroundDrawList()->AddText(ImVec2(45, 45),
             ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(io.Framerate) + " FPS").c_str());
 
-        ImGui::Begin("Settings");
-        if(ImGui::Button("Change Material"))
-        {
-            auto newmat1 = mvMaterialData{};
-            auto newmat2 = mvMaterialData{};
-            auto newmat3 = mvMaterialData{};
-            newmat1.materialColor = glm::vec4{ 1.0f, 1.0f, 0.0f, 1.0f };
-            newmat2.materialColor = glm::vec4{ 0.0f, 1.0f, 1.0f, 1.0f };
-            newmat3.materialColor = glm::vec4{ 1.0f, 0.0f, 1.0f, 1.0f };
-
-            std::vector<mvMaterialData> newmaterials = {newmat1, newmat2, newmat3};
-
-            mvUpdateBuffer(material.materialBuffer.buffers[GContext->graphics.currentImageIndex], newmaterials.data());
-        }
+        ImGui::Begin("Light Controls");
+        if (ImGui::SliderFloat3("Position", &light.info.viewLightPos.x, -25.0f, 25.0f))
+            lightCube.pos = light.info.viewLightPos;
         ImGui::End();
 
         glm::mat4 viewMatrix = mvBuildCameraMatrix(camera);
         glm::mat4 projMatrix = mvBuildProjectionMatrix(camera);
 
-        mvBind(light, material.pipeline.pipelineLayout);
-        Renderer::mvRenderMesh(lightSphere, material, {}, viewMatrix, projMatrix);
+        mvBind(light, viewMatrix, material.pipeline.pipelineLayout);
+        Renderer::mvRenderMesh(lightCube, material, {}, viewMatrix, projMatrix);
 
-        Renderer::mvRenderMesh(cube1, material, {}, viewMatrix, projMatrix);
-        Renderer::mvRenderMesh(quad1, material, {}, viewMatrix, projMatrix);
+        glm::mat4 extratransform = glm::translate(glm::vec3{ 0.0f, 10.0f, 0.0f });
+        Renderer::mvRenderMesh(cube1, material, extratransform, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(quad1, material, extratransform, viewMatrix, projMatrix);
         
         Renderer::mvEndPass(currentCommandBuffer);
 
@@ -169,7 +164,7 @@ int main()
     mvCleanupMaterial(material);
     mvCleanupPointLight(light);
     mvCleanupMesh(cube1);
-    mvCleanupMesh(lightSphere);
+    mvCleanupMesh(lightCube);
     mvCleanupMesh(quad1);
     Renderer::mvStopRenderer();
     DestroyContext();

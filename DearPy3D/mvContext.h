@@ -5,6 +5,8 @@
 #include "mvViewport.h"
 #include "mvGraphics.h"
 
+#define MV_MAX_FRAMES_IN_FLIGHT 2
+
 namespace DearPy3D {
 
 	//-----------------------------------------------------------------------------

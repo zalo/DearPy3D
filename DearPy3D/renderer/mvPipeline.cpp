@@ -180,8 +180,6 @@ namespace DearPy3D {
             vkDestroyPipelineLayout(mvGetLogicalDevice(), pipeline.pipelineLayout, nullptr);
             for(auto descriptorSetLayout : descriptorSetLayouts)
                 vkDestroyDescriptorSetLayout(mvGetLogicalDevice(), descriptorSetLayout, nullptr);
-            //pipeline.descriptorSetLayouts.clear();
-            //pipeline.descriptorSets.clear();
             });
 	}
 

@@ -47,7 +47,6 @@ namespace DearPy3D {
     struct mvGraphics
     {
         mvDeletionQueue                deletionQueue;
-        const int                      max_frames_in_flight = 2;
 
         // internal
         VkInstance                     instance;

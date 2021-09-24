@@ -1,38 +1,36 @@
 #include "mvMesh.h"
 #include "mvContext.h"
-#include "mvSphere.h"
 
 namespace DearPy3D {
 
-    mvMesh mvCreateTexturedCube(const std::string& path)
+    mvMesh mvCreateTexturedCube(const std::string& path, float sideLength)
     {
 
-        static const float side = 1.0f;
-        static auto vertices = std::vector<float>{
-            -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 0 near side
-             side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 1
-            -side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 2
-             side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 3
-            -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 4 far side
-             side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 5
-            -side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 6
-             side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 7
-            -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 8 left side
-            -side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 9
-            -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 10
-            -side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 11
-             side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 12 right side
-             side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 13
-             side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 14
-             side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 15
-            -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 16 bottom side
-             side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 17
-            -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 18
-             side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 19
-            -side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 20 top side
-             side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 21
-            -side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 22
-             side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f   // 23
+        auto vertices = std::vector<float>{
+            -sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 0 near side
+             sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 1
+            -sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 2
+             sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 3
+            -sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 4 far side
+             sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 5
+            -sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 6
+             sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 7
+            -sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 8 left side
+            -sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 9
+            -sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 10
+            -sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 11
+             sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 12 right side
+             sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 13
+             sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 14
+             sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 15
+            -sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 16 bottom side
+             sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 17
+            -sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 18
+             sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 19
+            -sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 20 top side
+             sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 21
+            -sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 22
+             sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f   // 23
         };
 
         static auto indices = std::vector<uint16_t>{
@@ -71,54 +69,16 @@ namespace DearPy3D {
         return drawable;
     }
 
-    mvMesh mvCreateSolidSphere()
-    {
-
-        std::vector<float> vertices;
-        std::vector<uint16_t> indices;
-        std::vector<float> normals;
-        mvSphere sphere = mvCreateSphere(0.25f);
-
-        vertices = sphere.vertices;
-        indices = sphere.indices;
-        normals = sphere.normals;
-
-        std::vector<float> nverticies;
-        for (int i = 0; i < vertices.size(); i = i + 3)
-        {
-            nverticies.push_back(vertices[i]);
-            nverticies.push_back(vertices[i + 1]);
-            nverticies.push_back(vertices[i + 2]);
-            nverticies.push_back(normals[i]);
-            nverticies.push_back(normals[i + 1]);
-            nverticies.push_back(normals[i + 2]);
-
-            nverticies.push_back(0.0f);
-            nverticies.push_back(0.0f);
-            nverticies.push_back(0.0f);
-            nverticies.push_back(0.0f);
-            nverticies.push_back(0.0f);
-            nverticies.push_back(0.0f);
-            nverticies.push_back(0.0f);
-            nverticies.push_back(0.0f);
-        }
-
-        mvMesh drawable{};
-        drawable.vertexBuffer = mvCreateBuffer(vertices.data(), vertices.size(), sizeof(float), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-        drawable.indexBuffer = mvCreateBuffer(indices.data(), indices.size(), sizeof(uint16_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-        return drawable;
-    }
-
-    mvMesh mvCreateTexturedQuad(const std::string& path)
+    mvMesh mvCreateTexturedQuad(const std::string& path, float sideLength)
     {
 
         // initialize vertices
         auto vertices = std::vector<float>
         {
-            -1.0f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-             1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-             1.0f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+             sideLength, -sideLength, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+            -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+             sideLength,  sideLength, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
         };
 
         // initialize indexes
@@ -152,17 +112,17 @@ namespace DearPy3D {
 
     }
 
-    void mvCleanupMesh(mvMesh& drawable)
+    void mvCleanupMesh(mvMesh& mesh)
     {
-        mvCleanupBuffer(drawable.indexBuffer);
-        drawable.indexBuffer.buffer = VK_NULL_HANDLE;
-        drawable.indexBuffer.memoryAllocation = VK_NULL_HANDLE;
-        drawable.indexBuffer.count = 0u;
+        mvCleanupBuffer(mesh.indexBuffer);
+        mesh.indexBuffer.buffer = VK_NULL_HANDLE;
+        mesh.indexBuffer.memoryAllocation = VK_NULL_HANDLE;
+        mesh.indexBuffer.count = 0u;
 
-        mvCleanupBuffer(drawable.vertexBuffer);
-        drawable.vertexBuffer.buffer = VK_NULL_HANDLE;
-        drawable.vertexBuffer.memoryAllocation = VK_NULL_HANDLE;
-        drawable.vertexBuffer.count = 0u;
+        mvCleanupBuffer(mesh.vertexBuffer);
+        mesh.vertexBuffer.buffer = VK_NULL_HANDLE;
+        mesh.vertexBuffer.memoryAllocation = VK_NULL_HANDLE;
+        mesh.vertexBuffer.count = 0u;
     }
     
 }

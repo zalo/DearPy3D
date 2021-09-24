@@ -8,12 +8,11 @@ namespace DearPy3D {
 
         mvPointLight light;
 
-        mvPointLightInfo info{};
-        info.viewLightPos = glm::vec4(pos, 1.0f);
+        light.info.viewLightPos = glm::vec4(pos, 1.0f);
 
-        for (size_t i = 0; i < 3; i++)
+        for (size_t i = 0; i < MV_MAX_FRAMES_IN_FLIGHT+1; i++)
             light.buffer.buffers.push_back(mvCreateDynamicBuffer(
-                &info, 
+                &light.info, 
                 1, 
                 mvGetRequiredUniformBufferSize(sizeof(mvPointLightInfo)), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT));
 
@@ -40,11 +39,11 @@ namespace DearPy3D {
         //-----------------------------------------------------------------------------
         // allocate descriptor sets
         //-----------------------------------------------------------------------------
-        std::vector<VkDescriptorSetLayout> layouts(3, light.descriptorSetLayout);
+        std::vector<VkDescriptorSetLayout> layouts(MV_MAX_FRAMES_IN_FLIGHT+1, light.descriptorSetLayout);
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = GContext->graphics.descriptorPool;
-        allocInfo.descriptorSetCount = 3;
+        allocInfo.descriptorSetCount = MV_MAX_FRAMES_IN_FLIGHT+1;
         allocInfo.pSetLayouts = layouts.data();
 
         if (vkAllocateDescriptorSets(mvGetLogicalDevice(), &allocInfo, light.descriptorSets) != VK_SUCCESS)
@@ -54,7 +53,7 @@ namespace DearPy3D {
         // update descriptor sets
         //-----------------------------------------------------------------------------
 
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < MV_MAX_FRAMES_IN_FLIGHT+1; i++)
         {
             std::vector<VkWriteDescriptorSet> descriptorWrites;
             descriptorWrites.resize(1);
@@ -81,10 +80,22 @@ namespace DearPy3D {
         return light;
     }
 
-    void mvBind(mvPointLight& light, VkPipelineLayout pipelineLayout)
+    void mvBind(mvPointLight& light, glm::mat4 viewMatrix, VkPipelineLayout pipelineLayout)
     {
+
+        glm::vec4 posCopy = light.info.viewLightPos;
+
+        glm::vec3 out = viewMatrix * light.info.viewLightPos;
+        light.info.viewLightPos.x = out.x;
+        light.info.viewLightPos.y = out.y;
+        light.info.viewLightPos.z = out.z;
+
+        mvUpdateBuffer(light.buffer.buffers[GContext->graphics.currentImageIndex], &light.info);
+
         vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
             pipelineLayout, 1, 1, &light.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
+
+        light.info.viewLightPos = posCopy;
     }
 
     void mvCleanupPointLight(mvPointLight& light)

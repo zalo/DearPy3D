@@ -448,9 +448,9 @@ namespace DearPy3D {
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.commandPool = GContext->graphics.commandPool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = (uint32_t)3;
+        allocInfo.commandBufferCount = (uint32_t)(MV_MAX_FRAMES_IN_FLIGHT+1);
 
-        GContext->graphics.commandBuffers.resize(3);
+        GContext->graphics.commandBuffers.resize(MV_MAX_FRAMES_IN_FLIGHT+1);
 
         if (vkAllocateCommandBuffers(mvGetLogicalDevice(), &allocInfo, GContext->graphics.commandBuffers.data()) != VK_SUCCESS)
             throw std::runtime_error("failed to allocate command buffers!");
@@ -600,9 +600,9 @@ namespace DearPy3D {
 
     static void mvCreateSyncObjects()
     {
-        GContext->graphics.imageAvailableSemaphores.resize(GContext->graphics.max_frames_in_flight);
-        GContext->graphics.renderFinishedSemaphores.resize(GContext->graphics.max_frames_in_flight);
-        GContext->graphics.inFlightFences.resize(GContext->graphics.max_frames_in_flight);
+        GContext->graphics.imageAvailableSemaphores.resize(MV_MAX_FRAMES_IN_FLIGHT);
+        GContext->graphics.renderFinishedSemaphores.resize(MV_MAX_FRAMES_IN_FLIGHT);
+        GContext->graphics.inFlightFences.resize(MV_MAX_FRAMES_IN_FLIGHT);
         GContext->graphics.imagesInFlight.resize(GContext->graphics.swapChainImages.size(), VK_NULL_HANDLE);
 
         VkSemaphoreCreateInfo semaphoreInfo{};
@@ -612,7 +612,7 @@ namespace DearPy3D {
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-        for (size_t i = 0; i < GContext->graphics.max_frames_in_flight; i++)
+        for (size_t i = 0; i < MV_MAX_FRAMES_IN_FLIGHT; i++)
         {
             if (vkCreateSemaphore(mvGetLogicalDevice(), &semaphoreInfo, nullptr, &GContext->graphics.imageAvailableSemaphores[i]) != VK_SUCCESS ||
                 vkCreateSemaphore(mvGetLogicalDevice(), &semaphoreInfo, nullptr, &GContext->graphics.renderFinishedSemaphores[i]) != VK_SUCCESS ||
@@ -741,7 +741,7 @@ namespace DearPy3D {
         mvShutdownAllocator();
         vkDestroyDescriptorPool(GContext->graphics.logicalDevice, GContext->graphics.descriptorPool, nullptr);
 
-        for (size_t i = 0; i < GContext->graphics.max_frames_in_flight; i++)
+        for (size_t i = 0; i < MV_MAX_FRAMES_IN_FLIGHT; i++)
         {
             vkDestroySemaphore(GContext->graphics.logicalDevice, GContext->graphics.imageAvailableSemaphores[i], nullptr);
             vkDestroySemaphore(GContext->graphics.logicalDevice, GContext->graphics.renderFinishedSemaphores[i], nullptr);

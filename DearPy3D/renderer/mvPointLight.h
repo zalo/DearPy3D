@@ -36,12 +36,13 @@ namespace DearPy3D {
     struct mvPointLight
     {
         mvPointLightBuffer    buffer;
-        VkDescriptorSet       descriptorSets[3];
+        VkDescriptorSet       descriptorSets[MV_MAX_FRAMES_IN_FLIGHT+1];
         VkDescriptorSetLayout descriptorSetLayout;
+        mvPointLightInfo      info;
     };
 
     mvPointLight mvCreatePointLight (glm::vec3 pos = { 0.0f,0.0f,0.5f });
-    void         mvBind             (mvPointLight& light, VkPipelineLayout pipelineLayout);
+    void         mvBind             (mvPointLight& light, glm::mat4 viewMatrix, VkPipelineLayout pipelineLayout);
     void         mvCleanupPointLight(mvPointLight& light);
 
 }

@@ -17,9 +17,8 @@ namespace DearPy3D {
         glm::vec3 rot;
     };
 
-    mvMesh mvCreateTexturedCube(const std::string& path);
-    mvMesh mvCreateSolidSphere();
-    mvMesh mvCreateTexturedQuad(const std::string& path);
-    void   mvCleanupMesh(mvMesh& drawable);
+    mvMesh mvCreateTexturedCube(const std::string& path, float sideLength = 1.0f);
+    mvMesh mvCreateTexturedQuad(const std::string& path, float sideLength = 1.0f);
+    void   mvCleanupMesh(mvMesh& mesh);
         
 }

@@ -27,7 +27,8 @@ namespace DearPy3D {
 
         int useGlossAlpha = false;
         int hasAlpha = false;
-        char _pad1[8];
+        int doLighting = true;
+        char _pad1[4];
         //-------------------------- ( 16 bytes )
         
         char _pad2[192];
@@ -49,7 +50,7 @@ namespace DearPy3D {
         uint32_t              offsetIndex = 0u;
         mvMaterialBuffer      materialBuffer;
         VkDescriptorSetLayout descriptorSetLayout;
-        VkDescriptorSet       descriptorSets[3];
+        VkDescriptorSet       descriptorSets[MV_MAX_FRAMES_IN_FLIGHT+1];
 
         uint32_t              _index          = 0u;   // uniform offset index
         uint32_t              _lastImageIndex = 100u; // fake value for first run

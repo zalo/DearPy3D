@@ -14,7 +14,7 @@ namespace DearPy3D {
         material.texture = mvCreateTexture("../../Resources/brickwall.jpg");
         material.sampler = mvCreateSampler();
 
-        for (size_t i = 0; i < 3; i++)
+        for (size_t i = 0; i < MV_MAX_FRAMES_IN_FLIGHT+1; i++)
             material.materialBuffer.buffers.push_back(mvCreateDynamicBuffer(
                 materialData.data(), 
                 materialData.size(), 
@@ -64,7 +64,7 @@ namespace DearPy3D {
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = GContext->graphics.descriptorPool;
-        allocInfo.descriptorSetCount = 3;
+        allocInfo.descriptorSetCount = MV_MAX_FRAMES_IN_FLIGHT+1;
         allocInfo.pSetLayouts = layouts.data();
 
         if (vkAllocateDescriptorSets(mvGetLogicalDevice(), &allocInfo, material.descriptorSets) != VK_SUCCESS)
@@ -74,7 +74,7 @@ namespace DearPy3D {
         // update descriptor sets
         //-----------------------------------------------------------------------------
 
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < MV_MAX_FRAMES_IN_FLIGHT+1; i++)
         {
             std::vector<VkWriteDescriptorSet> descriptorWrites;
             descriptorWrites.resize(2);

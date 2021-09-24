@@ -152,10 +152,10 @@ namespace DearPy3D {
 
             VkResult result = vkQueuePresentKHR(GContext->graphics.presentQueue, &presentInfo);
 
-            GContext->graphics.currentFrame = (GContext->graphics.currentFrame + 1) % GContext->graphics.max_frames_in_flight;
+            GContext->graphics.currentFrame = (GContext->graphics.currentFrame + 1) % MV_MAX_FRAMES_IN_FLIGHT;
         }
 
-        void mvRenderMesh(const mvMesh& drawable, mvMaterial& material, mvTransforms transforms, glm::mat4 camera, glm::mat4 projection)
+        void mvRenderMesh(const mvMesh& drawable, mvMaterial& material, glm::mat4 accumulatedTransform, glm::mat4 camera, glm::mat4 projection)
         {
             // if the last image index is different, reset uniform
             // offset counter. This is a temp. solution.
@@ -183,7 +183,8 @@ namespace DearPy3D {
                 glm::rotate(drawable.rot.y, glm::vec3{ 0.0f, 1.0f, 0.0f }) *
                 glm::rotate(drawable.rot.z, glm::vec3{ 0.0f, 0.0f, 1.0f });
 
-            transforms.model = localTransform;
+            mvTransforms transforms;
+            transforms.model = accumulatedTransform * localTransform;
             transforms.modelView = camera * transforms.model;
             transforms.modelViewProjection = projection * transforms.modelView;
 

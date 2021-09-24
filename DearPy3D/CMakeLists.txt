@@ -14,9 +14,6 @@ target_sources(dearpy3d
 		"core/mvViewport.cpp"
 		"core/mvTimer.cpp"
 
-		# geometry
-		"geometry/mvSphere.cpp"
-
 		# utilities
 		"utilities/mvImporter.cpp"
 
@@ -57,7 +54,6 @@ target_include_directories(dearpy3d
 
 		"."
 		"core/"
-		"geometry/"
 		"utilities/"
 		"renderer/"
 		"renderer/drawables/"
