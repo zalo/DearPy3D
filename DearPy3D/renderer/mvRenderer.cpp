@@ -172,7 +172,7 @@ namespace DearPy3D {
                 material._lastImageIndex = GContext->graphics.currentImageIndex;
             }
 
-            uint32_t material_uniform_offset = material._index * GContext->graphics.deviceProperties.limits.minUniformBufferOffsetAlignment;
+            uint32_t material_uniform_offset = material._index * mvGetRequiredUniformBufferSize(sizeof(mvMaterialData));
             vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline.pipelineLayout, 0, 1, &material.descriptorSets[GContext->graphics.currentImageIndex], 1, &material_uniform_offset);
             vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), drawable.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
             vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &drawable.vertexBuffer.buffer, &offsets);
