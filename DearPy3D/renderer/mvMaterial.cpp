@@ -19,7 +19,7 @@ namespace DearPy3D {
             material.materialBuffer.buffers.push_back(mvCreateDynamicBuffer(
                 materialData.data(), 
                 materialData.size(), 
-                mvGetRequiredUniformBufferSize(sizeof(mvMaterialData)), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT));
+                sizeof(mvMaterialData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT));
 
         auto vlayout = mvCreateVertexLayout(
             {

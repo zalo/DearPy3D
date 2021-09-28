@@ -14,7 +14,7 @@ namespace DearPy3D {
             light.buffer.buffers.push_back(mvCreateDynamicBuffer(
                 &light.info, 
                 1, 
-                mvGetRequiredUniformBufferSize(sizeof(mvPointLightInfo)), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT));
+                sizeof(mvPointLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT));
 
         //-----------------------------------------------------------------------------
         // create descriptor set layout
