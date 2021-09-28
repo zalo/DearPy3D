@@ -67,8 +67,8 @@ namespace DearPy3D {
         VkImage                        depthImage = VK_NULL_HANDLE;
         VkDeviceMemory                 depthImageMemory = VK_NULL_HANDLE;
         VkImageView                    depthImageView = VK_NULL_HANDLE;
-        std::vector<VkSemaphore>       imageAvailableSemaphores;
-        std::vector<VkSemaphore>       renderFinishedSemaphores;
+        std::vector<VkSemaphore>       imageAvailableSemaphores; // syncronize rendering to image when already rendering to image
+        std::vector<VkSemaphore>       renderFinishedSemaphores; // syncronize render/present
         std::vector<VkFence>           inFlightFences;
         std::vector<VkFence>           imagesInFlight;
         VkRenderPass                   renderPass = VK_NULL_HANDLE;
