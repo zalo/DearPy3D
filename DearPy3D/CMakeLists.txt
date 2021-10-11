@@ -23,7 +23,6 @@ target_sources(dearpy3d
 		"renderer/mvPointLight.cpp"
 		"renderer/mvDeletionQueue.cpp"
 		"renderer/mvAllocator.cpp"
-		"renderer/mvObjMaterial.cpp"
 		"renderer/mvGraphics.cpp"
 		"renderer/mvCamera.cpp"
 		"renderer/mvBuffer.cpp"

@@ -1,22 +1,19 @@
 #pragma once
 #include <chrono>
 
-namespace DearPy3D {
+class mvTimer
+{
 
-	class mvTimer
-	{
+public:
 
-	public:
+	mvTimer();
 
-		mvTimer();
-
-		float mark();
-		float peek() const;
-		float now() const;
+	float mark();
+	float peek() const;
+	float now() const;
 	
-	private:
+private:
 
-		std::chrono::steady_clock::time_point m_start;
-		std::chrono::steady_clock::time_point m_last;
-	};
-}
+	std::chrono::steady_clock::time_point m_start;
+	std::chrono::steady_clock::time_point m_last;
+};

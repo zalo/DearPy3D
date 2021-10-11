@@ -5,17 +5,13 @@
 #include "mvShader.h"
 #include "mvVertexLayout.h"
 
-namespace DearPy3D {
+struct mvPipeline
+{
+	mvShader                           vertexShader;
+	mvShader                           fragShader;
+	mvVertexLayout                     layout;
+	VkPipelineLayout                   pipelineLayout = VK_NULL_HANDLE;
+	VkPipeline                         pipeline = VK_NULL_HANDLE;
+};
 
-	struct mvPipeline
-	{
-		mvShader                           vertexShader;
-		mvShader                           fragShader;
-		mvVertexLayout                     layout;
-		VkPipelineLayout                   pipelineLayout = VK_NULL_HANDLE;
-		VkPipeline                         pipeline = VK_NULL_HANDLE;
-	};
-
-	void mvFinalizePipeline(mvPipeline& pipeline, std::vector<VkDescriptorSetLayout> descriptorSetLayouts);
-
-}
+void mvFinalizePipeline(mvPipeline& pipeline, std::vector<VkDescriptorSetLayout> descriptorSetLayouts);

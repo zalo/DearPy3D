@@ -1,19 +1,17 @@
 #include "mvContext.h"
 
-namespace DearPy3D {
+extern mvContext* GContext = nullptr;
 
-	extern mvContext* GContext = nullptr;
+void 
+CreateContext()
+{
+	GContext = new mvContext();
+}
 
-	void CreateContext()
-	{
-		GContext = new mvContext();
-	}
-
-	void DestroyContext()
-	{
-		glfwTerminate();
-		delete GContext;
-		GContext = nullptr;
-	}
-
+void 
+DestroyContext()
+{
+	glfwTerminate();
+	delete GContext;
+	GContext = nullptr;
 }

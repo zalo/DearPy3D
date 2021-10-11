@@ -10,8 +10,6 @@
 #include "mvMath.h"
 #include "mvRenderer.h"
 
-using namespace DearPy3D;
-
 int main() 
 {
     CreateContext();

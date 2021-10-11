@@ -3,19 +3,15 @@
 #include <functional>
 #include <deque>
 
-namespace DearPy3D {
+class mvDeletionQueue
+{
 
-	class mvDeletionQueue
-	{
+public:
 
-	public:
+	void pushDeletor(std::function<void()>&&);
+	void flush();
 
-		void pushDeletor(std::function<void()>&&);
-		void flush();
+private:
 
-	private:
-
-		std::deque<std::function<void()>> _deletors;
-	};
-
-}
+	std::deque<std::function<void()>> _deletors;
+};
