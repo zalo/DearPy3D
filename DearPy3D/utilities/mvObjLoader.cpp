@@ -319,7 +319,7 @@ PostProcess(std::vector<mvObjMesh*>& meshes)
 
 		// left hand
 
-#if 0
+#if 1
 		for (size_t i = 0; i < mesh->triangleCount; i++)
 		{
 			size_t i0 = mesh->indicies[i * 3];

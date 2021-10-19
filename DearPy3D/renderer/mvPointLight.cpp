@@ -76,6 +76,10 @@ mvCreatePointLight(glm::vec3 pos)
 
     }
 
+    GContext->graphics.deletionQueue2.pushDeletor([=]() {
+        vkDestroyDescriptorSetLayout(mvGetLogicalDevice(), light.descriptorSetLayout, nullptr);
+        });
+
     return light;
 }
 

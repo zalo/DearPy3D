@@ -44,7 +44,8 @@ void            mvEndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 struct mvGraphics
 {
-    mvDeletionQueue                deletionQueue;
+    mvDeletionQueue                deletionQueue1;
+    mvDeletionQueue                deletionQueue2;
 
     // internal
     VkInstance                     instance;

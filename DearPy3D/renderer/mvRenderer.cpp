@@ -168,23 +168,10 @@ namespace Renderer {
     void
     mvRenderMesh(const mvMesh& drawable, mvMaterial& material, glm::mat4 accumulatedTransform, glm::mat4 camera, glm::mat4 projection)
     {
-        // if the last image index is different, reset uniform
-        // offset counter. This is a temp. solution.
-        mv_local_persist uint32_t lastImageIndex = 100; // fake value for first run
         mv_local_persist VkDeviceSize offsets = { 0 };
 
-        // if the last image index is different, reset uniform
-        // offset counter. This is a temp. solution.
-        if (material._lastImageIndex == GContext->graphics.currentImageIndex)
-            material._index++;
-        else
-        {
-            material._index = 0u;
-            material._lastImageIndex = GContext->graphics.currentImageIndex;
-        }
-
-        uint32_t material_uniform_offset = material._index * mvGetRequiredUniformBufferSize(sizeof(mvMaterialData));
-        vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline.pipelineLayout, 0, 1, &material.descriptorSets[GContext->graphics.currentImageIndex], 1, &material_uniform_offset);
+        vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline.pipelineLayout, 
+            0, 1, &material.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
         vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), drawable.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &drawable.vertexBuffer.buffer, &offsets);
         vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline.pipeline);

@@ -7,6 +7,7 @@
 #include "mvSampler.h"
 #include "mvBuffer.h"
 #include "mvMath.h"
+#include "mvObjLoader.h"
 
 struct mvMaterialData
 {
@@ -47,10 +48,8 @@ struct mvMaterial
     mvMaterialBuffer      materialBuffer;
     VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorSet*      descriptorSets;
-
-    uint32_t              _index          = 0u;   // uniform offset index
-    uint32_t              _lastImageIndex = 100u; // fake value for first run
 };
 
-mvMaterial mvCreateMaterial (std::vector<mvMaterialData> materialData, const char* vertexShader, const char* pixelShader);
-void       mvCleanupMaterial(mvMaterial& material);
+mvMaterial mvCreateMaterial   (mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
+mvMaterial mvCreateObjMaterial(mvMaterialData materialData, mvObjMaterial objMaterial, const char* vertexShader, const char* pixelShader, const std::string& path);
+void       mvCleanupMaterial  (mvMaterial& material);

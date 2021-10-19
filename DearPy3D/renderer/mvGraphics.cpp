@@ -446,7 +446,7 @@ mvCreateSwapChain()
 
     GContext->graphics.swapChainImageFormat = surfaceFormat.format;
     GContext->graphics.swapChainExtent = extent;
-    GContext->graphics.deletionQueue.pushDeletor([=]() { vkDestroySwapchainKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, nullptr); });
+    GContext->graphics.deletionQueue1.pushDeletor([=]() { vkDestroySwapchainKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, nullptr); });
 
     // creating image views
     GContext->graphics.swapChainImageViews.resize(GContext->graphics.swapChainImages.size());
@@ -478,7 +478,7 @@ mvCreateMainCommandPool()
     if (vkAllocateCommandBuffers(mvGetLogicalDevice(), &allocInfo, GContext->graphics.commandBuffers.data()) != VK_SUCCESS)
         throw std::runtime_error("failed to allocate command buffers!");
 
-    GContext->graphics.deletionQueue.pushDeletor([=]() {vkDestroyCommandPool(mvGetLogicalDevice(), GContext->graphics.commandPool, nullptr); });
+    GContext->graphics.deletionQueue1.pushDeletor([=]() {vkDestroyCommandPool(mvGetLogicalDevice(), GContext->graphics.commandPool, nullptr); });
 }
 
 mv_internal void 
@@ -567,7 +567,7 @@ mvCreateMainRenderPass()
     if (vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, &GContext->graphics.renderPass) != VK_SUCCESS)
         throw std::runtime_error("failed to create render pass!");
 
-    GContext->graphics.deletionQueue.pushDeletor([=]() {
+    GContext->graphics.deletionQueue1.pushDeletor([=]() {
         vkFreeCommandBuffers(mvGetLogicalDevice(),
             GContext->graphics.commandPool,
             static_cast<uint32_t>(GContext->graphics.commandBuffers.size()),
@@ -587,7 +587,7 @@ mvCreateMainDepthResources()
 
     GContext->graphics.depthImageView = mvCreateImageView(GContext->graphics.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-    GContext->graphics.deletionQueue.pushDeletor([=]() {
+    GContext->graphics.deletionQueue1.pushDeletor([=]() {
         vkDestroyImageView(mvGetLogicalDevice(), GContext->graphics.depthImageView, nullptr);
         vkDestroyImage(mvGetLogicalDevice(), GContext->graphics.depthImage, nullptr);
         vkFreeMemory(mvGetLogicalDevice(), GContext->graphics.depthImageMemory, nullptr);
@@ -619,7 +619,7 @@ mvCreateFrameBuffers()
         if (vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &GContext->graphics.swapChainFramebuffers[i]) != VK_SUCCESS)
             throw std::runtime_error("failed to create framebuffer!");
 
-        GContext->graphics.deletionQueue.pushDeletor([=]() {
+        GContext->graphics.deletionQueue1.pushDeletor([=]() {
             vkDestroyFramebuffer(mvGetLogicalDevice(), GContext->graphics.swapChainFramebuffers[i], nullptr);
             vkDestroyImageView(mvGetLogicalDevice(), GContext->graphics.swapChainImageViews[i], nullptr);
             });
@@ -775,7 +775,8 @@ void
 mvCleanupGraphicsContext()
 {
         
-    GContext->graphics.deletionQueue.flush();
+    GContext->graphics.deletionQueue1.flush();
+    GContext->graphics.deletionQueue2.flush();
     mvShutdownAllocator();
     vkDestroyDescriptorPool(GContext->graphics.logicalDevice, GContext->graphics.descriptorPool, nullptr);
 
@@ -803,7 +804,8 @@ mvRecreateSwapChain()
 {
     vkDeviceWaitIdle(mvGetLogicalDevice());
 
-    GContext->graphics.deletionQueue.flush();
+    GContext->graphics.deletionQueue1.flush();
+    GContext->graphics.deletionQueue2.flush();
 
     mvShutdownAllocator();
     mvInitializeAllocator();

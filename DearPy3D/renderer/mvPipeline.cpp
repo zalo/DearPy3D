@@ -69,8 +69,8 @@ mvFinalizePipeline(mvPipeline& pipeline, std::vector<VkDescriptorSetLayout> desc
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    //rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    //rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.cullMode = VK_CULL_MODE_NONE;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
 
@@ -175,10 +175,8 @@ mvFinalizePipeline(mvPipeline& pipeline, std::vector<VkDescriptorSetLayout> desc
     pipeline.vertexShader.shaderModule = VK_NULL_HANDLE;
     pipeline.fragShader.shaderModule = VK_NULL_HANDLE;
 
-    GContext->graphics.deletionQueue.pushDeletor([=]() {
+    GContext->graphics.deletionQueue1.pushDeletor([=]() {
         vkDestroyPipeline(mvGetLogicalDevice(), pipeline.pipeline, nullptr);
         vkDestroyPipelineLayout(mvGetLogicalDevice(), pipeline.pipelineLayout, nullptr);
-        for(auto descriptorSetLayout : descriptorSetLayouts)
-            vkDestroyDescriptorSetLayout(mvGetLogicalDevice(), descriptorSetLayout, nullptr);
         });
 }
