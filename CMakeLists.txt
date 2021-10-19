@@ -13,7 +13,6 @@ set(BUILD_SHARED_LIBS OFF)
 add_definitions(-D_USE_MATH_DEFINES)
 
 add_subdirectory ("Dependencies/glfw")
-add_subdirectory ("Dependencies/glm")
 add_subdirectory ("DearPy3D")
 add_subdirectory ("DearSandbox")
 add_subdirectory ("ImGuiTesting")
