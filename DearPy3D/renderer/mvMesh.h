@@ -17,7 +17,7 @@ struct mvMesh
     glm::vec3 rot;
 };
 
-mvMesh mvCreateTexturedCube(const std::string& path, float sideLength = 1.0f);
-mvMesh mvCreateTexturedQuad(const std::string& path, float sideLength = 1.0f);
+mvMesh mvCreateTexturedCube(float sideLength = 1.0f);
+mvMesh mvCreateTexturedQuad(float sideLength = 1.0f);
 mvMesh mvCreateObjMesh     (mvObjMesh& mesh);
 void   mvCleanupMesh(mvMesh& mesh);

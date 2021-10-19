@@ -3,7 +3,7 @@
 #include "mvObjLoader.h"
 
 mvMesh 
-mvCreateTexturedCube(const std::string& path, float sideLength)
+mvCreateTexturedCube(float sideLength)
 {
 
     auto vertices = std::vector<float>{
@@ -76,7 +76,7 @@ mvCreateTexturedCube(const std::string& path, float sideLength)
 }
 
 mvMesh 
-mvCreateTexturedQuad(const std::string& path, float sideLength)
+mvCreateTexturedQuad(float sideLength)
 {
 
     // initialize vertices

@@ -21,15 +21,15 @@ int main()
     camera.pos = glm::vec3{5.0f, 5.0f, -15.0f};
     camera.aspect = GContext->viewport.width/GContext->viewport.height;
     
-    mvMesh quad1 = mvCreateTexturedQuad("../../Resources/brickwall.jpg");
+    mvMesh quad1 = mvCreateTexturedQuad();
     quad1.pos.x = 5.0f;
     quad1.pos.y = 5.0f;
     quad1.pos.z = 5.0f;
-    mvMesh cube1 = mvCreateTexturedCube("../../Resources/brickwall.jpg", 3.0f);
+    mvMesh cube1 = mvCreateTexturedCube(3.0f);
     cube1.pos.x = 10.0f;
     cube1.pos.y = 10.0f;
     cube1.pos.z = 20.0f;
-    mvMesh lightCube = mvCreateTexturedCube("../../Resources/brickwall.jpg", 0.25f);
+    mvMesh lightCube = mvCreateTexturedCube(0.25f);
     lightCube.pos.y = 10.0f;
 
     auto mat1 = mvMaterialData{};
@@ -83,9 +83,9 @@ int main()
             Renderer::mvResize();
 
             // recreation
-            auto newquad1 = mvCreateTexturedQuad("../../Resources/brickwall.jpg");
-            auto newcube1 = mvCreateTexturedCube("../../Resources/brickwall.jpg", 3.0f);
-            auto newlightcube = mvCreateTexturedCube("../../Resources/brickwall.jpg", 0.25f);
+            auto newquad1 = mvCreateTexturedQuad();
+            auto newcube1 = mvCreateTexturedCube(3.0f);
+            auto newlightcube = mvCreateTexturedCube(0.25f);
             
             quad1.indexBuffer = newquad1.indexBuffer;
             quad1.vertexBuffer = newquad1.vertexBuffer;
