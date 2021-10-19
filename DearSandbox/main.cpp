@@ -52,7 +52,7 @@ int main()
     while (GContext->viewport.running)
     {
         const auto dt = timer.mark() * 1.0f;
-        quad1.rot.z += dt;
+        //quad1.rot.z += dt;
 
         mvProcessViewportEvents();
 
