@@ -11,10 +11,10 @@
 
 struct mvMaterialData
 {
-    glm::vec4 materialColor = { 0.45f, 0.45f, 0.85f, 1.0f };
+    mvVec4 materialColor = { 0.45f, 0.45f, 0.85f, 1.0f };
     //-------------------------- ( 16 bytes )
 
-    glm::vec3 specularColor = { 0.18f, 0.18f, 0.18f };
+    mvVec3 specularColor = { 0.18f, 0.18f, 0.18f };
     float specularGloss = 8.0f;
     //-------------------------- ( 16 bytes )
 

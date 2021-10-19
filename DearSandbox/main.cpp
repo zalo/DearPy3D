@@ -20,7 +20,7 @@ int main()
     Renderer::mvStartRenderer();
 
     mvCamera camera{};
-    camera.pos = glm::vec3{5.0f, 5.0f, -15.0f};
+    camera.pos = {5.0f, 5.0f, -15.0f};
     camera.aspect = GContext->viewport.width/GContext->viewport.height;
     
     mvMesh quad1 = mvCreateTexturedQuad();
@@ -48,15 +48,15 @@ int main()
     auto mat1 = mvMaterialData{};
     auto mat2 = mvMaterialData{};
     auto mat3 = mvMaterialData{};
-    mat1.materialColor = glm::vec4{ 1.0f, 1.0f, 1.0f, 1.0f };
+    mat1.materialColor = { 1.0f, 1.0f, 1.0f, 1.0f };
     mat1.doLighting = false;
-    mat2.materialColor = glm::vec4{ 0.0f, 1.0f, 0.0f, 1.0f };
-    mat3.materialColor = glm::vec4{ 1.0f, 0.0f, 0.0f, 1.0f };
+    mat2.materialColor = { 0.0f, 1.0f, 0.0f, 1.0f };
+    mat3.materialColor = { 1.0f, 0.0f, 0.0f, 1.0f };
 
     mvMaterial material1 = mvCreateMaterial(mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
     mvMaterial material2 = mvCreateMaterial(mat2, "vs_shader.vert.spv", "ps_shader.frag.spv");
     mvMaterial material3 = mvCreateMaterial(mat3, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    mvPointLight light = mvCreatePointLight(glm::vec3{0.0f, 10.0f, 0.0f});
+    mvPointLight light = mvCreatePointLight({0.0f, 10.0f, 0.0f});
 
     std::vector<mvMaterial> materials;
     std::vector<mvObjMaterial> objMaterials;
@@ -154,7 +154,7 @@ int main()
 
             }
 
-            light = mvCreatePointLight(glm::vec3{ 0.0f, 10.0f, 0.0f });
+            light = mvCreatePointLight({ 0.0f, 10.0f, 0.0f });
             material1 = mvCreateMaterial(mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
             material2 = mvCreateMaterial(mat2, "vs_shader.vert.spv", "ps_shader.frag.spv");
             material3 = mvCreateMaterial(mat3, "vs_shader.vert.spv", "ps_shader.frag.spv");
@@ -213,16 +213,20 @@ int main()
 
         ImGui::Begin("Light Controls");
         if (ImGui::SliderFloat3("Position", &light.info.viewLightPos.x, -25.0f, 25.0f))
-            lightCube.pos = light.info.viewLightPos;
+        {
+            lightCube.pos.x = light.info.viewLightPos.x;
+            lightCube.pos.y = light.info.viewLightPos.y;
+            lightCube.pos.z = light.info.viewLightPos.z;
+        }
         ImGui::End();
 
-        glm::mat4 viewMatrix = mvBuildCameraMatrix(camera);
-        glm::mat4 projMatrix = mvBuildProjectionMatrix(camera);
+        mvMat4 viewMatrix = mvBuildCameraMatrix(camera);
+        mvMat4 projMatrix = mvBuildProjectionMatrix(camera);
 
         mvBind(light, viewMatrix, material1.pipeline.pipelineLayout);
-        Renderer::mvRenderMesh(lightCube, material1, glm::translate(glm::vec3{ 0.0f, 0.0f, 0.0f }), viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(lightCube, material1, mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 0.0f, 0.0f }), viewMatrix, projMatrix);
 
-        glm::mat4 extratransform = glm::translate(glm::vec3{ 0.0f, 0.0f, 0.0f });
+        mvMat4 extratransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 0.0f, 0.0f });
         Renderer::mvRenderMesh(cube1, material2, extratransform, viewMatrix, projMatrix);
         Renderer::mvRenderMesh(quad1, material3, extratransform, viewMatrix, projMatrix);
 

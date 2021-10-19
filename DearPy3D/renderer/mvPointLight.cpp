@@ -2,12 +2,12 @@
 #include "mvContext.h"
 
 mvPointLight 
-mvCreatePointLight(glm::vec3 pos)
+mvCreatePointLight(mvVec3 pos)
 {
 
     mvPointLight light;
     light.descriptorSets = new VkDescriptorSet[GContext->graphics.swapChainImages.size()];
-    light.info.viewLightPos = glm::vec4(pos, 1.0f);
+    light.info.viewLightPos = mvVec4{ pos.x, pos.y, pos.z, 1.0f };
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
         light.buffer.buffers.push_back(mvCreateDynamicBuffer(
@@ -84,12 +84,12 @@ mvCreatePointLight(glm::vec3 pos)
 }
 
 void
-mvBind(mvPointLight& light, glm::mat4 viewMatrix, VkPipelineLayout pipelineLayout)
+mvBind(mvPointLight& light, mvMat4 viewMatrix, VkPipelineLayout pipelineLayout)
 {
 
-    glm::vec4 posCopy = light.info.viewLightPos;
+    mvVec4 posCopy = light.info.viewLightPos;
 
-    glm::vec3 out = viewMatrix * light.info.viewLightPos;
+    mvVec4 out = viewMatrix * light.info.viewLightPos;
     light.info.viewLightPos.x = out.x;
     light.info.viewLightPos.y = out.y;
     light.info.viewLightPos.z = out.z;

@@ -2,6 +2,7 @@
 #include "mvContext.h"
 #include <fstream>
 #include <sstream>
+#include <assert.h>
 
 mv_internal void
 ProcessMaterialLine(const std::string& line, mvObjMaterial** currentMaterial, std::vector<mvObjMaterial>& materials)
@@ -191,7 +192,7 @@ ProcessMeshLine(const std::string& line, mvObjMesh** currentMesh, mvObjModel& mo
 	{
 
 		model.verticies.push_back(
-			glm::vec3{
+			{
 				std::stof(tokens[1]),
 				std::stof(tokens[2]),
 				std::stof(tokens[3])
@@ -202,7 +203,7 @@ ProcessMeshLine(const std::string& line, mvObjMesh** currentMesh, mvObjModel& mo
 	{
 
 		model.normals.push_back(
-			glm::vec3{
+			{
 				std::stof(tokens[1]),
 				std::stof(tokens[2]),
 				std::stof(tokens[3])
@@ -214,7 +215,7 @@ ProcessMeshLine(const std::string& line, mvObjMesh** currentMesh, mvObjModel& mo
 	{
 
 		model.textureCoordinates.push_back(
-			glm::vec2{
+			{
 				std::stof(tokens[1]),
 				std::stof(tokens[2])
 			});
@@ -264,19 +265,19 @@ PostProcess(std::vector<mvObjMesh*>& meshes)
 			size_t i1 = mesh->indicies[i * 3 + 1];
 			size_t i2 = mesh->indicies[i * 3 + 2];
 
-			glm::vec3 pos0 = mesh->averticies[i0].position;
-			glm::vec3 pos1 = mesh->averticies[i1].position;
-			glm::vec3 pos2 = mesh->averticies[i2].position;
+			mvVec3 pos0 = mesh->averticies[i0].position;
+			mvVec3 pos1 = mesh->averticies[i1].position;
+			mvVec3 pos2 = mesh->averticies[i2].position;
 
-			glm::vec2 tex0 = mesh->averticies[i0].uv;
-			glm::vec2 tex1 = mesh->averticies[i1].uv;
-			glm::vec2 tex2 = mesh->averticies[i2].uv;
+			mvVec2 tex0 = mesh->averticies[i0].uv;
+			mvVec2 tex1 = mesh->averticies[i1].uv;
+			mvVec2 tex2 = mesh->averticies[i2].uv;
 
-			glm::vec3 edge1 = pos1 - pos0;
-			glm::vec3 edge2 = pos2 - pos0;
+			mvVec3 edge1 = pos1 - pos0;
+			mvVec3 edge2 = pos2 - pos0;
 
-			glm::vec2 uv1 = tex1 - tex0;
-			glm::vec2 uv2 = tex2 - tex0;
+			mvVec2 uv1 = tex1 - tex0;
+			mvVec2 uv2 = tex2 - tex0;
 
 			float dirCorrection = (uv1.x * uv2.y - uv1.y * uv2.x) < 0.0f ? -1.0f : 1.0f;
 
@@ -288,15 +289,15 @@ PostProcess(std::vector<mvObjMesh*>& meshes)
 				uv2.y = 0.0f;
 			}
 
-			glm::vec3 tangent = {
+			mvVec3 tangent = {
 				((edge1.x * uv2.y) - (edge2.x * uv1.y)) * dirCorrection,
 				((edge1.y * uv2.y) - (edge2.y * uv1.y)) * dirCorrection,
 				((edge1.z * uv2.y) - (edge2.z * uv1.y)) * dirCorrection
 			};
 
-			glm::vec3 bitangent = {
+			mvVec3 bitangent = {
 				((edge1.x * uv2.x) - (edge2.x * uv1.x)) * dirCorrection,
-				((edge1.t * uv2.x) - (edge2.y * uv1.x)) * dirCorrection,
+				((edge1.y * uv2.x) - (edge2.y * uv1.x)) * dirCorrection,
 				((edge1.z * uv2.x) - (edge2.z * uv1.x)) * dirCorrection
 			};
 
@@ -309,12 +310,12 @@ PostProcess(std::vector<mvObjMesh*>& meshes)
 			mesh->averticies[i2].bitangent = bitangent - mesh->averticies[i2].normal * (bitangent * mesh->averticies[i2].normal);
 
 			// normalize
-			mesh->averticies[i0].tangent = glm::normalize(mesh->averticies[i0].tangent);
-			mesh->averticies[i1].tangent = glm::normalize(mesh->averticies[i1].tangent);
-			mesh->averticies[i2].tangent = glm::normalize(mesh->averticies[i2].tangent);
-			mesh->averticies[i0].bitangent = glm::normalize(mesh->averticies[i0].bitangent);
-			mesh->averticies[i1].bitangent = glm::normalize(mesh->averticies[i1].bitangent);
-			mesh->averticies[i2].bitangent = glm::normalize(mesh->averticies[i2].bitangent);
+			mesh->averticies[i0].tangent = mvNormalize(mesh->averticies[i0].tangent);
+			mesh->averticies[i1].tangent = mvNormalize(mesh->averticies[i1].tangent);
+			mesh->averticies[i2].tangent = mvNormalize(mesh->averticies[i2].tangent);
+			mesh->averticies[i0].bitangent = mvNormalize(mesh->averticies[i0].bitangent);
+			mesh->averticies[i1].bitangent = mvNormalize(mesh->averticies[i1].bitangent);
+			mesh->averticies[i2].bitangent = mvNormalize(mesh->averticies[i2].bitangent);
 		}
 
 		// left hand

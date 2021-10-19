@@ -7,10 +7,10 @@
 struct mvPointLightInfo
 {
 
-    glm::vec4 viewLightPos = { 0.0f, 0.0f, 0.0f, 1.0f };
+    mvVec4 viewLightPos = { 0.0f, 0.0f, 0.0f, 1.0f };
     //-------------------------- ( 16 bytes )
 
-    glm::vec3 diffuseColor = { 1.0f, 1.0f, 1.0f };
+    mvVec3 diffuseColor = { 1.0f, 1.0f, 1.0f };
     float diffuseIntensity = 1.0f;
     //-------------------------- ( 16 bytes )
 
@@ -36,6 +36,6 @@ struct mvPointLight
     mvPointLightInfo      info;
 };
 
-mvPointLight mvCreatePointLight (glm::vec3 pos = { 0.0f,0.0f,0.5f });
-void         mvBind             (mvPointLight& light, glm::mat4 viewMatrix, VkPipelineLayout pipelineLayout);
+mvPointLight mvCreatePointLight (mvVec3 pos = { 0.0f,0.0f,0.5f });
+void         mvBind             (mvPointLight& light, mvMat4 viewMatrix, VkPipelineLayout pipelineLayout);
 void         mvCleanupPointLight(mvPointLight& light);

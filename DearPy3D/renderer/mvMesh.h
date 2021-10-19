@@ -13,11 +13,11 @@ struct mvMesh
 {
     mvBuffer  indexBuffer;
     mvBuffer  vertexBuffer;
-    glm::vec3 pos;
-    glm::vec3 rot;
+    mvVec3 pos;
+    mvVec3 rot;
 };
 
 mvMesh mvCreateTexturedCube(float sideLength = 1.0f);
 mvMesh mvCreateTexturedQuad(float sideLength = 1.0f);
 mvMesh mvCreateObjMesh     (mvObjMesh& mesh);
-void   mvCleanupMesh(mvMesh& mesh);
+void   mvCleanupMesh       (mvMesh& mesh);

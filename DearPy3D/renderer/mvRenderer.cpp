@@ -166,7 +166,7 @@ namespace Renderer {
     }
 
     void
-    mvRenderMesh(const mvMesh& drawable, mvMaterial& material, glm::mat4 accumulatedTransform, glm::mat4 camera, glm::mat4 projection)
+    mvRenderMesh(const mvMesh& drawable, mvMaterial& material, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
     {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
@@ -176,10 +176,10 @@ namespace Renderer {
         vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &drawable.vertexBuffer.buffer, &offsets);
         vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline.pipeline);
 
-        glm::mat4 localTransform = glm::translate(glm::vec3{ drawable.pos.x, drawable.pos.y, drawable.pos.z }) *
-            glm::rotate(drawable.rot.x, glm::vec3{ 1.0f, 0.0f, 0.0f }) *
-            glm::rotate(drawable.rot.y, glm::vec3{ 0.0f, 1.0f, 0.0f }) *
-            glm::rotate(drawable.rot.z, glm::vec3{ 0.0f, 0.0f, 1.0f });
+        mvMat4 localTransform = mvTranslate(mvIdentityMat4(), mvVec3{ drawable.pos.x, drawable.pos.y, drawable.pos.z }) *
+            mvRotate(mvIdentityMat4(), drawable.rot.x, mvVec3{ 1.0f, 0.0f, 0.0f }) *
+            mvRotate(mvIdentityMat4(), drawable.rot.y, mvVec3{ 0.0f, 1.0f, 0.0f }) *
+            mvRotate(mvIdentityMat4(), drawable.rot.z, mvVec3{ 0.0f, 0.0f, 1.0f });
 
         mvTransforms transforms;
         transforms.model = accumulatedTransform * localTransform;

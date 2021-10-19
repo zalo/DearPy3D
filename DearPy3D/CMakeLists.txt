@@ -13,6 +13,7 @@ target_sources(dearpy3d
 		# core
 		"core/mvViewport.cpp"
 		"core/mvTimer.cpp"
+		"core/mvMath.cpp"
 
 		# utilities
 		"utilities/mvObjLoader.cpp"

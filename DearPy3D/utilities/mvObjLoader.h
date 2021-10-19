@@ -9,11 +9,11 @@ struct mvObjMaterial
 	std::string name;
 	bool pbr = false;
 
-	glm::vec3 ambientColor = { 1.0f, 1.0f, 1.0f }; // Ka
-	glm::vec3 diffuseColor = { 1.0f, 1.0f, 1.0f }; // Kd
-	glm::vec3 specularColor = { 1.0f, 1.0f, 1.0f }; // Ks
-	glm::vec3 transmissionFilter = { 1.0f, 1.0f, 1.0f }; // Tf
-	glm::vec3 emissive = { 0.0f, 0.0f, 0.0f }; // Ke
+	mvVec3 ambientColor = { 1.0f, 1.0f, 1.0f }; // Ka
+	mvVec3 diffuseColor = { 1.0f, 1.0f, 1.0f }; // Kd
+	mvVec3 specularColor = { 1.0f, 1.0f, 1.0f }; // Ks
+	mvVec3 transmissionFilter = { 1.0f, 1.0f, 1.0f }; // Tf
+	mvVec3 emissive = { 0.0f, 0.0f, 0.0f }; // Ke
 
 	float opticalDensity = 1.0f; // Ni
 	float specularExponent = 0.0f; // Ns
@@ -42,11 +42,11 @@ struct mvObjMaterial
 
 struct mvObjVertex
 {
-	glm::vec3 position = {};
-	glm::vec3 normal = {};
-	glm::vec3 tangent = {};
-	glm::vec3 bitangent = {};
-	glm::vec2 uv = {};
+	mvVec3 position = {};
+	mvVec3 normal = {};
+	mvVec3 tangent = {};
+	mvVec3 bitangent = {};
+	mvVec2 uv = {};
 };
 
 struct mvObjMesh
@@ -70,9 +70,9 @@ struct mvObjModel
 {
 	std::vector<mvObjMesh*> meshes;
 	mvObjNode               rootNode;
-	std::vector<glm::vec3>  verticies;
-	std::vector<glm::vec3>  normals;
-	std::vector<glm::vec2>  textureCoordinates;
+	std::vector<mvVec3>  verticies;
+	std::vector<mvVec3>  normals;
+	std::vector<mvVec2>  textureCoordinates;
 	std::string             materialLib;
 };
 

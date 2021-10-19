@@ -13,5 +13,5 @@ namespace Renderer
 	void mvPresent();
 	void mvBeginPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass);
 	void mvEndPass(VkCommandBuffer commandBuffer);
-	void mvRenderMesh(const mvMesh& drawable, mvMaterial& material, glm::mat4 accumulatedTransform, glm::mat4 camera, glm::mat4 projection);
+	void mvRenderMesh(const mvMesh& drawable, mvMaterial& material, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
 }

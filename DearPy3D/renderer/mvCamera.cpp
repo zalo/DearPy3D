@@ -15,28 +15,22 @@ wrap_angle(T theta) noexcept
     return mod;
 }
 
-glm::mat4 
-mvBuildCameraMatrix(const mvCamera& camera)
+mvMat4 
+mvBuildCameraMatrix(mvCamera& camera)
 {
-    glm::mat4 roll_pitch_yaw = glm::yawPitchRoll(camera.yaw, camera.pitch, 0.0f);
-
-    glm::vec4 forward_base_vector = { 0.0f, 0.0f, 1.0f, 0.0f };
-
-    glm::vec4 look_vector = roll_pitch_yaw * forward_base_vector;
-
-    glm::vec3 lpos = { look_vector.x, look_vector.y, look_vector.z };
-
-    glm::vec3 look_target = camera.pos + lpos;
-
-    glm::mat4 camera_matrix = glm::lookAt(camera.pos, look_target, glm::vec3{ 0.0f, -1.0f, 0.0f });
-
+    mvMat4 roll_pitch_yaw = mvYawPitchRoll(camera.yaw, camera.pitch, 0.0f);
+    mvVec4 forward_base_vector = { 0.0f, 0.0f, 1.0f, 0.0f };
+    mvVec4 look_vector = roll_pitch_yaw * forward_base_vector;
+    mvVec3 lpos = { look_vector.x, look_vector.y, look_vector.z };
+    mvVec3 look_target = camera.pos + lpos;
+    mvMat4 camera_matrix = mvLookAtRH(camera.pos, look_target, mvVec3{ 0.0f, -1.0f, 0.0f });
     return camera_matrix;
 }
 
-glm::mat4 
-mvBuildProjectionMatrix(const mvCamera& camera)
+mvMat4
+mvBuildProjectionMatrix(mvCamera& camera)
 {
-    return glm::perspective(glm::radians(45.0f), camera.aspect, 0.1f, 400.0f);
+    return mvPerspectiveRH(mvRadians(45.0f), camera.aspect, 0.1f, 400.0f);
 }
 
 void 
@@ -49,9 +43,9 @@ mvRotateCamera(mvCamera& camera, float dx, float dy)
 void 
 mvTranslateCamera(mvCamera& camera, float dx, float dy, float dz)
 {
-    glm::mat4 roll_pitch_yaw = glm::yawPitchRoll(camera.yaw, camera.pitch, 0.0f);
-    glm::mat4 scale = glm::scale(glm::vec3{ CameraTravelSpeed, CameraTravelSpeed, CameraTravelSpeed });
-    glm::vec4 translation = glm::vec4{ dx, dy, dz, 0.0f };
+    mvMat4 roll_pitch_yaw = mvYawPitchRoll(camera.yaw, camera.pitch, 0.0f);
+    mvMat4 scale = mvScale(mvIdentityMat4(), mvVec3{ CameraTravelSpeed, CameraTravelSpeed, CameraTravelSpeed });
+    mvVec4 translation = { dx, dy, dz, 0.0f };
 
     translation = (roll_pitch_yaw * scale) * translation;
 
