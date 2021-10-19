@@ -7,6 +7,8 @@
 #include "mvDeletionQueue.h"
 #include "mvMaterial.h"
 
+struct mvObjMesh;
+
 struct mvMesh
 {
     mvBuffer  indexBuffer;
@@ -17,4 +19,5 @@ struct mvMesh
 
 mvMesh mvCreateTexturedCube(const std::string& path, float sideLength = 1.0f);
 mvMesh mvCreateTexturedQuad(const std::string& path, float sideLength = 1.0f);
+mvMesh mvCreateObjMesh     (mvObjMesh& mesh);
 void   mvCleanupMesh(mvMesh& mesh);

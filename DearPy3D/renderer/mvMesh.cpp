@@ -1,5 +1,6 @@
 #include "mvMesh.h"
 #include "mvContext.h"
+#include "mvObjLoader.h"
 
 mvMesh 
 mvCreateTexturedCube(const std::string& path, float sideLength)
@@ -7,35 +8,35 @@ mvCreateTexturedCube(const std::string& path, float sideLength)
 
     auto vertices = std::vector<float>{
         -sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 0 near side
-            sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 1
+         sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 1
         -sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 2
-            sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 3
+         sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 3
         -sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 4 far side
-            sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 5
+         sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 5
         -sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 6
-            sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 7
+         sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 7
         -sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 8 left side
         -sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 9
         -sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 10
         -sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 11
-            sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 12 right side
-            sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 13
-            sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 14
-            sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 15
+         sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 12 right side
+         sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 13
+         sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 14
+         sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 15
         -sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 16 bottom side
-            sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 17
+         sideLength, -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 17
         -sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 18
-            sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 19
+         sideLength, -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 19
         -sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 20 top side
-            sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 21
+         sideLength,  sideLength, -sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 21
         -sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 22
-            sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f   // 23
+         sideLength,  sideLength,  sideLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f   // 23
     };
 
     mv_local_persist auto indices = std::vector<uint16_t>{
-            1,  2,  0,  1,  3,  2,
-            7,  5,  4,  6,  7,  4,
-            9, 10,  8,  9, 11, 10,
+        1,  2,  0,  1,  3,  2,
+        7,  5,  4,  6,  7,  4,
+        9, 10,  8,  9, 11, 10,
         15, 13, 12, 14, 15, 12,
         18, 17, 16, 19, 17, 18,
         21, 23, 20, 23, 22, 20
@@ -76,9 +77,9 @@ mvCreateTexturedQuad(const std::string& path, float sideLength)
     auto vertices = std::vector<float>
     {
         -sideLength,  sideLength, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-            sideLength, -sideLength, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+         sideLength, -sideLength, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
         -sideLength, -sideLength, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-            sideLength,  sideLength, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+         sideLength,  sideLength, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
     };
 
     // initialize indexes
@@ -110,6 +111,16 @@ mvCreateTexturedQuad(const std::string& path, float sideLength)
     drawable.indexBuffer = mvCreateBuffer(indices.data(), indices.size(), sizeof(uint16_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     return drawable;
 
+}
+
+mvMesh
+mvCreateObjMesh(mvObjMesh& mesh)
+{
+
+    mvMesh drawable{};
+    drawable.vertexBuffer = mvCreateBuffer(mesh.averticies.data(), mesh.averticies.size(), sizeof(mvObjVertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    drawable.indexBuffer = mvCreateBuffer(mesh.indicies.data(), mesh.indicies.size(), sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+    return drawable;
 }
 
 void 

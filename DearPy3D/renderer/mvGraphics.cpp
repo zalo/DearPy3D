@@ -610,6 +610,7 @@ mvCreateFrameBuffers()
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass = GContext->graphics.renderPass;
         framebufferInfo.attachmentCount = 2;
+
         framebufferInfo.pAttachments = attachments;
         framebufferInfo.width = GContext->graphics.swapChainExtent.width;
         framebufferInfo.height = GContext->graphics.swapChainExtent.height;

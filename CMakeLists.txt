@@ -6,6 +6,9 @@ set(MV_NO_SHADERS ${MV_NO_SHADERS})
 
 # various settings for third party libs
 set(GLFW_BUILD_DOCS OFF)
+set(GLFW_BUILD_EXAMPLES OFF)
+set(GLFW_BUILD_TESTS OFF)
+set(GLFW_INSTALL OFF)
 set(BUILD_SHARED_LIBS OFF)
 add_definitions(-D_USE_MATH_DEFINES)
 

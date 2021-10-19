@@ -15,7 +15,7 @@ target_sources(dearpy3d
 		"core/mvTimer.cpp"
 
 		# utilities
-		"utilities/mvImporter.cpp"
+		"utilities/mvObjLoader.cpp"
 
 		# renderer
 		"renderer/mvRenderer.cpp"

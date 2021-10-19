@@ -9,6 +9,7 @@
 #include <iostream>
 #include "mvMath.h"
 #include "mvRenderer.h"
+#include "mvObjLoader.h"
 
 int main() 
 {
