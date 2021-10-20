@@ -70,9 +70,9 @@ struct mvObjModel
 {
 	std::vector<mvObjMesh*> meshes;
 	mvObjNode               rootNode;
-	std::vector<mvVec3>  verticies;
-	std::vector<mvVec3>  normals;
-	std::vector<mvVec2>  textureCoordinates;
+	std::vector<mvVec3>     verticies;
+	std::vector<mvVec3>     normals;
+	std::vector<mvVec2>     textureCoordinates;
 	std::string             materialLib;
 };
 

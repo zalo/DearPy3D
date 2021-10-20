@@ -17,6 +17,7 @@ target_sources(dearpy3d
 
 		# utilities
 		"utilities/mvObjLoader.cpp"
+		"utilities/mvGLTFLoader.cpp"
 
 		# renderer
 		"renderer/mvRenderer.cpp"
