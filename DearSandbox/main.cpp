@@ -10,14 +10,11 @@
 #include "mvMath.h"
 #include "mvRenderer.h"
 #include "mvObjLoader.h"
-#include "mvGLTFLoader.h"
 
 mv_internal bool loadModel = false;
 
 int main() 
 {
-
-    //mvGLTFModel gltfmodel = mvLoadGLTF("C://dev//glTF-Sample-Models//2.0//Box//glTF//Box.gltf");
 
     CreateContext();
     

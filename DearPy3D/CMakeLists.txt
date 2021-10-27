@@ -17,7 +17,6 @@ target_sources(dearpy3d
 
 		# utilities
 		"utilities/mvObjLoader.cpp"
-		"utilities/mvGLTFLoader.cpp"
 
 		# renderer
 		"renderer/mvRenderer.cpp"
@@ -64,7 +63,6 @@ target_include_directories(dearpy3d
 		"../Dependencies/glm/"
 		"../Dependencies/stb/"
 		"../Dependencies/VulkanMemoryAllocator/"
-		"../Dependencies/json/"
 		"../Dependencies/imgui/"
 		"../Dependencies/imgui/backends/"
 )
