@@ -44,7 +44,7 @@ struct mvMaterialBuffer
 struct mvMaterial
 {
     mvPipeline            pipeline;
-    mvTexture             texture;
+    mvAssetID             texture;
     mvSampler             sampler;
     u32                   offsetIndex = 0u;
     mvMaterialBuffer      materialBuffer;

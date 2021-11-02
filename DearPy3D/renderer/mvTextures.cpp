@@ -45,11 +45,3 @@ mvCreateTexture(const std::string& file)
 
     return texture;
 }
-
-void 
-mvCleanupTexture(mvTexture& texture)
-{
-    vkDestroyImageView(mvGetLogicalDevice(), texture.textureImageView, nullptr);
-    vkDestroyImage(mvGetLogicalDevice(), texture.textureImage, nullptr);
-    vkFreeMemory(mvGetLogicalDevice(), texture.textureImageMemory, nullptr);
-}

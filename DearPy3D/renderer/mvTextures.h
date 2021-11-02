@@ -11,4 +11,3 @@ struct mvTexture
 };
 
 mvTexture mvCreateTexture(const std::string& file);
-void      mvCleanupTexture(mvTexture& texture);

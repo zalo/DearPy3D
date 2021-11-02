@@ -64,6 +64,14 @@ mvCleanupAssetManager(mvAssetManager* manager)
 		manager->dynBuffers[i].buffer.count = 0u;
 	}
 
+	// textures
+	for (int i = 0; i < manager->textureCount; i++)
+	{
+		vkDestroyImageView(mvGetLogicalDevice(), manager->textures[i].texture.textureImageView, nullptr);
+		vkDestroyImage(mvGetLogicalDevice(), manager->textures[i].texture.textureImage, nullptr);
+		vkFreeMemory(mvGetLogicalDevice(), manager->textures[i].texture.textureImageMemory, nullptr);
+	}
+
 	delete[] manager->textures;
 	delete[] manager->buffers;
 	delete[] manager->dynBuffers;
