@@ -3,8 +3,22 @@
 #include "mvContext.h"
 
 void 
-mvFinalizePipeline(mvPipeline& pipeline, std::vector<VkDescriptorSetLayout> descriptorSetLayouts)
+mvFinalizePipeline(mvPipeline& pipeline, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader)
 {
+
+    pipeline.vertexShader = mvCreateShader(vertexShader);
+    pipeline.fragShader = mvCreateShader(pixelShader);
+
+    pipeline.layout = mvCreateVertexLayout(
+        {
+            mvVertexElementType::Position3D,
+            mvVertexElementType::Normal,
+            mvVertexElementType::Tangent,
+            mvVertexElementType::Bitangent,
+            mvVertexElementType::Texture2D
+        }
+    );
+
     //---------------------------------------------------------------------
     // input assembler stage
     //---------------------------------------------------------------------

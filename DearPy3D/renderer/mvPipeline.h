@@ -14,4 +14,4 @@ struct mvPipeline
 	VkPipeline                         pipeline = VK_NULL_HANDLE;
 };
 
-void mvFinalizePipeline(mvPipeline& pipeline, std::vector<VkDescriptorSetLayout> descriptorSetLayouts);
+void mvFinalizePipeline(mvPipeline& pipeline, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader);

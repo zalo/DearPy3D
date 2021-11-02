@@ -9,6 +9,7 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->meshes = new mvMeshAsset[manager->maxMeshCount];
 	manager->phongMaterials = new mvPhongMaterialAsset[manager->maxPhongMaterialCount];
 	manager->samplers = new mvSamplerAsset[manager->maxSamplerCount];
+	manager->pipelines = new mvPipelineAsset[manager->maxPipelineCount];
 }
 
 void 
@@ -54,6 +55,9 @@ mvPrepareResizeAssetManager(mvAssetManager* manager)
 		manager->dynBuffers[i].buffer.count = 0u;
 	}
 	manager->dynBufferCount = 0u;
+
+	// cleanup pipelines
+	manager->pipelineCount = 0u;
 
 }
 
@@ -112,6 +116,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->dynBuffers;
 	delete[] manager->meshes;
 	delete[] manager->samplers;
+	delete[] manager->pipelines;
 
 	manager->samplers = nullptr;
 	manager->textures = nullptr;
@@ -119,6 +124,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	manager->dynBuffers = nullptr;
 	manager->meshes = nullptr;
 	manager->phongMaterials = nullptr;
+	manager->pipelines = nullptr;
 
 	manager->samplerCount = 0u;
 	manager->textureCount = 0u;
@@ -126,6 +132,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	manager->dynBufferCount = 0u;
 	manager->meshCount = 0u;
 	manager->phongMaterialCount = 0u;
+	manager->pipelineCount = 0u;
 }
 
 mvAssetID
@@ -182,7 +189,7 @@ mvRegistryMeshAsset(mvAssetManager* manager, mvMesh mesh)
 }
 
 mvAssetID
-mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, const char* vertexShader, const char* pixelShader)
+mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader)
 {
 	mv_local_persist int temp = 0;
 	temp++;
@@ -195,7 +202,7 @@ mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, co
 	}
 
 	manager->phongMaterials[manager->phongMaterialCount].hash = hash;
-	manager->phongMaterials[manager->phongMaterialCount].material = mvCreateMaterial(*manager, materialData, vertexShader, pixelShader);
+	manager->phongMaterials[manager->phongMaterialCount].material = mvCreateMaterial(*manager, materialData, descriptorSetLayouts, vertexShader, pixelShader);
 	manager->phongMaterialCount++;
 	return manager->phongMaterialCount - 1;
 }
@@ -215,4 +222,20 @@ mvGetSamplerAsset(mvAssetManager* manager)
 	manager->samplers[manager->samplerCount].sampler = mvCreateSampler();
 	manager->samplerCount++;
 	return manager->samplerCount - 1;
+}
+
+mvAssetID 
+mvGetPipelineAsset(mvAssetManager* manager, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader)
+{
+	std::string hash = std::string(pixelShader) + std::string(vertexShader);
+	for (s32 i = 0; i < manager->pipelineCount; i++)
+	{
+		if (manager->pipelines[i].hash == hash)
+			return i;
+	}
+
+	manager->pipelines[manager->pipelineCount].hash = hash;
+	mvFinalizePipeline(manager->pipelines[manager->pipelineCount].pipeline, descriptorSetLayouts, vertexShader, pixelShader);
+	manager->pipelineCount++;
+	return manager->pipelineCount - 1;
 }

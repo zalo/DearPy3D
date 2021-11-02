@@ -5,7 +5,7 @@
 #include "mvAssetManager.h"
 
 mvMaterial 
-mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, const char* vertexShader, const char* pixelShader)
+mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader)
 {
     mv_local_persist int temp = 0;
     temp++;
@@ -13,8 +13,6 @@ mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, const char* ve
 
     mvMaterial material{};
     material.descriptorSets = new VkDescriptorSet[GContext->graphics.swapChainImages.size()];
-    material.pipeline.vertexShader = mvCreateShader(vertexShader);
-    material.pipeline.fragShader = mvCreateShader(pixelShader);
     material.texture = mvGetTextureAsset(&am, "../../Resources/brickwall.jpg");
     material.sampler = mvGetSamplerAsset(&am);
 
@@ -23,17 +21,6 @@ mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, const char* ve
             &materialData, 
             1, 
             sizeof(mvMaterialData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, hash));
-
-    auto vlayout = mvCreateVertexLayout(
-        {
-            mvVertexElementType::Position3D,
-            mvVertexElementType::Normal,
-            mvVertexElementType::Tangent,
-            mvVertexElementType::Bitangent,
-            mvVertexElementType::Texture2D 
-        }
-    );
-    material.pipeline.layout = vlayout;
 
     //-----------------------------------------------------------------------------
     // create descriptor set layout
@@ -119,5 +106,7 @@ mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, const char* ve
           vkDestroyDescriptorSetLayout(mvGetLogicalDevice(), material.descriptorSetLayout, nullptr);
         });
 
+    descriptorSetLayouts.push_back(material.descriptorSetLayout);
+    material.pipeline = mvGetPipelineAsset(&am, descriptorSetLayouts, vertexShader, pixelShader);
     return material;
 }

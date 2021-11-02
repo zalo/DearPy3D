@@ -9,9 +9,9 @@ layout(location = 4) in mat3 inTangentBasis;
 
 layout(location = 0) out vec4 outColor;
 
-layout(set = 0, binding = 0) uniform sampler2D texSampler;
+layout(set = 1, binding = 0) uniform sampler2D texSampler;
 
-layout(set = 0, binding = 1) uniform mvPhongMaterial
+layout(set = 1, binding = 1) uniform mvPhongMaterial
 {
     vec3 materialColor;
     //-------------------------- ( 16 bytes )
@@ -35,7 +35,7 @@ layout(set = 0, binding = 1) uniform mvPhongMaterial
     //-------------------------- ( 4 * 16 = 64 bytes )
 };
 
-layout(set = 1, binding = 0) uniform mvPointLight 
+layout(set = 0, binding = 0) uniform mvPointLight 
 {
     vec3 viewLightPos;
     //-------------------------- ( 16 bytes )

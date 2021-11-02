@@ -1,17 +1,20 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "mvTypes.h"
 #include "mvTextures.h"
 #include "mvMaterials.h"
 #include "mvBuffer.h"
 #include "mvMesh.h"
+#include "mvPipeline.h"
 
 struct mvMeshAsset;
 struct mvBufferAsset;
 struct mvTextureAsset;
 struct mvPhongMaterialAsset;
 struct mvSamplerAsset;
+struct mvPipelineAsset;
 
 struct mvAssetManager
 {
@@ -44,6 +47,11 @@ struct mvAssetManager
 	u32                   maxPhongMaterialCount = 500u;
 	u32                   phongMaterialCount = 0u;
 	mvPhongMaterialAsset* phongMaterials = nullptr;
+
+	// pipelines	       	  
+	u32                   maxPipelineCount = 50u;
+	u32                   pipelineCount = 0u;
+	mvPipelineAsset*      pipelines = nullptr;
 };
 
 void mvInitializeAssetManager   (mvAssetManager* manager);
@@ -53,8 +61,9 @@ void mvCleanupAssetManager      (mvAssetManager* manager);
 mvAssetID mvGetTextureAsset      (mvAssetManager* manager, const std::string& path);
 mvAssetID mvGetBufferAsset       (mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag);
 mvAssetID mvGetDynamicBufferAsset(mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag);
-mvAssetID mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
+mvAssetID mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader);
 mvAssetID mvGetSamplerAsset      (mvAssetManager* manager);
+mvAssetID mvGetPipelineAsset     (mvAssetManager* manager, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader);
 
 mvAssetID mvRegistryMeshAsset    (mvAssetManager* manager, mvMesh mesh);
 
@@ -85,4 +94,10 @@ struct mvPhongMaterialAsset
 {
 	std::string hash;
 	mvMaterial  material;
+};
+
+struct mvPipelineAsset
+{
+	std::string hash;
+	mvPipeline  pipeline;
 };

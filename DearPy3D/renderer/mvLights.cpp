@@ -98,7 +98,7 @@ mvBind(mvAssetManager& am, mvPointLight& light, mvMat4 viewMatrix, VkPipelineLay
     mvUpdateBuffer(am.dynBuffers[light.buffer.buffers[GContext->graphics.currentImageIndex]].buffer, &light.info);
 
     vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
-        pipelineLayout, 1, 1, &light.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
+        pipelineLayout, 0, 1, &light.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
 
     light.info.viewLightPos = posCopy;
 }

@@ -42,7 +42,7 @@ struct mvMaterialBuffer
 
 struct mvMaterial
 {
-    mvPipeline            pipeline;
+    mvAssetID             pipeline;
     mvAssetID             texture;
     mvAssetID             sampler;
     u32                   offsetIndex = 0u;
@@ -51,4 +51,4 @@ struct mvMaterial
     VkDescriptorSet*      descriptorSets;
 };
 
-mvMaterial mvCreateMaterial   (mvAssetManager& am, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
+mvMaterial mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader);

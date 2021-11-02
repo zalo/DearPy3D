@@ -45,14 +45,11 @@ int main()
     mat2.materialColor = { 0.0f, 1.0f, 0.0f, 1.0f };
     mat3.materialColor = { 1.0f, 0.0f, 0.0f, 1.0f };
 
-    mvAssetID material1 = mvGetPhongMaterialAsset(&am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    mvAssetID material2 = mvGetPhongMaterialAsset(&am, mat2, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    mvAssetID material3 = mvGetPhongMaterialAsset(&am, mat3, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    mvPointLight light = mvCreatePointLight(am, {0.0f, 10.0f, 0.0f});
-
-    mvFinalizePipeline(am.phongMaterials[material1].material.pipeline, { am.phongMaterials[material1].material.descriptorSetLayout, light.descriptorSetLayout });
-    mvFinalizePipeline(am.phongMaterials[material2].material.pipeline, { am.phongMaterials[material2].material.descriptorSetLayout, light.descriptorSetLayout });
-    mvFinalizePipeline(am.phongMaterials[material3].material.pipeline, { am.phongMaterials[material3].material.descriptorSetLayout, light.descriptorSetLayout});
+    mvPointLight light = mvCreatePointLight(am, { 0.0f, 10.0f, 0.0f });
+    mvAssetID material1 = mvGetPhongMaterialAsset(&am, mat1, {light.descriptorSetLayout}, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mvAssetID material2 = mvGetPhongMaterialAsset(&am, mat2, {light.descriptorSetLayout}, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mvAssetID material3 = mvGetPhongMaterialAsset(&am, mat3, {light.descriptorSetLayout}, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    
 
     //---------------------------------------------------------------------
     // main loop
@@ -102,13 +99,9 @@ int main()
             lightCube.vertexBuffer = newlightcube.vertexBuffer;
 
             light = mvCreatePointLight(am, { 0.0f, 10.0f, 0.0f });
-            material1 = mvGetPhongMaterialAsset(&am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
-            material2 = mvGetPhongMaterialAsset(&am, mat2, "vs_shader.vert.spv", "ps_shader.frag.spv");
-            material3 = mvGetPhongMaterialAsset(&am, mat3, "vs_shader.vert.spv", "ps_shader.frag.spv");
-
-            mvFinalizePipeline(am.phongMaterials[material1].material.pipeline, { am.phongMaterials[material1].material.descriptorSetLayout, light.descriptorSetLayout });
-            mvFinalizePipeline(am.phongMaterials[material2].material.pipeline, { am.phongMaterials[material2].material.descriptorSetLayout, light.descriptorSetLayout });
-            mvFinalizePipeline(am.phongMaterials[material3].material.pipeline, { am.phongMaterials[material3].material.descriptorSetLayout, light.descriptorSetLayout });
+            material1 = mvGetPhongMaterialAsset(&am, mat1, {light.descriptorSetLayout}, "vs_shader.vert.spv", "ps_shader.frag.spv");
+            material2 = mvGetPhongMaterialAsset(&am, mat2, {light.descriptorSetLayout}, "vs_shader.vert.spv", "ps_shader.frag.spv");
+            material3 = mvGetPhongMaterialAsset(&am, mat3, {light.descriptorSetLayout}, "vs_shader.vert.spv", "ps_shader.frag.spv");
 
             GContext->viewport.resized = false;
 
@@ -160,7 +153,7 @@ int main()
         mvMat4 viewMatrix = mvBuildCameraMatrix(camera);
         mvMat4 projMatrix = mvBuildProjectionMatrix(camera);
 
-        mvBind(am, light, viewMatrix, am.phongMaterials[material1].material.pipeline.pipelineLayout);
+        mvBind(am, light, viewMatrix, am.pipelines[am.phongMaterials[material1].material.pipeline].pipeline.pipelineLayout);
         Renderer::mvRenderMesh(am, lightCube, material1, mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 0.0f, 0.0f }), viewMatrix, projMatrix);
 
         mvMat4 extratransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 0.0f, 0.0f });
