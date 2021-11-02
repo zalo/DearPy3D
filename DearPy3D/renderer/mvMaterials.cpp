@@ -122,11 +122,3 @@ mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, const char* ve
 
     return material;
 }
-
-void 
-mvCleanupMaterial(mvAssetManager& am, mvMaterial& material)
-{
-    vkDeviceWaitIdle(mvGetLogicalDevice());
-    mvCleanupSampler(material.sampler);
-    delete[] material.descriptorSets;
-}

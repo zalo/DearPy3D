@@ -10,6 +10,7 @@
 struct mvMeshAsset;
 struct mvBufferAsset;
 struct mvTextureAsset;
+struct mvPhongMaterialAsset;
 
 struct mvAssetManager
 {
@@ -33,6 +34,11 @@ struct mvAssetManager
 	u32                   maxMeshCount = 500u;
 	u32                   meshCount = 0u;
 	mvMeshAsset*          meshes = nullptr;
+
+	// phong materials	       	  
+	u32                   maxPhongMaterialCount = 500u;
+	u32                   phongMaterialCount = 0u;
+	mvPhongMaterialAsset* phongMaterials = nullptr;
 };
 
 void mvInitializeAssetManager   (mvAssetManager* manager);
@@ -42,6 +48,8 @@ void mvCleanupAssetManager      (mvAssetManager* manager);
 mvAssetID mvGetTextureAsset      (mvAssetManager* manager, const std::string& path);
 mvAssetID mvGetBufferAsset       (mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag);
 mvAssetID mvGetDynamicBufferAsset(mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag);
+mvAssetID mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
+
 mvAssetID mvRegistryMeshAsset    (mvAssetManager* manager, mvMesh mesh);
 
 struct mvMeshAsset
@@ -59,4 +67,10 @@ struct mvTextureAsset
 {
 	std::string hash;
 	mvTexture   texture;
+};
+
+struct mvPhongMaterialAsset
+{
+	std::string hash;
+	mvMaterial  material;
 };

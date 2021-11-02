@@ -167,15 +167,15 @@ namespace Renderer {
     }
 
     void
-    mvRenderMesh(mvAssetManager& am, const mvMesh& drawable, mvMaterial& material, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
+    mvRenderMesh(mvAssetManager& am, const mvMesh& drawable, mvAssetID material, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
     {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
-        vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline.pipelineLayout, 
-            0, 1, &material.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
+        vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, am.phongMaterials[material].material.pipeline.pipelineLayout, 
+            0, 1, &am.phongMaterials[material].material.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
         vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), am.buffers[drawable.indexBuffer].buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &am.buffers[drawable.vertexBuffer].buffer.buffer, &offsets);
-        vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline.pipeline);
+        vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, am.phongMaterials[material].material.pipeline.pipeline);
 
         mvMat4 localTransform = mvTranslate(mvIdentityMat4(), mvVec3{ drawable.pos.x, drawable.pos.y, drawable.pos.z }) *
             mvRotate(mvIdentityMat4(), drawable.rot.x, mvVec3{ 1.0f, 0.0f, 0.0f }) *
@@ -189,7 +189,7 @@ namespace Renderer {
 
         vkCmdPushConstants(
             GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex],
-            material.pipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
+            am.phongMaterials[material].material.pipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
         mvDraw(am.buffers[drawable.indexBuffer].buffer.count);
     }

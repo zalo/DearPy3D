@@ -53,4 +53,3 @@ struct mvMaterial
 };
 
 mvMaterial mvCreateMaterial   (mvAssetManager& am, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
-void       mvCleanupMaterial  (mvAssetManager& am, mvMaterial& material);

@@ -7,11 +7,22 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->buffers = new mvBufferAsset[manager->maxBufferCount];
 	manager->dynBuffers = new mvBufferAsset[manager->maxDynBufferCount];
 	manager->meshes = new mvMeshAsset[manager->maxMeshCount];
+	manager->phongMaterials = new mvPhongMaterialAsset[manager->maxPhongMaterialCount];
 }
 
 void 
 mvPrepareResizeAssetManager(mvAssetManager* manager)
 {
+	vkDeviceWaitIdle(mvGetLogicalDevice());
+
+	// cleanup materials
+	for (int i = 0; i < manager->phongMaterialCount; i++)
+	{
+		mvCleanupSampler(manager->phongMaterials[i].material.sampler);
+		delete[] manager->phongMaterials[i].material.descriptorSets;
+	}
+	manager->phongMaterialCount = 0u;
+
 	// cleanup buffers
 	for (int i = 0; i < manager->bufferCount; i++)
 	{
@@ -41,6 +52,15 @@ mvPrepareResizeAssetManager(mvAssetManager* manager)
 void 
 mvCleanupAssetManager(mvAssetManager* manager)
 {
+	vkDeviceWaitIdle(mvGetLogicalDevice());
+
+	// cleanup materials
+	for (int i = 0; i < manager->phongMaterialCount; i++)
+	{
+		mvCleanupSampler(manager->phongMaterials[i].material.sampler);
+		delete[] manager->phongMaterials[i].material.descriptorSets;
+	}
+	manager->phongMaterialCount = 0u;
 
 	// buffers
 	for (int i = 0; i < manager->bufferCount; i++)
@@ -81,13 +101,14 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	manager->buffers = nullptr;
 	manager->dynBuffers = nullptr;
 	manager->meshes = nullptr;
+	manager->phongMaterials = nullptr;
 
 	manager->textureCount = 0u;
 	manager->bufferCount = 0u;
 	manager->dynBufferCount = 0u;
 	manager->meshCount = 0u;
+	manager->phongMaterialCount = 0u;
 }
-
 
 mvAssetID
 mvGetTextureAsset(mvAssetManager* manager, const std::string& path)
@@ -140,4 +161,23 @@ mvRegistryMeshAsset(mvAssetManager* manager, mvMesh mesh)
 	manager->meshes[manager->meshCount].mesh = mesh;
 	manager->meshCount++;
 	return manager->meshCount - 1;
+}
+
+mvAssetID
+mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, const char* vertexShader, const char* pixelShader)
+{
+	mv_local_persist int temp = 0;
+	temp++;
+	std::string hash = std::string(pixelShader) + std::string(vertexShader) + std::to_string(temp);
+
+	for (s32 i = 0; i < manager->phongMaterialCount; i++)
+	{
+		if (manager->phongMaterials[i].hash == hash)
+			return i;
+	}
+
+	manager->phongMaterials[manager->phongMaterialCount].hash = hash;
+	manager->phongMaterials[manager->phongMaterialCount].material = mvCreateMaterial(*manager, materialData, vertexShader, pixelShader);
+	manager->phongMaterialCount++;
+	return manager->phongMaterialCount - 1;
 }

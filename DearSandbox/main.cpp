@@ -45,14 +45,14 @@ int main()
     mat2.materialColor = { 0.0f, 1.0f, 0.0f, 1.0f };
     mat3.materialColor = { 1.0f, 0.0f, 0.0f, 1.0f };
 
-    mvMaterial material1 = mvCreateMaterial(am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    mvMaterial material2 = mvCreateMaterial(am, mat2, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    mvMaterial material3 = mvCreateMaterial(am, mat3, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mvAssetID material1 = mvGetPhongMaterialAsset(&am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mvAssetID material2 = mvGetPhongMaterialAsset(&am, mat2, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mvAssetID material3 = mvGetPhongMaterialAsset(&am, mat3, "vs_shader.vert.spv", "ps_shader.frag.spv");
     mvPointLight light = mvCreatePointLight(am, {0.0f, 10.0f, 0.0f});
 
-    mvFinalizePipeline(material1.pipeline, {material1.descriptorSetLayout, light.descriptorSetLayout});
-    mvFinalizePipeline(material2.pipeline, {material2.descriptorSetLayout, light.descriptorSetLayout});
-    mvFinalizePipeline(material3.pipeline, {material3.descriptorSetLayout, light.descriptorSetLayout});
+    mvFinalizePipeline(am.phongMaterials[material1].material.pipeline, { am.phongMaterials[material1].material.descriptorSetLayout, light.descriptorSetLayout });
+    mvFinalizePipeline(am.phongMaterials[material2].material.pipeline, { am.phongMaterials[material2].material.descriptorSetLayout, light.descriptorSetLayout });
+    mvFinalizePipeline(am.phongMaterials[material3].material.pipeline, { am.phongMaterials[material3].material.descriptorSetLayout, light.descriptorSetLayout});
 
     //---------------------------------------------------------------------
     // main loop
@@ -83,10 +83,6 @@ int main()
             camera.aspect = (float)newwidth/(float)newheight;
 
             // cleanup
-            mvCleanupMaterial(am, material1);
-            mvCleanupMaterial(am, material2);
-            mvCleanupMaterial(am, material3);
-
             mvCleanupPointLight(light);
             mvPrepareResizeAssetManager(&am);
             GContext->viewport.width = newwidth;
@@ -106,12 +102,13 @@ int main()
             lightCube.vertexBuffer = newlightcube.vertexBuffer;
 
             light = mvCreatePointLight(am, { 0.0f, 10.0f, 0.0f });
-            material1 = mvCreateMaterial(am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
-            material2 = mvCreateMaterial(am, mat2, "vs_shader.vert.spv", "ps_shader.frag.spv");
-            material3 = mvCreateMaterial(am, mat3, "vs_shader.vert.spv", "ps_shader.frag.spv");
-            mvFinalizePipeline(material1.pipeline, { material1.descriptorSetLayout, light.descriptorSetLayout });
-            mvFinalizePipeline(material2.pipeline, { material2.descriptorSetLayout, light.descriptorSetLayout });
-            mvFinalizePipeline(material3.pipeline, { material3.descriptorSetLayout, light.descriptorSetLayout });
+            material1 = mvGetPhongMaterialAsset(&am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
+            material2 = mvGetPhongMaterialAsset(&am, mat2, "vs_shader.vert.spv", "ps_shader.frag.spv");
+            material3 = mvGetPhongMaterialAsset(&am, mat3, "vs_shader.vert.spv", "ps_shader.frag.spv");
+
+            mvFinalizePipeline(am.phongMaterials[material1].material.pipeline, { am.phongMaterials[material1].material.descriptorSetLayout, light.descriptorSetLayout });
+            mvFinalizePipeline(am.phongMaterials[material2].material.pipeline, { am.phongMaterials[material2].material.descriptorSetLayout, light.descriptorSetLayout });
+            mvFinalizePipeline(am.phongMaterials[material3].material.pipeline, { am.phongMaterials[material3].material.descriptorSetLayout, light.descriptorSetLayout });
 
             GContext->viewport.resized = false;
 
@@ -163,7 +160,7 @@ int main()
         mvMat4 viewMatrix = mvBuildCameraMatrix(camera);
         mvMat4 projMatrix = mvBuildProjectionMatrix(camera);
 
-        mvBind(am, light, viewMatrix, material1.pipeline.pipelineLayout);
+        mvBind(am, light, viewMatrix, am.phongMaterials[material1].material.pipeline.pipelineLayout);
         Renderer::mvRenderMesh(am, lightCube, material1, mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 0.0f, 0.0f }), viewMatrix, projMatrix);
 
         mvMat4 extratransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 0.0f, 0.0f });
@@ -179,9 +176,6 @@ int main()
         Renderer::mvPresent();
     }
 
-    mvCleanupMaterial(am, material1);
-    mvCleanupMaterial(am, material2);
-    mvCleanupMaterial(am, material3);
     mvCleanupPointLight(light);
 
     mvCleanupAssetManager(&am);
