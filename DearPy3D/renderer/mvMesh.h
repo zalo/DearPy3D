@@ -5,19 +5,21 @@
 #include "mvBuffer.h"
 #include "mvPipeline.h"
 #include "mvDeletionQueue.h"
-#include "mvMaterial.h"
+#include "mvMaterials.h"
+#include "mvTypes.h"
 
 struct mvObjMesh;
+struct mvAssetManager;
 
 struct mvMesh
 {
-    mvBuffer  indexBuffer;
-    mvBuffer  vertexBuffer;
-    mvVec3 pos;
-    mvVec3 rot;
+    std::string name;
+    mvAssetID   indexBuffer;
+    mvAssetID   vertexBuffer;
+    mvVec3      pos;
+    mvVec3      rot;
 };
 
-mvMesh mvCreateTexturedCube(float sideLength = 1.0f);
-mvMesh mvCreateTexturedQuad(float sideLength = 1.0f);
+mvMesh mvCreateTexturedCube(mvAssetManager& assetManager, float sideLength = 1.0f);
+mvMesh mvCreateTexturedQuad(mvAssetManager& assetManager, float sideLength = 1.0f);
 mvMesh mvCreateObjMesh     (mvObjMesh& mesh);
-void   mvCleanupMesh       (mvMesh& mesh);

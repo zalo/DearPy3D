@@ -3,15 +3,14 @@
 #include "mvMesh.h"
 #include "mvCamera.h"
 #include "mvTimer.h"
-#include "mvPointLight.h"
-#include "mvMaterial.h"
+#include "mvLights.h"
+#include "mvMaterials.h"
 #include "mvContext.h"
 #include <iostream>
 #include "mvMath.h"
 #include "mvRenderer.h"
 #include "mvObjLoader.h"
-
-mv_internal bool loadModel = false;
+#include "mvAssetManager.h"
 
 int main() 
 {
@@ -20,31 +19,23 @@ int main()
     
     Renderer::mvStartRenderer();
 
+    mvAssetManager am{};
+    mvInitializeAssetManager(&am);
+
     mvCamera camera{};
     camera.pos = {5.0f, 5.0f, -15.0f};
     camera.aspect = GContext->viewport.width/GContext->viewport.height;
     
-    mvMesh quad1 = mvCreateTexturedQuad();
+    mvMesh quad1 = mvCreateTexturedQuad(am);
     quad1.pos.x = 5.0f;
     quad1.pos.y = 5.0f;
     quad1.pos.z = 5.0f;
-    mvMesh cube1 = mvCreateTexturedCube(3.0f);
+    mvMesh cube1 = mvCreateTexturedCube(am, 3.0f);
     cube1.pos.x = 10.0f;
     cube1.pos.y = 10.0f;
     cube1.pos.z = 20.0f;
-    mvMesh lightCube = mvCreateTexturedCube(0.25f);
+    mvMesh lightCube = mvCreateTexturedCube(am, 0.25f);
     lightCube.pos.y = 10.0f;
-
-    std::vector<mvMesh> meshes;
-    mvObjModel objModel{};
-    if (loadModel)
-    {
-        objModel = mvLoadObjModel("../../Dependencies/MarvelAssets/Sponza/sponza.obj");
-        for (auto mesh : objModel.meshes)
-        {
-            meshes.push_back(mvCreateObjMesh(*mesh));
-        }
-    }
 
     auto mat1 = mvMaterialData{};
     auto mat2 = mvMaterialData{};
@@ -54,22 +45,10 @@ int main()
     mat2.materialColor = { 0.0f, 1.0f, 0.0f, 1.0f };
     mat3.materialColor = { 1.0f, 0.0f, 0.0f, 1.0f };
 
-    mvMaterial material1 = mvCreateMaterial(mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    mvMaterial material2 = mvCreateMaterial(mat2, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    mvMaterial material3 = mvCreateMaterial(mat3, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    mvPointLight light = mvCreatePointLight({0.0f, 10.0f, 0.0f});
-
-    std::vector<mvMaterial> materials;
-    std::vector<mvObjMaterial> objMaterials;
-    if (loadModel)
-    {
-        objMaterials = mvLoadObjMaterials("../../Dependencies/MarvelAssets/Sponza/sponza.mtl");
-        for (auto objMaterial : objMaterials)
-        {
-            materials.push_back(mvCreateObjMaterial({}, objMaterial, "vs_shader.vert.spv", "ps_shader.frag.spv", "../../Dependencies/MarvelAssets/Sponza/"));
-            mvFinalizePipeline(materials.back().pipeline, { materials.back().descriptorSetLayout, light.descriptorSetLayout });
-        }
-    }
+    mvMaterial material1 = mvCreateMaterial(am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mvMaterial material2 = mvCreateMaterial(am, mat2, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mvMaterial material3 = mvCreateMaterial(am, mat3, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mvPointLight light = mvCreatePointLight(am, {0.0f, 10.0f, 0.0f});
 
     mvFinalizePipeline(material1.pipeline, {material1.descriptorSetLayout, light.descriptorSetLayout});
     mvFinalizePipeline(material2.pipeline, {material2.descriptorSetLayout, light.descriptorSetLayout});
@@ -104,35 +83,20 @@ int main()
             camera.aspect = (float)newwidth/(float)newheight;
 
             // cleanup
-            mvCleanupMaterial(material1);
-            mvCleanupMaterial(material2);
-            mvCleanupMaterial(material3);
-
-            if (loadModel)
-            {
-                for (auto& material : materials)
-                {
-                    mvCleanupMaterial(material);
-                }
-
-                for (auto& mesh : meshes)
-                {
-                    mvCleanupMesh(mesh);
-                }
-            }
+            mvCleanupMaterial(am, material1);
+            mvCleanupMaterial(am, material2);
+            mvCleanupMaterial(am, material3);
 
             mvCleanupPointLight(light);
-            mvCleanupMesh(cube1);
-            mvCleanupMesh(lightCube);
-            mvCleanupMesh(quad1);
+            mvPrepareResizeAssetManager(&am);
             GContext->viewport.width = newwidth;
             GContext->viewport.height = newheight;
             Renderer::mvResize();
 
             // recreation
-            auto newquad1 = mvCreateTexturedQuad();
-            auto newcube1 = mvCreateTexturedCube(3.0f);
-            auto newlightcube = mvCreateTexturedCube(0.25f);
+            auto newquad1 = mvCreateTexturedQuad(am);
+            auto newcube1 = mvCreateTexturedCube(am, 3.0f);
+            auto newlightcube = mvCreateTexturedCube(am, 0.25f);
             
             quad1.indexBuffer = newquad1.indexBuffer;
             quad1.vertexBuffer = newquad1.vertexBuffer;
@@ -141,38 +105,13 @@ int main()
             lightCube.indexBuffer = newlightcube.indexBuffer;
             lightCube.vertexBuffer = newlightcube.vertexBuffer;
 
-
-            if (loadModel)
-            {
-
-                objModel = mvLoadObjModel("../../Dependencies/MarvelAssets/Sponza/sponza.obj");
-                for (int i = 0; i < objModel.meshes.size(); i++)
-                {
-                    auto newmesh = mvCreateObjMesh(*objModel.meshes[i]);
-                    meshes[i].indexBuffer = newmesh.indexBuffer;
-                    meshes[i].vertexBuffer = newmesh.vertexBuffer;
-                }
-
-            }
-
-            light = mvCreatePointLight({ 0.0f, 10.0f, 0.0f });
-            material1 = mvCreateMaterial(mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
-            material2 = mvCreateMaterial(mat2, "vs_shader.vert.spv", "ps_shader.frag.spv");
-            material3 = mvCreateMaterial(mat3, "vs_shader.vert.spv", "ps_shader.frag.spv");
+            light = mvCreatePointLight(am, { 0.0f, 10.0f, 0.0f });
+            material1 = mvCreateMaterial(am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
+            material2 = mvCreateMaterial(am, mat2, "vs_shader.vert.spv", "ps_shader.frag.spv");
+            material3 = mvCreateMaterial(am, mat3, "vs_shader.vert.spv", "ps_shader.frag.spv");
             mvFinalizePipeline(material1.pipeline, { material1.descriptorSetLayout, light.descriptorSetLayout });
             mvFinalizePipeline(material2.pipeline, { material2.descriptorSetLayout, light.descriptorSetLayout });
             mvFinalizePipeline(material3.pipeline, { material3.descriptorSetLayout, light.descriptorSetLayout });
-
-            if (loadModel)
-            {
-                objMaterials = mvLoadObjMaterials("../../Dependencies/MarvelAssets/Sponza/sponza.mtl");
-                materials.clear();
-                for (auto objMaterial : objMaterials)
-                {
-                    materials.push_back(mvCreateObjMaterial({}, objMaterial, "vs_shader.vert.spv", "ps_shader.frag.spv", "../../Dependencies/MarvelAssets/Sponza/"));
-                    mvFinalizePipeline(materials.back().pipeline, { materials.back().descriptorSetLayout, light.descriptorSetLayout });
-                }
-            }
 
             GContext->viewport.resized = false;
 
@@ -224,26 +163,13 @@ int main()
         mvMat4 viewMatrix = mvBuildCameraMatrix(camera);
         mvMat4 projMatrix = mvBuildProjectionMatrix(camera);
 
-        mvBind(light, viewMatrix, material1.pipeline.pipelineLayout);
-        Renderer::mvRenderMesh(lightCube, material1, mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 0.0f, 0.0f }), viewMatrix, projMatrix);
+        mvBind(am, light, viewMatrix, material1.pipeline.pipelineLayout);
+        Renderer::mvRenderMesh(am, lightCube, material1, mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 0.0f, 0.0f }), viewMatrix, projMatrix);
 
         mvMat4 extratransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 0.0f, 0.0f });
-        Renderer::mvRenderMesh(cube1, material2, extratransform, viewMatrix, projMatrix);
-        Renderer::mvRenderMesh(quad1, material3, extratransform, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(am, cube1, material2, extratransform, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(am, quad1, material3, extratransform, viewMatrix, projMatrix);
 
-        if (loadModel)
-        {
-            for (int i = 0; i < meshes.size(); i++)
-            {
-                for (int j = 0; j < objMaterials.size(); j++)
-                {
-                    if (objMaterials[j].name == objModel.meshes[i]->material)
-                        Renderer::mvRenderMesh(meshes[i], materials[j], extratransform, viewMatrix, projMatrix);
-                }
-
-            }
-        }
-        
         Renderer::mvEndPass(currentCommandBuffer);
 
         //---------------------------------------------------------------------
@@ -253,27 +179,12 @@ int main()
         Renderer::mvPresent();
     }
 
-    mvCleanupMaterial(material1);
-    mvCleanupMaterial(material2);
-    mvCleanupMaterial(material3);
+    mvCleanupMaterial(am, material1);
+    mvCleanupMaterial(am, material2);
+    mvCleanupMaterial(am, material3);
     mvCleanupPointLight(light);
 
-    if (loadModel)
-    {
-        for (auto& material : materials)
-        {
-            mvCleanupMaterial(material);
-        }
-
-        for (auto& mesh : meshes)
-        {
-            mvCleanupMesh(mesh);
-        }
-    }
-
-    mvCleanupMesh(cube1);
-    mvCleanupMesh(lightCube);
-    mvCleanupMesh(quad1);
+    mvCleanupAssetManager(&am);
     Renderer::mvStopRenderer();
     DestroyContext();
 }

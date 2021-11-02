@@ -3,6 +3,9 @@
 #include "mvMath.h"
 #include "mvMesh.h"
 #include "mvBuffer.h"
+#include "mvTypes.h"
+
+struct mvAssetManager;
 
 struct mvPointLightInfo
 {
@@ -25,7 +28,7 @@ struct mvPointLightInfo
 
 struct mvPointLightBuffer
 {
-    std::vector<mvBuffer> buffers;
+    std::vector<mvAssetID> buffers;
 };
 
 struct mvPointLight
@@ -36,6 +39,6 @@ struct mvPointLight
     mvPointLightInfo      info;
 };
 
-mvPointLight mvCreatePointLight (mvVec3 pos = { 0.0f,0.0f,0.5f });
-void         mvBind             (mvPointLight& light, mvMat4 viewMatrix, VkPipelineLayout pipelineLayout);
+mvPointLight mvCreatePointLight (mvAssetManager& am, mvVec3 pos = { 0.0f,0.0f,0.5f });
+void         mvBind             (mvAssetManager& am, mvPointLight& light, mvMat4 viewMatrix, VkPipelineLayout pipelineLayout);
 void         mvCleanupPointLight(mvPointLight& light);

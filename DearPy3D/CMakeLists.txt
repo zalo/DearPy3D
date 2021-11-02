@@ -20,8 +20,9 @@ target_sources(dearpy3d
 
 		# renderer
 		"renderer/mvRenderer.cpp"
-		"renderer/mvMaterial.cpp"
-		"renderer/mvPointLight.cpp"
+		"renderer/mvAssetManager.cpp"
+		"renderer/mvMaterials.cpp"
+		"renderer/mvLights.cpp"
 		"renderer/mvDeletionQueue.cpp"
 		"renderer/mvAllocator.cpp"
 		"renderer/mvGraphics.cpp"
@@ -31,7 +32,7 @@ target_sources(dearpy3d
 		"renderer/mvPipeline.cpp"
 		"renderer/mvShader.cpp"
 		"renderer/mvSampler.cpp"
-		"renderer/mvTexture.cpp"
+		"renderer/mvTextures.cpp"
 		"renderer/mvMesh.cpp"
 
 		# Vulkan Memory Allocator

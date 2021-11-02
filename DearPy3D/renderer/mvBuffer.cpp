@@ -3,7 +3,7 @@
 #include "mvContext.h"
 
 mvBuffer 
-mvCreateBuffer(void* data, uint64_t count, uint64_t size, VkBufferUsageFlags flags)
+mvCreateBuffer(void* data, u64 count, u64 size, VkBufferUsageFlags flags)
 {
     mvBuffer buffer{};
     buffer.count = count;
@@ -44,7 +44,7 @@ mvCreateBuffer(void* data, uint64_t count, uint64_t size, VkBufferUsageFlags fla
 }
 
 mvBuffer 
-mvCreateDynamicBuffer(void* data, uint64_t count, uint64_t size, VkBufferUsageFlags flags)
+mvCreateDynamicBuffer(void* data, u64 count, u64 size, VkBufferUsageFlags flags)
 {
     size_t bufferAlignment = mvGetRequiredUniformBufferSize(size);
 
@@ -65,7 +65,7 @@ mvCreateDynamicBuffer(void* data, uint64_t count, uint64_t size, VkBufferUsageFl
     char* mdata = (char*)mvMapMemory(stagingBufferAllocation);
     char* sdata = (char*)data;
         
-    uint64_t currentOffset = 0u;
+    u64 currentOffset = 0u;
     for (size_t i = 0; i < count; i++)
     {
         char* dst = &mdata[i * bufferAlignment];
@@ -92,13 +92,6 @@ mvCreateDynamicBuffer(void* data, uint64_t count, uint64_t size, VkBufferUsageFl
     mvDestroyBuffer(stagingBuffer, stagingBufferAllocation);
 
     return buffer;
-}
-   
-void 
-mvCleanupBuffer(mvBuffer& buffer)
-{
-    vkDestroyBuffer(mvGetLogicalDevice(), buffer.buffer, nullptr);
-    mvFree(buffer.memoryAllocation);
 }
 
 void 

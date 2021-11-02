@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
+#include "mvAssetManager.h"
 
 namespace Renderer {
 
@@ -166,14 +167,14 @@ namespace Renderer {
     }
 
     void
-    mvRenderMesh(const mvMesh& drawable, mvMaterial& material, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
+    mvRenderMesh(mvAssetManager& am, const mvMesh& drawable, mvMaterial& material, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
     {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
         vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline.pipelineLayout, 
             0, 1, &material.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
-        vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), drawable.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &drawable.vertexBuffer.buffer, &offsets);
+        vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), am.buffers[drawable.indexBuffer].buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &am.buffers[drawable.vertexBuffer].buffer.buffer, &offsets);
         vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline.pipeline);
 
         mvMat4 localTransform = mvTranslate(mvIdentityMat4(), mvVec3{ drawable.pos.x, drawable.pos.y, drawable.pos.z }) *
@@ -190,7 +191,7 @@ namespace Renderer {
             GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex],
             material.pipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
-        mvDraw(drawable.indexBuffer.count);
+        mvDraw(am.buffers[drawable.indexBuffer].buffer.count);
     }
 
     void

@@ -1,8 +1,9 @@
-#include "mvPointLight.h"
+#include "mvLights.h"
 #include "mvContext.h"
+#include "mvAssetManager.h"
 
 mvPointLight 
-mvCreatePointLight(mvVec3 pos)
+mvCreatePointLight(mvAssetManager& am, mvVec3 pos)
 {
 
     mvPointLight light;
@@ -10,10 +11,10 @@ mvCreatePointLight(mvVec3 pos)
     light.info.viewLightPos = mvVec4{ pos.x, pos.y, pos.z, 1.0f };
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        light.buffer.buffers.push_back(mvCreateDynamicBuffer(
+        light.buffer.buffers.push_back(mvGetDynamicBufferAsset(&am,
             &light.info, 
             1, 
-            sizeof(mvPointLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT));
+            sizeof(mvPointLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, "point_light"));
 
     //-----------------------------------------------------------------------------
     // create descriptor set layout
@@ -58,7 +59,7 @@ mvCreatePointLight(mvVec3 pos)
         descriptorWrites.resize(1);
 
         VkDescriptorBufferInfo materialInfo;
-        materialInfo.buffer = light.buffer.buffers[i].buffer;
+        materialInfo.buffer = am.dynBuffers[light.buffer.buffers[i]].buffer.buffer;
         materialInfo.offset = 0;
         materialInfo.range = mvGetRequiredUniformBufferSize(sizeof(mvPointLightInfo));
 
@@ -84,7 +85,7 @@ mvCreatePointLight(mvVec3 pos)
 }
 
 void
-mvBind(mvPointLight& light, mvMat4 viewMatrix, VkPipelineLayout pipelineLayout)
+mvBind(mvAssetManager& am, mvPointLight& light, mvMat4 viewMatrix, VkPipelineLayout pipelineLayout)
 {
 
     mvVec4 posCopy = light.info.viewLightPos;
@@ -94,7 +95,7 @@ mvBind(mvPointLight& light, mvMat4 viewMatrix, VkPipelineLayout pipelineLayout)
     light.info.viewLightPos.y = out.y;
     light.info.viewLightPos.z = out.z;
 
-    mvUpdateBuffer(light.buffer.buffers[GContext->graphics.currentImageIndex], &light.info);
+    mvUpdateBuffer(am.dynBuffers[light.buffer.buffers[GContext->graphics.currentImageIndex]].buffer, &light.info);
 
     vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
         pipelineLayout, 1, 1, &light.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
@@ -106,6 +107,4 @@ void
 mvCleanupPointLight(mvPointLight& light)
 {
     delete[] light.descriptorSets;
-    for (auto& item : light.buffer.buffers)
-        mvCleanupBuffer(item);
 }

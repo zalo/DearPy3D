@@ -1,9 +1,10 @@
 #include "mvMesh.h"
 #include "mvContext.h"
 #include "mvObjLoader.h"
+#include "mvAssetManager.h"
 
 mvMesh 
-mvCreateTexturedCube(float sideLength)
+mvCreateTexturedCube(mvAssetManager& assetManager, float sideLength)
 {
 
     auto vertices = std::vector<float>{
@@ -69,14 +70,18 @@ mvCreateTexturedCube(float sideLength)
         vertices[14 * indices[i + 2] + 5] = n[2];
     }
 
-    mvMesh drawable{};
-    drawable.vertexBuffer = mvCreateBuffer(vertices.data(), vertices.size(), sizeof(float), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    drawable.indexBuffer = mvCreateBuffer(indices.data(), indices.size(), sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-    return drawable;
+    mvMesh mesh{};
+    mesh.name = "textured cube";
+    mesh.vertexBuffer = mvGetBufferAsset(&assetManager, 
+        vertices.data(), vertices.size(), 
+        sizeof(u32), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+        "textured_cube_vertex" + std::to_string(sideLength));
+    mesh.indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, "textured_cube_index");
+    return mesh;
 }
 
 mvMesh 
-mvCreateTexturedQuad(float sideLength)
+mvCreateTexturedQuad(mvAssetManager& assetManager, float sideLength)
 {
 
     // initialize vertices
@@ -120,11 +125,14 @@ mvCreateTexturedQuad(float sideLength)
         vertices[14 * indices[i + 2] + 5] = n[2];
     }
 
-    mvMesh drawable{};
-    drawable.vertexBuffer = mvCreateBuffer(vertices.data(), vertices.size(), sizeof(float), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    drawable.indexBuffer = mvCreateBuffer(indices.data(), indices.size(), sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-    return drawable;
-
+    mvMesh mesh{};
+    mesh.name = "textured quad";
+    mesh.vertexBuffer = mvGetBufferAsset(&assetManager,
+        vertices.data(), vertices.size(),
+        sizeof(u32), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        "textured_quad_vertex" + std::to_string(sideLength));
+    mesh.indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, "textured_quad_index");
+    return mesh;
 }
 
 mvMesh
@@ -132,21 +140,7 @@ mvCreateObjMesh(mvObjMesh& mesh)
 {
 
     mvMesh drawable{};
-    drawable.vertexBuffer = mvCreateBuffer(mesh.averticies.data(), mesh.averticies.size(), sizeof(mvObjVertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    drawable.indexBuffer = mvCreateBuffer(mesh.indicies.data(), mesh.indicies.size(), sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+    //drawable.vertexBuffer = mvCreateBuffer(mesh.averticies.data(), mesh.averticies.size(), sizeof(mvObjVertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    //drawable.indexBuffer = mvCreateBuffer(mesh.indicies.data(), mesh.indicies.size(), sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     return drawable;
-}
-
-void 
-mvCleanupMesh(mvMesh& mesh)
-{
-    mvCleanupBuffer(mesh.indexBuffer);
-    mesh.indexBuffer.buffer = VK_NULL_HANDLE;
-    mesh.indexBuffer.memoryAllocation = VK_NULL_HANDLE;
-    mesh.indexBuffer.count = 0u;
-
-    mvCleanupBuffer(mesh.vertexBuffer);
-    mesh.vertexBuffer.buffer = VK_NULL_HANDLE;
-    mesh.vertexBuffer.memoryAllocation = VK_NULL_HANDLE;
-    mesh.vertexBuffer.count = 0u;
 }

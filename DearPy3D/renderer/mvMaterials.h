@@ -3,11 +3,13 @@
 #include <memory>
 #include "mvPipeline.h"
 #include "mvDeletionQueue.h"
-#include "mvTexture.h"
+#include "mvTextures.h"
 #include "mvSampler.h"
 #include "mvBuffer.h"
 #include "mvMath.h"
 #include "mvObjLoader.h"
+
+struct mvAssetManager;
 
 struct mvMaterialData
 {
@@ -36,7 +38,7 @@ struct mvMaterialData
 
 struct mvMaterialBuffer
 {
-    std::vector<mvBuffer> buffers;
+    std::vector<mvAssetID> buffers;
 };
 
 struct mvMaterial
@@ -44,12 +46,11 @@ struct mvMaterial
     mvPipeline            pipeline;
     mvTexture             texture;
     mvSampler             sampler;
-    uint32_t              offsetIndex = 0u;
+    u32                   offsetIndex = 0u;
     mvMaterialBuffer      materialBuffer;
     VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorSet*      descriptorSets;
 };
 
-mvMaterial mvCreateMaterial   (mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
-mvMaterial mvCreateObjMaterial(mvMaterialData materialData, mvObjMaterial objMaterial, const char* vertexShader, const char* pixelShader, const std::string& path);
-void       mvCleanupMaterial  (mvMaterial& material);
+mvMaterial mvCreateMaterial   (mvAssetManager& am, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
+void       mvCleanupMaterial  (mvAssetManager& am, mvMaterial& material);
