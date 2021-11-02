@@ -11,9 +11,14 @@ struct mvMeshAsset;
 struct mvBufferAsset;
 struct mvTextureAsset;
 struct mvPhongMaterialAsset;
+struct mvSamplerAsset;
 
 struct mvAssetManager
 {
+	// samplers
+	u32                   maxSamplerCount = 50u;
+	u32                   samplerCount = 0u;
+	mvSamplerAsset*       samplers = nullptr;
 
 	// textures
 	u32                   maxTextureCount = 500u;
@@ -49,8 +54,15 @@ mvAssetID mvGetTextureAsset      (mvAssetManager* manager, const std::string& pa
 mvAssetID mvGetBufferAsset       (mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag);
 mvAssetID mvGetDynamicBufferAsset(mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag);
 mvAssetID mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
+mvAssetID mvGetSamplerAsset      (mvAssetManager* manager);
 
 mvAssetID mvRegistryMeshAsset    (mvAssetManager* manager, mvMesh mesh);
+
+struct mvSamplerAsset
+{
+	std::string hash;
+	mvSampler   sampler;
+};
 
 struct mvMeshAsset
 {

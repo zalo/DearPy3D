@@ -10,4 +10,10 @@ struct mvTexture
 	VkImageView    textureImageView   = VK_NULL_HANDLE;
 };
 
+struct mvSampler
+{
+	VkSampler textureSampler;
+};
+
+mvSampler mvCreateSampler();
 mvTexture mvCreateTexture(const std::string& file);

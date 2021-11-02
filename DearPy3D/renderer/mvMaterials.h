@@ -4,7 +4,6 @@
 #include "mvPipeline.h"
 #include "mvDeletionQueue.h"
 #include "mvTextures.h"
-#include "mvSampler.h"
 #include "mvBuffer.h"
 #include "mvMath.h"
 #include "mvObjLoader.h"
@@ -45,7 +44,7 @@ struct mvMaterial
 {
     mvPipeline            pipeline;
     mvAssetID             texture;
-    mvSampler             sampler;
+    mvAssetID             sampler;
     u32                   offsetIndex = 0u;
     mvMaterialBuffer      materialBuffer;
     VkDescriptorSetLayout descriptorSetLayout;

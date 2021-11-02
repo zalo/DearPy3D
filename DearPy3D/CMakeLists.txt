@@ -31,7 +31,6 @@ target_sources(dearpy3d
 		"renderer/mvVertexLayout.cpp"
 		"renderer/mvPipeline.cpp"
 		"renderer/mvShader.cpp"
-		"renderer/mvSampler.cpp"
 		"renderer/mvTextures.cpp"
 		"renderer/mvMesh.cpp"
 

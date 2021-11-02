@@ -2,7 +2,6 @@
 #include <stdexcept>
 #include "mvContext.h"
 #include "mvTextures.h"
-#include "mvSampler.h"
 #include "mvAssetManager.h"
 
 mvMaterial 
@@ -17,7 +16,7 @@ mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, const char* ve
     material.pipeline.vertexShader = mvCreateShader(vertexShader);
     material.pipeline.fragShader = mvCreateShader(pixelShader);
     material.texture = mvGetTextureAsset(&am, "../../Resources/brickwall.jpg");
-    material.sampler = mvCreateSampler();
+    material.sampler = mvGetSamplerAsset(&am);
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
         material.materialBuffer.buffers.push_back(mvGetDynamicBufferAsset(&am,
@@ -87,7 +86,7 @@ mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, const char* ve
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageInfo.imageView = am.textures[material.texture].texture.textureImageView;
-        imageInfo.sampler = material.sampler.textureSampler;
+        imageInfo.sampler = am.samplers[material.sampler].sampler.textureSampler;
 
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = material.descriptorSets[i];

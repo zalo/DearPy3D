@@ -8,6 +8,7 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->dynBuffers = new mvBufferAsset[manager->maxDynBufferCount];
 	manager->meshes = new mvMeshAsset[manager->maxMeshCount];
 	manager->phongMaterials = new mvPhongMaterialAsset[manager->maxPhongMaterialCount];
+	manager->samplers = new mvSamplerAsset[manager->maxSamplerCount];
 }
 
 void 
@@ -15,10 +16,17 @@ mvPrepareResizeAssetManager(mvAssetManager* manager)
 {
 	vkDeviceWaitIdle(mvGetLogicalDevice());
 
+	// cleanup samplers
+	for (int i = 0; i < manager->samplerCount; i++)
+	{
+		vkDestroySampler(mvGetLogicalDevice(), manager->samplers[i].sampler.textureSampler, nullptr);
+		manager->samplers[i].sampler.textureSampler = VK_NULL_HANDLE;
+	}
+	manager->samplerCount = 0u;
+
 	// cleanup materials
 	for (int i = 0; i < manager->phongMaterialCount; i++)
 	{
-		mvCleanupSampler(manager->phongMaterials[i].material.sampler);
 		delete[] manager->phongMaterials[i].material.descriptorSets;
 	}
 	manager->phongMaterialCount = 0u;
@@ -54,10 +62,17 @@ mvCleanupAssetManager(mvAssetManager* manager)
 {
 	vkDeviceWaitIdle(mvGetLogicalDevice());
 
+	// cleanup samplers
+	for (int i = 0; i < manager->samplerCount; i++)
+	{
+		vkDestroySampler(mvGetLogicalDevice(), manager->samplers[i].sampler.textureSampler, nullptr);
+		manager->samplers[i].sampler.textureSampler = VK_NULL_HANDLE;
+	}
+	manager->samplerCount = 0u;
+
 	// cleanup materials
 	for (int i = 0; i < manager->phongMaterialCount; i++)
 	{
-		mvCleanupSampler(manager->phongMaterials[i].material.sampler);
 		delete[] manager->phongMaterials[i].material.descriptorSets;
 	}
 	manager->phongMaterialCount = 0u;
@@ -96,13 +111,16 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->buffers;
 	delete[] manager->dynBuffers;
 	delete[] manager->meshes;
+	delete[] manager->samplers;
 
+	manager->samplers = nullptr;
 	manager->textures = nullptr;
 	manager->buffers = nullptr;
 	manager->dynBuffers = nullptr;
 	manager->meshes = nullptr;
 	manager->phongMaterials = nullptr;
 
+	manager->samplerCount = 0u;
 	manager->textureCount = 0u;
 	manager->bufferCount = 0u;
 	manager->dynBufferCount = 0u;
@@ -180,4 +198,21 @@ mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, co
 	manager->phongMaterials[manager->phongMaterialCount].material = mvCreateMaterial(*manager, materialData, vertexShader, pixelShader);
 	manager->phongMaterialCount++;
 	return manager->phongMaterialCount - 1;
+}
+
+mvAssetID 
+mvGetSamplerAsset(mvAssetManager* manager)
+{
+	mv_local_persist std::string tempHash = "sampler";
+
+	for (s32 i = 0; i < manager->samplerCount; i++)
+	{
+		if (manager->samplers[i].hash == tempHash)
+			return i;
+	}
+
+	manager->samplers[manager->samplerCount].hash = tempHash;
+	manager->samplers[manager->samplerCount].sampler = mvCreateSampler();
+	manager->samplerCount++;
+	return manager->samplerCount - 1;
 }
