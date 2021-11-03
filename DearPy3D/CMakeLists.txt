@@ -15,10 +15,8 @@ target_sources(dearpy3d
 		"core/mvTimer.cpp"
 		"core/mvMath.cpp"
 
-		# utilities
-		"utilities/mvObjLoader.cpp"
-
 		# renderer
+		"renderer/mvObjLoader.cpp"
 		"renderer/mvRenderer.cpp"
 		"renderer/mvAssetManager.cpp"
 		"renderer/mvMaterials.cpp"
@@ -33,6 +31,7 @@ target_sources(dearpy3d
 		"renderer/mvShader.cpp"
 		"renderer/mvTextures.cpp"
 		"renderer/mvMesh.cpp"
+		"renderer/mvScene.cpp"
 
 		# Vulkan Memory Allocator
 		"../Dependencies/VulkanMemoryAllocator/vk_mem_alloc.cpp"
@@ -54,7 +53,6 @@ target_include_directories(dearpy3d
 
 		"."
 		"core/"
-		"utilities/"
 		"renderer/"
 		"renderer/drawables/"
 

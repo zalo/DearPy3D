@@ -46,7 +46,6 @@ target_include_directories(dearpy3dsandbox
 		"../DearPy3D/"
 		"../DearPy3D/core/"
 		"../DearPy3D/renderer/"
-		"../DearPy3D/utilities/"
 
 	    "$ENV{VK_SDK_PATH}/Include/"
 		"../Dependencies/glfw/include/"
