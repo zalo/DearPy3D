@@ -34,11 +34,8 @@ struct mvPointLightBuffer
 struct mvPointLight
 {
     mvPointLightBuffer    buffer;
-    VkDescriptorSet*      descriptorSets;
-    VkDescriptorSetLayout descriptorSetLayout;
     mvPointLightInfo      info;
 };
 
 mvPointLight mvCreatePointLight (mvAssetManager& am, mvVec3 pos = { 0.0f,0.0f,0.5f });
-void         mvBind             (mvAssetManager& am, mvPointLight& light, mvMat4 viewMatrix, VkPipelineLayout pipelineLayout);
-void         mvCleanupPointLight(mvPointLight& light);
+void         mvBind             (mvAssetManager& am, mvPointLight& light, mvMat4 viewMatrix);

@@ -5,6 +5,7 @@
 #include "mvTypes.h"
 
 struct mvAssetManager;
+struct mvPointLight;
 
 struct mvSceneData
 {
@@ -23,10 +24,11 @@ struct mvSceneBuffer
 
 struct mvScene
 {
-    u32                   offsetIndex = 0u;
     mvSceneBuffer         sceneBuffer;
-    VkDescriptorSetLayout descriptorSetLayout;
+    //VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorSet*      descriptorSets;
 };
 
-mvScene mvCreateScene(mvAssetManager& am, mvSceneData sceneData, b32 doLighting);
+mvScene mvCreateScene(mvAssetManager& am, mvSceneData sceneData);
+void    mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light);
+void    mvBindScene(mvAssetManager& am, mvAssetID scene, mvAssetID pipelineLayout);

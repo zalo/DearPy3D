@@ -4,14 +4,27 @@
 #include <vulkan/vulkan.h>
 #include "mvShader.h"
 #include "mvVertexLayout.h"
+#include "mvTypes.h"
+
+struct mvScene;
+struct mvMaterial;
+struct mvAssetManager;
+
+struct mvPipelineLayout
+{
+	VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+	std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+};
 
 struct mvPipeline
 {
-	mvShader                           vertexShader;
-	mvShader                           fragShader;
-	mvVertexLayout                     layout;
-	VkPipelineLayout                   pipelineLayout = VK_NULL_HANDLE;
-	VkPipeline                         pipeline = VK_NULL_HANDLE;
+	mvShader       vertexShader;
+	mvShader       fragShader;
+	mvVertexLayout layout;
+	mvAssetID      pipelineLayout;
+	VkPipeline     pipeline = VK_NULL_HANDLE;
 };
 
-void mvFinalizePipeline(mvPipeline& pipeline, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader);
+
+mvPipeline       mvCreatePipeline(mvAssetManager& assetManager, mvScene& scene, mvMaterial& material);
+mvPipelineLayout mvCreatePipelineLayout(std::vector<VkDescriptorSetLayout> descriptorSetLayouts);

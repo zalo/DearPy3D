@@ -2,7 +2,6 @@
 
 #include <memory>
 #include "mvPipeline.h"
-#include "mvDeletionQueue.h"
 #include "mvTextures.h"
 #include "mvBuffer.h"
 #include "mvMath.h"
@@ -47,8 +46,9 @@ struct mvMaterial
     mvAssetID             sampler;
     u32                   offsetIndex = 0u;
     mvMaterialBuffer      materialBuffer;
-    VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorSet*      descriptorSets;
+    std::string           vertexShader;
+    std::string           pixelShader;
 };
 
-mvMaterial mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader);
+mvMaterial mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);

@@ -10,12 +10,22 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->phongMaterials = new mvPhongMaterialAsset[manager->maxPhongMaterialCount];
 	manager->samplers = new mvSamplerAsset[manager->maxSamplerCount];
 	manager->pipelines = new mvPipelineAsset[manager->maxPipelineCount];
+	manager->pipelineLayouts = new mvPipelineLayoutAsset[manager->maxPipelineLayoutCount];
+	manager->scenes = new mvSceneAsset[manager->maxSceneCount];
+	manager->descriptorSetLayouts = new mvDescriptorSetLayoutAsset[manager->maxDescriptorSetLayoutCount];
 }
 
 void 
 mvPrepareResizeAssetManager(mvAssetManager* manager)
 {
 	vkDeviceWaitIdle(mvGetLogicalDevice());
+
+	// cleanup pipelines
+	for (int i = 0; i < manager->pipelineCount; i++)
+	{
+		vkDestroyPipeline(mvGetLogicalDevice(), manager->pipelines[i].pipeline.pipeline, nullptr);
+	}
+	manager->pipelineCount = 0u;
 
 	// cleanup samplers
 	for (int i = 0; i < manager->samplerCount; i++)
@@ -31,6 +41,13 @@ mvPrepareResizeAssetManager(mvAssetManager* manager)
 		delete[] manager->phongMaterials[i].material.descriptorSets;
 	}
 	manager->phongMaterialCount = 0u;
+
+	// cleanup scene
+	for (int i = 0; i < manager->sceneCount; i++)
+	{
+		delete[] manager->scenes[i].scene.descriptorSets;
+	}
+	manager->sceneCount = 0u;
 
 	// cleanup buffers
 	for (int i = 0; i < manager->bufferCount; i++)
@@ -56,9 +73,6 @@ mvPrepareResizeAssetManager(mvAssetManager* manager)
 	}
 	manager->dynBufferCount = 0u;
 
-	// cleanup pipelines
-	manager->pipelineCount = 0u;
-
 }
 
 void 
@@ -80,6 +94,13 @@ mvCleanupAssetManager(mvAssetManager* manager)
 		delete[] manager->phongMaterials[i].material.descriptorSets;
 	}
 	manager->phongMaterialCount = 0u;
+
+	// cleanup scene
+	for (int i = 0; i < manager->sceneCount; i++)
+	{
+		delete[] manager->scenes[i].scene.descriptorSets;
+	}
+	manager->sceneCount = 0u;
 
 	// buffers
 	for (int i = 0; i < manager->bufferCount; i++)
@@ -111,12 +132,34 @@ mvCleanupAssetManager(mvAssetManager* manager)
 		vkFreeMemory(mvGetLogicalDevice(), manager->textures[i].texture.textureImageMemory, nullptr);
 	}
 
+	// descriptor set layouts
+	for (int i = 0; i < manager->descriptorSetLayoutCount; i++)
+	{
+		vkDestroyDescriptorSetLayout(mvGetLogicalDevice(), manager->descriptorSetLayouts[i].layout, nullptr);
+	}
+
+	// pipeline layouts
+	for (int i = 0; i < manager->pipelineLayoutCount; i++)
+	{
+		vkDestroyPipelineLayout(mvGetLogicalDevice(), manager->pipelineLayouts[i].layout.pipelineLayout, nullptr);
+	}
+
+	// cleanup pipelines
+	for (int i = 0; i < manager->pipelineCount; i++)
+	{
+		vkDestroyPipeline(mvGetLogicalDevice(), manager->pipelines[i].pipeline.pipeline, nullptr);
+	}
+	manager->pipelineCount = 0u;
+
 	delete[] manager->textures;
 	delete[] manager->buffers;
 	delete[] manager->dynBuffers;
 	delete[] manager->meshes;
 	delete[] manager->samplers;
 	delete[] manager->pipelines;
+	delete[] manager->pipelineLayouts;
+	delete[] manager->scenes;
+	delete[] manager->descriptorSetLayouts;
 
 	manager->samplers = nullptr;
 	manager->textures = nullptr;
@@ -125,6 +168,9 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	manager->meshes = nullptr;
 	manager->phongMaterials = nullptr;
 	manager->pipelines = nullptr;
+	manager->pipelineLayouts = nullptr;
+	manager->scenes = nullptr;
+	manager->descriptorSetLayouts = nullptr;
 
 	manager->samplerCount = 0u;
 	manager->textureCount = 0u;
@@ -133,6 +179,9 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	manager->meshCount = 0u;
 	manager->phongMaterialCount = 0u;
 	manager->pipelineCount = 0u;
+	manager->pipelineLayoutCount = 0u;
+	manager->sceneCount = 0u;
+	manager->descriptorSetLayoutCount = 0u;
 }
 
 mvAssetID
@@ -189,7 +238,7 @@ mvRegistryMeshAsset(mvAssetManager* manager, mvMesh mesh)
 }
 
 mvAssetID
-mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader)
+mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, const char* vertexShader, const char* pixelShader)
 {
 	mv_local_persist int temp = 0;
 	temp++;
@@ -202,7 +251,7 @@ mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, st
 	}
 
 	manager->phongMaterials[manager->phongMaterialCount].hash = hash;
-	manager->phongMaterials[manager->phongMaterialCount].material = mvCreateMaterial(*manager, materialData, descriptorSetLayouts, vertexShader, pixelShader);
+	manager->phongMaterials[manager->phongMaterialCount].material = mvCreateMaterial(*manager, materialData, vertexShader, pixelShader);
 	manager->phongMaterialCount++;
 	return manager->phongMaterialCount - 1;
 }
@@ -225,9 +274,9 @@ mvGetSamplerAsset(mvAssetManager* manager)
 }
 
 mvAssetID 
-mvGetPipelineAsset(mvAssetManager* manager, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader)
+mvGetPipelineAsset(mvAssetManager* manager, mvScene& scene, mvMaterial& material)
 {
-	std::string hash = std::string(pixelShader) + std::string(vertexShader);
+	std::string hash = std::string(material.pixelShader) + std::string(material.vertexShader);
 	for (s32 i = 0; i < manager->pipelineCount; i++)
 	{
 		if (manager->pipelines[i].hash == hash)
@@ -235,7 +284,62 @@ mvGetPipelineAsset(mvAssetManager* manager, std::vector<VkDescriptorSetLayout> d
 	}
 
 	manager->pipelines[manager->pipelineCount].hash = hash;
-	mvFinalizePipeline(manager->pipelines[manager->pipelineCount].pipeline, descriptorSetLayouts, vertexShader, pixelShader);
+	manager->pipelines[manager->pipelineCount].pipeline = mvCreatePipeline(*manager, scene, material);
 	manager->pipelineCount++;
 	return manager->pipelineCount - 1;
+}
+
+mvAssetID 
+mvGetSceneAsset(mvAssetManager* manager, mvSceneData sceneData)
+{
+	std::string hash = "scene_" + std::string(sceneData.doLighting ? "T" : "F");
+
+	for (s32 i = 0; i < manager->sceneCount; i++)
+	{
+		if (manager->scenes[i].hash == hash)
+			return i;
+	}
+
+	manager->scenes[manager->sceneCount].hash = hash;
+	manager->scenes[manager->sceneCount].scene = mvCreateScene(*manager, sceneData);
+	manager->sceneCount++;
+	return manager->sceneCount - 1;
+}
+
+mvAssetID 
+mvGetPipelineLayoutAsset(mvAssetManager* manager, std::vector<VkDescriptorSetLayout> descriptorSetLayouts)
+{
+	std::string hash = "layout_" + std::to_string(descriptorSetLayouts.size());
+
+	for (s32 i = 0; i < manager->pipelineLayoutCount; i++)
+	{
+		if (manager->scenes[i].hash == hash)
+			return i;
+	}
+
+	manager->pipelineLayouts[manager->pipelineLayoutCount].hash = hash;
+	manager->pipelineLayouts[manager->pipelineLayoutCount].layout = mvCreatePipelineLayout(descriptorSetLayouts);
+	manager->pipelineLayoutCount++;
+	return manager->pipelineLayoutCount - 1;
+}
+
+mvAssetID
+mvRegisterDescriptorSetLayoutAsset(mvAssetManager* manager, VkDescriptorSetLayout layout, const std::string& tag)
+{
+	manager->descriptorSetLayouts[manager->descriptorSetLayoutCount].hash = tag;
+	manager->descriptorSetLayouts[manager->descriptorSetLayoutCount].layout = layout;
+	manager->descriptorSetLayoutCount++;
+	return manager->descriptorSetLayoutCount - 1;
+}
+
+mvAssetID 
+mvGetDescriptorSetLayoutAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->descriptorSetLayoutCount; i++)
+	{
+		if (manager->descriptorSetLayouts[i].hash == tag)
+			return i;
+	}
+
+	return -1;
 }

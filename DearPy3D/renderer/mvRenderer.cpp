@@ -167,11 +167,11 @@ namespace Renderer {
     }
 
     void
-    mvRenderMesh(mvAssetManager& am, const mvMesh& drawable, mvAssetID material, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
+    mvRenderMesh(mvAssetManager& am, mvAssetID pipelineLayout, const mvMesh& drawable, mvAssetID material, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
     {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
-        vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, am.pipelines[am.phongMaterials[material].material.pipeline].pipeline.pipelineLayout, 
+        vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, am.pipelineLayouts[pipelineLayout].layout.pipelineLayout,
             1, 1, &am.phongMaterials[material].material.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
         vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), am.buffers[drawable.indexBuffer].buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &am.buffers[drawable.vertexBuffer].buffer.buffer, &offsets);
@@ -189,7 +189,7 @@ namespace Renderer {
 
         vkCmdPushConstants(
             GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex],
-            am.pipelines[am.phongMaterials[material].material.pipeline].pipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
+            am.pipelineLayouts[pipelineLayout].layout.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
         mvDraw(am.buffers[drawable.indexBuffer].buffer.count);
     }

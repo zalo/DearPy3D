@@ -4,7 +4,6 @@
 #include "mvMath.h"
 #include "mvBuffer.h"
 #include "mvPipeline.h"
-#include "mvDeletionQueue.h"
 #include "mvMaterials.h"
 #include "mvTypes.h"
 

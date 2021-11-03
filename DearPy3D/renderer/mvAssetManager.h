@@ -8,6 +8,7 @@
 #include "mvBuffer.h"
 #include "mvMesh.h"
 #include "mvPipeline.h"
+#include "mvScene.h"
 
 struct mvMeshAsset;
 struct mvBufferAsset;
@@ -15,9 +16,17 @@ struct mvTextureAsset;
 struct mvPhongMaterialAsset;
 struct mvSamplerAsset;
 struct mvPipelineAsset;
+struct mvPipelineLayoutAsset;
+struct mvSceneAsset;
+struct mvDescriptorSetLayoutAsset;
 
 struct mvAssetManager
 {
+	// scenes
+	u32                   maxSceneCount = 50u;
+	u32                   sceneCount = 0u;
+	mvSceneAsset*         scenes = nullptr;
+
 	// samplers
 	u32                   maxSamplerCount = 50u;
 	u32                   samplerCount = 0u;
@@ -52,20 +61,35 @@ struct mvAssetManager
 	u32                   maxPipelineCount = 50u;
 	u32                   pipelineCount = 0u;
 	mvPipelineAsset*      pipelines = nullptr;
+
+	// pipeline layouts       	  
+	u32                    maxPipelineLayoutCount = 50u;
+	u32                    pipelineLayoutCount = 0u;
+	mvPipelineLayoutAsset* pipelineLayouts = nullptr;
+
+	// descriptor set layouts       	  
+	u32                         maxDescriptorSetLayoutCount = 50u;
+	u32                         descriptorSetLayoutCount = 0u;
+	mvDescriptorSetLayoutAsset* descriptorSetLayouts = nullptr;
 };
 
 void mvInitializeAssetManager   (mvAssetManager* manager);
 void mvPrepareResizeAssetManager(mvAssetManager* manager);
 void mvCleanupAssetManager      (mvAssetManager* manager);
 
-mvAssetID mvGetTextureAsset      (mvAssetManager* manager, const std::string& path);
-mvAssetID mvGetBufferAsset       (mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag);
-mvAssetID mvGetDynamicBufferAsset(mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag);
-mvAssetID mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader);
-mvAssetID mvGetSamplerAsset      (mvAssetManager* manager);
-mvAssetID mvGetPipelineAsset     (mvAssetManager* manager, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader);
+mvAssetID mvGetTextureAsset       (mvAssetManager* manager, const std::string& path);
+mvAssetID mvGetBufferAsset        (mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag);
+mvAssetID mvGetDynamicBufferAsset (mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag);
+mvAssetID mvGetPhongMaterialAsset (mvAssetManager* manager, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
+mvAssetID mvGetSamplerAsset       (mvAssetManager* manager);
+mvAssetID mvGetPipelineAsset      (mvAssetManager* manager, mvScene& scene, mvMaterial& material);
+mvAssetID mvGetPipelineLayoutAsset(mvAssetManager* manager, std::vector<VkDescriptorSetLayout> descriptorSetLayouts);
+mvAssetID mvGetSceneAsset         (mvAssetManager* manager, mvSceneData sceneData);
 
-mvAssetID mvRegistryMeshAsset    (mvAssetManager* manager, mvMesh mesh);
+mvAssetID mvRegisterDescriptorSetLayoutAsset(mvAssetManager* manager, VkDescriptorSetLayout layout, const std::string& tag);
+mvAssetID mvGetDescriptorSetLayoutAsset(mvAssetManager* manager, const std::string& tag);
+
+mvAssetID mvRegistryMeshAsset     (mvAssetManager* manager, mvMesh mesh);
 
 struct mvSamplerAsset
 {
@@ -100,4 +124,22 @@ struct mvPipelineAsset
 {
 	std::string hash;
 	mvPipeline  pipeline;
+};
+
+struct mvPipelineLayoutAsset
+{
+	std::string hash;
+	mvPipelineLayout layout;
+};
+
+struct mvDescriptorSetLayoutAsset
+{
+	std::string           hash;
+	VkDescriptorSetLayout layout;
+};
+
+struct mvSceneAsset
+{
+	std::string hash;
+	mvScene     scene;
 };

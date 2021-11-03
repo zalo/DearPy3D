@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <string>
 #include "mvViewport.h"
 #include "mvGraphics.h"
 

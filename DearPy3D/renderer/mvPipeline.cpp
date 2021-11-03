@@ -1,13 +1,20 @@
 #include "mvPipeline.h"
 #include <stdexcept>
 #include "mvContext.h"
+#include "mvScene.h"
+#include "mvMaterials.h"
+#include "mvAssetManager.h"
 
-void 
-mvFinalizePipeline(mvPipeline& pipeline, std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const char* vertexShader, const char* pixelShader)
+mvPipeline
+mvCreatePipeline(mvAssetManager& assetManager, mvScene& scene, mvMaterial& material)
 {
 
-    pipeline.vertexShader = mvCreateShader(vertexShader);
-    pipeline.fragShader = mvCreateShader(pixelShader);
+    //std::vector<VkDescriptorSetLayout> descriptorSetLayouts = { scene.descriptorSetLayout, material.descriptorSetLayout };
+
+    mvPipeline pipeline{};
+
+    pipeline.vertexShader = mvCreateShader(material.vertexShader);
+    pipeline.fragShader = mvCreateShader(material.pixelShader);
 
     pipeline.layout = mvCreateVertexLayout(
         {
@@ -133,9 +140,50 @@ mvFinalizePipeline(mvPipeline& pipeline, std::vector<VkDescriptorSetLayout> desc
     colorBlending.blendConstants[2] = 0.0f;
     colorBlending.blendConstants[3] = 0.0f;
 
+    VkPipelineMultisampleStateCreateInfo multisampling{};
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.sampleShadingEnable = VK_FALSE;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
     //---------------------------------------------------------------------
-    // Create Pipeline layout
+    // Create Pipeline
     //---------------------------------------------------------------------
+
+    VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+
+    VkGraphicsPipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.layout = assetManager.pipelineLayouts[pipeline.pipelineLayout].layout.pipelineLayout;
+    pipelineInfo.renderPass = GContext->graphics.renderPass;
+    pipelineInfo.subpass = 0;
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineInfo.pDepthStencilState = &depthStencil;
+
+    if (vkCreateGraphicsPipelines(mvGetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.pipeline) != VK_SUCCESS)
+        throw std::runtime_error("failed to create graphics pipeline!");
+
+    // no longer need this
+    vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.vertexShader.shaderModule, nullptr);
+    vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.fragShader.shaderModule, nullptr);
+    pipeline.vertexShader.shaderModule = VK_NULL_HANDLE;
+    pipeline.fragShader.shaderModule = VK_NULL_HANDLE;
+
+    return pipeline;
+}
+
+mvPipelineLayout 
+mvCreatePipelineLayout(std::vector<VkDescriptorSetLayout> descriptorSetLayouts)
+{
+    mvPipelineLayout layout{};
+    layout.descriptorSetLayouts = descriptorSetLayouts;
 
     //setup push constants
     VkPushConstantRange push_constant;
@@ -155,42 +203,8 @@ mvFinalizePipeline(mvPipeline& pipeline, std::vector<VkDescriptorSetLayout> desc
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
 
-    if (vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipeline.pipelineLayout) != VK_SUCCESS)
+    if (vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &layout.pipelineLayout) != VK_SUCCESS)
         throw std::runtime_error("failed to create pipeline layout!");
 
-    //---------------------------------------------------------------------
-    // Create Pipeline
-    //---------------------------------------------------------------------
-
-    VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
-
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = shaderStages;
-    pipelineInfo.pVertexInputState = &vertexInputInfo;
-    pipelineInfo.pInputAssemblyState = &inputAssembly;
-    pipelineInfo.pViewportState = &viewportState;
-    pipelineInfo.pRasterizationState = &rasterizer;
-    pipelineInfo.pMultisampleState = &multisampling;
-    pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.layout = pipeline.pipelineLayout;
-    pipelineInfo.renderPass = GContext->graphics.renderPass;
-    pipelineInfo.subpass = 0;
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-    pipelineInfo.pDepthStencilState = &depthStencil;
-
-    if (vkCreateGraphicsPipelines(mvGetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.pipeline) != VK_SUCCESS)
-        throw std::runtime_error("failed to create graphics pipeline!");
-
-    // no longer need this
-    vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.vertexShader.shaderModule, nullptr);
-    vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.fragShader.shaderModule, nullptr);
-    pipeline.vertexShader.shaderModule = VK_NULL_HANDLE;
-    pipeline.fragShader.shaderModule = VK_NULL_HANDLE;
-
-    GContext->graphics.deletionQueue1.pushDeletor([=]() {
-        vkDestroyPipeline(mvGetLogicalDevice(), pipeline.pipeline, nullptr);
-        vkDestroyPipelineLayout(mvGetLogicalDevice(), pipeline.pipelineLayout, nullptr);
-        });
+    return layout;
 }

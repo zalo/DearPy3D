@@ -4,7 +4,6 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 #include "mvAllocator.h"
-#include "mvDeletionQueue.h"
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -44,8 +43,6 @@ void            mvEndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 struct mvGraphics
 {
-    mvDeletionQueue                deletionQueue1;
-    mvDeletionQueue                deletionQueue2;
 
     // internal
     VkInstance                     instance;

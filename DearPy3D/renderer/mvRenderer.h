@@ -15,5 +15,5 @@ namespace Renderer
 	void mvPresent();
 	void mvBeginPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass);
 	void mvEndPass(VkCommandBuffer commandBuffer);
-	void mvRenderMesh(mvAssetManager& am, const mvMesh& drawable, mvAssetID material, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
+	void mvRenderMesh(mvAssetManager& am, mvAssetID pipelineLayout, const mvMesh& drawable, mvAssetID material, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
 }

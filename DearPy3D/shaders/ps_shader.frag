@@ -9,6 +9,31 @@ layout(location = 4) in mat3 inTangentBasis;
 
 layout(location = 0) out vec4 outColor;
 
+layout(set = 0, binding = 0) uniform mvScene
+{
+
+    bool doLighting;
+    //-------------------------- ( 16 bytes )
+    //-------------------------- ( 1* 16 = 16 bytes )
+} scene;
+
+layout(set = 0, binding = 1) uniform mvPointLight 
+{
+    vec3 viewLightPos;
+    //-------------------------- ( 16 bytes )
+    
+    vec3 diffuseColor;
+    float diffuseIntensity;
+    //-------------------------- ( 16 bytes )
+    
+    float attConst;
+    float attLin;
+    float attQuad;
+    //-------------------------- ( 16 bytes )
+    
+    //-------------------------- ( 4*16 = 64 bytes )
+} pointlight;
+
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
 
 layout(set = 1, binding = 1) uniform mvPhongMaterial
@@ -35,22 +60,7 @@ layout(set = 1, binding = 1) uniform mvPhongMaterial
     //-------------------------- ( 4 * 16 = 64 bytes )
 };
 
-layout(set = 0, binding = 0) uniform mvPointLight 
-{
-    vec3 viewLightPos;
-    //-------------------------- ( 16 bytes )
-    
-    vec3 diffuseColor;
-    float diffuseIntensity;
-    //-------------------------- ( 16 bytes )
-    
-    float attConst;
-    float attLin;
-    float attQuad;
-    //-------------------------- ( 16 bytes )
-    
-    //-------------------------- ( 4*16 = 64 bytes )
-} pointlight;
+
 
 float Attenuate(float attConst, float attLin, float attQuad, in float distFragToL)
 {
