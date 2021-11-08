@@ -17,7 +17,7 @@ mv_internal const char* gltfModel = "FlightHelmet";
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
 mv_internal const char* gltfPath = "C://dev//glTF-Sample-Models//2.0//";
 mv_internal b8 loadGLTF = false;
-mv_internal b8 loadSponza = true;
+mv_internal b8 loadSponza = false;
 mv_internal f32 shadowWidth = 100.0f;
 
 int main() 
@@ -79,27 +79,10 @@ int main()
             camera.aspect = (float)newwidth/(float)newheight;
 
             // cleanup
-            //mvCleanupPointLight(light);
-            mvPrepareResizeAssetManager(&am);
             GContext->viewport.width = newwidth;
             GContext->viewport.height = newheight;
             Renderer::mvResize();
-            Renderer::mvPreLoadAssets(am);
-
-            // recreation
-            if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
-            auto newquad1 = mvCreateTexturedQuad(am);
-            auto newcube1 = mvCreateTexturedCube(am, 3.0f);
-            auto newlightcube = mvCreateTexturedCube(am, 0.25f);
-            
-            quad1.indexBuffer = newquad1.indexBuffer;
-            quad1.vertexBuffer = newquad1.vertexBuffer;
-            cube1.indexBuffer = newcube1.indexBuffer;
-            cube1.vertexBuffer = newcube1.vertexBuffer;
-
-            light = mvCreatePointLight(am, { 0.0f, 10.0f, 0.0f });
-            scene = mvGetSceneAsset(&am, {});
-            mvUpdateSceneDescriptors(am, am.scenes[scene].scene, light);
+            mvPrepareResizeAssetManager(&am);
 
             GContext->viewport.resized = false;
 
@@ -168,8 +151,6 @@ int main()
         Renderer::mvEndFrame();
         Renderer::mvPresent();
     }
-
-    //mvCleanupPointLight(light);
 
     mvCleanupAssetManager(&am);
     Renderer::mvStopRenderer();

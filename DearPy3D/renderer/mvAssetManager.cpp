@@ -16,7 +16,7 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->nodes = new mvNodeAsset[manager->maxNodeCount];
 }
 
-void 
+void
 mvPrepareResizeAssetManager(mvAssetManager* manager)
 {
 	vkDeviceWaitIdle(mvGetLogicalDevice());
@@ -28,51 +28,10 @@ mvPrepareResizeAssetManager(mvAssetManager* manager)
 	}
 	manager->pipelineCount = 0u;
 
-	// cleanup samplers
-	for (int i = 0; i < manager->samplerCount; i++)
-	{
-		vkDestroySampler(mvGetLogicalDevice(), manager->samplers[i].sampler.textureSampler, nullptr);
-		manager->samplers[i].sampler.textureSampler = VK_NULL_HANDLE;
-	}
-	manager->samplerCount = 0u;
-
-	// cleanup materials
 	for (int i = 0; i < manager->phongMaterialCount; i++)
 	{
-		delete[] manager->phongMaterials[i].material.descriptorSets;
+		manager->phongMaterials[i].material.pipeline = mvGetPipelineAsset(manager, manager->phongMaterials[i].material);
 	}
-	manager->phongMaterialCount = 0u;
-
-	// cleanup scene
-	for (int i = 0; i < manager->sceneCount; i++)
-	{
-		delete[] manager->scenes[i].scene.descriptorSets;
-	}
-	manager->sceneCount = 0u;
-
-	// cleanup buffers
-	for (int i = 0; i < manager->bufferCount; i++)
-	{
-		vkDestroyBuffer(mvGetLogicalDevice(), manager->buffers[i].buffer.buffer, nullptr);
-		mvFree(manager->buffers[i].buffer.memoryAllocation);
-
-		manager->buffers[i].buffer.buffer = VK_NULL_HANDLE;
-		manager->buffers[i].buffer.memoryAllocation = VK_NULL_HANDLE;
-		manager->buffers[i].buffer.count = 0u;
-	}
-	manager->bufferCount = 0u;
-
-	// cleanup dynamic buffers
-	for (int i = 0; i < manager->dynBufferCount; i++)
-	{
-		vkDestroyBuffer(mvGetLogicalDevice(), manager->dynBuffers[i].buffer.buffer, nullptr);
-		mvFree(manager->dynBuffers[i].buffer.memoryAllocation);
-
-		manager->dynBuffers[i].buffer.buffer = VK_NULL_HANDLE;
-		manager->dynBuffers[i].buffer.memoryAllocation = VK_NULL_HANDLE;
-		manager->dynBuffers[i].buffer.count = 0u;
-	}
-	manager->dynBufferCount = 0u;
 
 }
 

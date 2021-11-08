@@ -808,8 +808,8 @@ mvRecreateSwapChain()
 
     mvFlushResources();
 
-    mvShutdownAllocator();
-    mvInitializeAllocator();
+    //mvShutdownAllocator();
+    //mvInitializeAllocator();
     mvCreateSwapChain();
     mvCreateMainCommandPool();
     mvCreateMainRenderPass();
