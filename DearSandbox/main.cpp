@@ -13,7 +13,12 @@
 #include "mvAssetManager.h"
 #include "mvScene.h"
 
-std::vector<VkDescriptorSetLayout> CreateDescriptorSetLayouts(mvAssetManager& am);
+mv_internal const char* gltfModel = "FlightHelmet";
+mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
+mv_internal const char* gltfPath = "C://dev//glTF-Sample-Models//2.0//";
+mv_internal b8 loadGLTF = false;
+mv_internal b8 loadSponza = true;
+mv_internal f32 shadowWidth = 100.0f;
 
 int main() 
 {
@@ -24,45 +29,26 @@ int main()
 
     mvAssetManager am{};
     mvInitializeAssetManager(&am);
+    Renderer::mvPreLoadAssets(am);
 
-    std::vector<VkDescriptorSetLayout> descriptorSetLayouts = CreateDescriptorSetLayouts(am);
-    mvAssetID pipelineLayout = mvGetPipelineLayoutAsset(&am, descriptorSetLayouts);
+    mvAssetID scene = mvGetSceneAsset(&am, {});
+
+    if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
 
     mvCamera camera{};
     camera.pos = {5.0f, 5.0f, -15.0f};
     camera.aspect = GContext->viewport.width/GContext->viewport.height;
     
     mvMesh quad1 = mvCreateTexturedQuad(am);
-    quad1.pos.x = 5.0f;
-    quad1.pos.y = 5.0f;
-    quad1.pos.z = 5.0f;
+    mvMat4 quadTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 5.0f, 5.0f, 5.0f });
+
     mvMesh cube1 = mvCreateTexturedCube(am, 3.0f);
-    cube1.pos.x = 10.0f;
-    cube1.pos.y = 10.0f;
-    cube1.pos.z = 20.0f;
-    mvMesh lightCube = mvCreateTexturedCube(am, 0.25f);
-    lightCube.pos.y = 10.0f;
-
-
-
-    auto mat1 = mvMaterialData{};
-    auto mat2 = mvMaterialData{};
-    auto mat3 = mvMaterialData{};
-    mat1.materialColor = { 1.0f, 1.0f, 1.0f, 1.0f };
-    mat1.doLighting = false;
-    mat2.materialColor = { 0.0f, 1.0f, 0.0f, 1.0f };
-    mat3.materialColor = { 1.0f, 0.0f, 0.0f, 1.0f };
+    mvMat4 cubeTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 10.0f, 10.0f, 20.0f });
 
     mvPointLight light = mvCreatePointLight(am, { 0.0f, 10.0f, 0.0f });
-    mvAssetID material1 = mvGetPhongMaterialAsset(&am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    mvAssetID material2 = mvGetPhongMaterialAsset(&am, mat2, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    mvAssetID material3 = mvGetPhongMaterialAsset(&am, mat3, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mvMat4 lightTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 10.0f, 0.0f });
     
-    mvAssetID scene = mvGetSceneAsset(&am, {});
     mvUpdateSceneDescriptors(am, am.scenes[scene].scene, light);
-    am.phongMaterials[material1].material.pipeline = mvGetPipelineAsset(&am, am.scenes[scene].scene, am.phongMaterials[material1].material);
-    am.phongMaterials[material2].material.pipeline = mvGetPipelineAsset(&am, am.scenes[scene].scene, am.phongMaterials[material2].material);
-    am.phongMaterials[material3].material.pipeline = mvGetPipelineAsset(&am, am.scenes[scene].scene, am.phongMaterials[material3].material);
 
     //---------------------------------------------------------------------
     // main loop
@@ -98,8 +84,10 @@ int main()
             GContext->viewport.width = newwidth;
             GContext->viewport.height = newheight;
             Renderer::mvResize();
+            Renderer::mvPreLoadAssets(am);
 
             // recreation
+            if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
             auto newquad1 = mvCreateTexturedQuad(am);
             auto newcube1 = mvCreateTexturedCube(am, 3.0f);
             auto newlightcube = mvCreateTexturedCube(am, 0.25f);
@@ -108,18 +96,10 @@ int main()
             quad1.vertexBuffer = newquad1.vertexBuffer;
             cube1.indexBuffer = newcube1.indexBuffer;
             cube1.vertexBuffer = newcube1.vertexBuffer;
-            lightCube.indexBuffer = newlightcube.indexBuffer;
-            lightCube.vertexBuffer = newlightcube.vertexBuffer;
 
             light = mvCreatePointLight(am, { 0.0f, 10.0f, 0.0f });
             scene = mvGetSceneAsset(&am, {});
-            material1 = mvGetPhongMaterialAsset(&am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
-            material2 = mvGetPhongMaterialAsset(&am, mat2, "vs_shader.vert.spv", "ps_shader.frag.spv");
-            material3 = mvGetPhongMaterialAsset(&am, mat3, "vs_shader.vert.spv", "ps_shader.frag.spv");
             mvUpdateSceneDescriptors(am, am.scenes[scene].scene, light);
-            am.phongMaterials[material1].material.pipeline = mvGetPipelineAsset(&am, am.scenes[scene].scene, am.phongMaterials[material1].material);
-            am.phongMaterials[material2].material.pipeline = mvGetPipelineAsset(&am, am.scenes[scene].scene, am.phongMaterials[material2].material);
-            am.phongMaterials[material3].material.pipeline = mvGetPipelineAsset(&am, am.scenes[scene].scene, am.phongMaterials[material3].material);
 
             GContext->viewport.resized = false;
 
@@ -162,9 +142,7 @@ int main()
         ImGui::Begin("Light Controls");
         if (ImGui::SliderFloat3("Position", &light.info.viewLightPos.x, -25.0f, 25.0f))
         {
-            lightCube.pos.x = light.info.viewLightPos.x;
-            lightCube.pos.y = light.info.viewLightPos.y;
-            lightCube.pos.z = light.info.viewLightPos.z;
+            lightTransform = mvTranslate(mvIdentityMat4(), light.info.viewLightPos.xyz());
             mvUpdateSceneDescriptors(am, am.scenes[scene].scene, light);
         }
         ImGui::End();
@@ -172,13 +150,15 @@ int main()
         mvMat4 viewMatrix = mvBuildCameraMatrix(camera);
         mvMat4 projMatrix = mvBuildProjectionMatrix(camera);
 
-        mvBindScene(am, scene, pipelineLayout);
+        mvBindScene(am, scene);
         mvBind(am, light, viewMatrix);
-        Renderer::mvRenderMesh(am, pipelineLayout, lightCube, material1, mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 0.0f, 0.0f }), viewMatrix, projMatrix);
 
-        mvMat4 extratransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 0.0f, 0.0f });
-        Renderer::mvRenderMesh(am, pipelineLayout, cube1, material2, extratransform, viewMatrix, projMatrix);
-        Renderer::mvRenderMesh(am, pipelineLayout, quad1, material3, extratransform, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(am, *light.mesh, lightTransform, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(am, cube1, cubeTransform, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(am, quad1, quadTransform, viewMatrix, projMatrix);
+
+        for (int i = 0; i < am.sceneCount; i++)
+            Renderer::mvRenderScene(am, am.scenes[i].scene, viewMatrix, projMatrix);
 
         Renderer::mvEndPass(currentCommandBuffer);
 
@@ -194,72 +174,4 @@ int main()
     mvCleanupAssetManager(&am);
     Renderer::mvStopRenderer();
     DestroyContext();
-}
-
-std::vector<VkDescriptorSetLayout> CreateDescriptorSetLayouts(mvAssetManager& am)
-{
-    std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
-    descriptorSetLayouts.resize(2);
-
-    {
-        //-----------------------------------------------------------------------------
-        // create descriptor set layout
-        //-----------------------------------------------------------------------------
-        std::vector<VkDescriptorSetLayoutBinding> bindings;
-        bindings.resize(2);
-
-        bindings[0].binding = 0u;
-        bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        bindings[0].descriptorCount = 1;
-        bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-        bindings[0].pImmutableSamplers = nullptr;
-
-        bindings[1].binding = 1u;
-        bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        bindings[1].descriptorCount = 1;
-        bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-        bindings[1].pImmutableSamplers = nullptr;
-
-        VkDescriptorSetLayoutCreateInfo layoutInfo{};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<u32>(bindings.size());
-        layoutInfo.pBindings = bindings.data();
-
-        if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &descriptorSetLayouts[0]) != VK_SUCCESS)
-            throw std::runtime_error("failed to create descriptor set layout!");
-
-        mvRegisterDescriptorSetLayoutAsset(&am, descriptorSetLayouts[0], "scene");
-    }
-
-    {
-        //-----------------------------------------------------------------------------
-        // create descriptor set layout
-        //-----------------------------------------------------------------------------
-        std::vector<VkDescriptorSetLayoutBinding> bindings;
-        bindings.resize(2);
-
-        bindings[0].binding = 0u;
-        bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        bindings[0].descriptorCount = 1;
-        bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        bindings[0].pImmutableSamplers = nullptr;
-
-        bindings[1].binding = 1u;
-        bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        bindings[1].descriptorCount = 1;
-        bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-        bindings[1].pImmutableSamplers = nullptr;
-
-        VkDescriptorSetLayoutCreateInfo layoutInfo{};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<u32>(bindings.size());
-        layoutInfo.pBindings = bindings.data();
-
-        if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &descriptorSetLayouts[1]) != VK_SUCCESS)
-            throw std::runtime_error("failed to create descriptor set layout!");
-
-        mvRegisterDescriptorSetLayoutAsset(&am, descriptorSetLayouts[1], "phong");
-    }
-
-    return descriptorSetLayouts;
 }

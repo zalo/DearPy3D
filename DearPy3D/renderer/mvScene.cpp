@@ -80,9 +80,11 @@ mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light
 }
 
 void
-mvBindScene(mvAssetManager& am, mvAssetID scene, mvAssetID pipelineLayout)
+mvBindScene(mvAssetManager& am, mvAssetID scene)
 {
+    mvAssetID layoutID = mvGetPipelineLayoutAsset(&am, "layout_2");
+    VkPipelineLayout layout = am.pipelineLayouts[layoutID].layout.pipelineLayout;
     vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
-        am.pipelineLayouts[pipelineLayout].layout.pipelineLayout,
+        layout,
         0, 1, &am.scenes[scene].scene.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
 }

@@ -15,6 +15,15 @@ mvCreatePointLight(mvAssetManager& am, mvVec3 pos)
             1, 
             sizeof(mvPointLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, "point_light"));
 
+    mvMesh lightCube = mvCreateTexturedCube(am, 0.25f);
+    auto mat1 = mvMaterialData{};
+    mat1.materialColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+    mat1.doLighting = false;
+    lightCube.phongMaterialID = mvGetPhongMaterialAsset(&am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    am.phongMaterials[lightCube.phongMaterialID].material.pipeline = mvGetPipelineAsset(&am, am.phongMaterials[lightCube.phongMaterialID].material);
+    mvRegistryMeshAsset(&am, lightCube);
+
+    light.mesh = &am.meshes[mvRegistryMeshAsset(&am, lightCube)].mesh;
     return light;
 }
 

@@ -30,6 +30,10 @@ struct mvVec4
 	union { float w, a; };
 
 	float& operator[](int index);
+	mvVec3 xyz()
+	{
+		return mvVec3{ x, y, z };
+	}
 };
 
 struct mvMat4

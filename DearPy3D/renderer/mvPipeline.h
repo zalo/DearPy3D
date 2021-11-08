@@ -26,5 +26,5 @@ struct mvPipeline
 };
 
 
-mvPipeline       mvCreatePipeline(mvAssetManager& assetManager, mvScene& scene, mvMaterial& material);
+mvPipeline       mvCreatePipeline(mvAssetManager& assetManager, mvMaterial& material);
 mvPipelineLayout mvCreatePipelineLayout(std::vector<VkDescriptorSetLayout> descriptorSetLayouts);

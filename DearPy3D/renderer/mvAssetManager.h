@@ -19,6 +19,8 @@ struct mvPipelineAsset;
 struct mvPipelineLayoutAsset;
 struct mvSceneAsset;
 struct mvDescriptorSetLayoutAsset;
+struct mvNodeAsset;
+struct mvSceneAsset;
 
 struct mvAssetManager
 {
@@ -71,6 +73,11 @@ struct mvAssetManager
 	u32                         maxDescriptorSetLayoutCount = 50u;
 	u32                         descriptorSetLayoutCount = 0u;
 	mvDescriptorSetLayoutAsset* descriptorSetLayouts = nullptr;
+
+	// nodes	       	  
+	u32                   maxNodeCount = 500u;
+	u32                   nodeCount = 0u;
+	mvNodeAsset*          nodes = nullptr;
 };
 
 void mvInitializeAssetManager   (mvAssetManager* manager);
@@ -82,14 +89,17 @@ mvAssetID mvGetBufferAsset        (mvAssetManager* manager, void* data, u64 coun
 mvAssetID mvGetDynamicBufferAsset (mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag);
 mvAssetID mvGetPhongMaterialAsset (mvAssetManager* manager, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
 mvAssetID mvGetSamplerAsset       (mvAssetManager* manager);
-mvAssetID mvGetPipelineAsset      (mvAssetManager* manager, mvScene& scene, mvMaterial& material);
+mvAssetID mvGetPipelineAsset      (mvAssetManager* manager, mvMaterial& material);
 mvAssetID mvGetPipelineLayoutAsset(mvAssetManager* manager, std::vector<VkDescriptorSetLayout> descriptorSetLayouts);
+mvAssetID mvGetPipelineLayoutAsset(mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetSceneAsset         (mvAssetManager* manager, mvSceneData sceneData);
 
 mvAssetID mvRegisterDescriptorSetLayoutAsset(mvAssetManager* manager, VkDescriptorSetLayout layout, const std::string& tag);
 mvAssetID mvGetDescriptorSetLayoutAsset(mvAssetManager* manager, const std::string& tag);
 
 mvAssetID mvRegistryMeshAsset     (mvAssetManager* manager, mvMesh mesh);
+mvAssetID mvRegistryNodeAsset     (mvAssetManager* manager, mvNode node);
+mvAssetID mvRegistrySceneAsset    (mvAssetManager* manager, mvScene scene);
 
 struct mvSamplerAsset
 {
@@ -142,4 +152,9 @@ struct mvSceneAsset
 {
 	std::string hash;
 	mvScene     scene;
+};
+
+struct mvNodeAsset
+{
+	mvNode node;
 };

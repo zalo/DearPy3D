@@ -167,31 +167,43 @@ namespace Renderer {
     }
 
     void
-    mvRenderMesh(mvAssetManager& am, mvAssetID pipelineLayout, const mvMesh& drawable, mvAssetID material, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
+    mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
     {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
-        vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, am.pipelineLayouts[pipelineLayout].layout.pipelineLayout,
-            1, 1, &am.phongMaterials[material].material.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
-        vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), am.buffers[drawable.indexBuffer].buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &am.buffers[drawable.vertexBuffer].buffer.buffer, &offsets);
-        vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, am.pipelines[am.phongMaterials[material].material.pipeline].pipeline.pipeline);
+        if (mesh.phongMaterialID == -1)
+        {
+            mesh.phongMaterialID = mvGetPhongMaterialAsset(&am, {}, "vs_shader.vert.spv", "ps_shader.frag.spv");
+            am.phongMaterials[mesh.phongMaterialID].material.pipeline = mvGetPipelineAsset(&am, am.phongMaterials[mesh.phongMaterialID].material);
+        }
 
-        mvMat4 localTransform = mvTranslate(mvIdentityMat4(), mvVec3{ drawable.pos.x, drawable.pos.y, drawable.pos.z }) *
-            mvRotate(mvIdentityMat4(), drawable.rot.x, mvVec3{ 1.0f, 0.0f, 0.0f }) *
-            mvRotate(mvIdentityMat4(), drawable.rot.y, mvVec3{ 0.0f, 1.0f, 0.0f }) *
-            mvRotate(mvIdentityMat4(), drawable.rot.z, mvVec3{ 0.0f, 0.0f, 1.0f });
+        mvAssetID materialID = mesh.phongMaterialID;
+        mvAssetID pipelineID = am.phongMaterials[materialID].material.pipeline;
+        mvAssetID layoutID = am.pipelines[pipelineID].pipeline.pipelineLayout;
+
+        VkCommandBuffer commandBuffer = GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex];
+        VkPipeline pipeline = am.pipelines[pipelineID].pipeline.pipeline;
+        VkPipelineLayout pipelineLayout = am.pipelineLayouts[layoutID].layout.pipelineLayout;
+        VkDescriptorSet descriptorSet = am.phongMaterials[materialID].material.descriptorSets[GContext->graphics.currentImageIndex];
+        VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].buffer.buffer;
+        VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].buffer.buffer;
+
+
+        if(mesh.diffuseTexture != -1)
+            mvUpdateMaterialDescriptors(am, am.phongMaterials[mesh.phongMaterialID].material, mesh.diffuseTexture);
+        vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &descriptorSet, 0, nullptr);
+        vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &vertexBuffer, &offsets);
+        vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
         mvTransforms transforms;
-        transforms.model = accumulatedTransform * localTransform;
+        transforms.model = accumulatedTransform;
         transforms.modelView = camera * transforms.model;
         transforms.modelViewProjection = projection * transforms.modelView;
 
-        vkCmdPushConstants(
-            GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex],
-            am.pipelineLayouts[pipelineLayout].layout.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
+        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
-        mvDraw(am.buffers[drawable.indexBuffer].buffer.count);
+        mvDraw(am.buffers[mesh.indexBuffer].buffer.count);
     }
 
     void
@@ -231,5 +243,104 @@ namespace Renderer {
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
             throw std::runtime_error("failed to record command buffer!");
+    }
+
+    mv_internal void
+    mvRenderNode(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
+    {
+
+        if (node.mesh > -1)
+            mvRenderMesh(am, am.meshes[node.mesh].mesh, accumulatedTransform * node.matrix, cam, proj);
+
+        for (u32 i = 0; i < node.childCount; i++)
+        {
+            mvRenderNode(am, am.nodes[node.children[i]].node, accumulatedTransform * node.matrix, cam, proj);
+        }
+    }
+
+    void
+    mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
+    {
+        for (u32 i = 0; i < scene.nodeCount; i++)
+        {
+            mvNode& rootNode = am.nodes[scene.nodes[i]].node;
+
+            if (rootNode.mesh > -1)
+                mvRenderMesh(am, am.meshes[rootNode.mesh].mesh, rootNode.matrix, cam, proj);
+
+            for (u32 j = 0; j < rootNode.childCount; j++)
+            {
+                mvRenderNode(am, am.nodes[rootNode.children[j]].node, rootNode.matrix, cam, proj);
+            }
+        }
+    }
+
+    void 
+    mvPreLoadAssets(mvAssetManager& am)
+    {
+        std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+        descriptorSetLayouts.resize(2);
+
+        {
+            //-----------------------------------------------------------------------------
+            // create descriptor set layout
+            //-----------------------------------------------------------------------------
+            std::vector<VkDescriptorSetLayoutBinding> bindings;
+            bindings.resize(2);
+
+            bindings[0].binding = 0u;
+            bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            bindings[0].descriptorCount = 1;
+            bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[0].pImmutableSamplers = nullptr;
+
+            bindings[1].binding = 1u;
+            bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            bindings[1].descriptorCount = 1;
+            bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[1].pImmutableSamplers = nullptr;
+
+            VkDescriptorSetLayoutCreateInfo layoutInfo{};
+            layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layoutInfo.bindingCount = static_cast<u32>(bindings.size());
+            layoutInfo.pBindings = bindings.data();
+
+            if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &descriptorSetLayouts[0]) != VK_SUCCESS)
+                throw std::runtime_error("failed to create descriptor set layout!");
+
+            mvRegisterDescriptorSetLayoutAsset(&am, descriptorSetLayouts[0], "scene");
+        }
+
+        {
+            //-----------------------------------------------------------------------------
+            // create descriptor set layout
+            //-----------------------------------------------------------------------------
+            std::vector<VkDescriptorSetLayoutBinding> bindings;
+            bindings.resize(2);
+
+            bindings[0].binding = 0u;
+            bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            bindings[0].descriptorCount = 1;
+            bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[0].pImmutableSamplers = nullptr;
+
+            bindings[1].binding = 1u;
+            bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            bindings[1].descriptorCount = 1;
+            bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[1].pImmutableSamplers = nullptr;
+
+            VkDescriptorSetLayoutCreateInfo layoutInfo{};
+            layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layoutInfo.bindingCount = static_cast<u32>(bindings.size());
+            layoutInfo.pBindings = bindings.data();
+
+            if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &descriptorSetLayouts[1]) != VK_SUCCESS)
+                throw std::runtime_error("failed to create descriptor set layout!");
+
+            mvRegisterDescriptorSetLayoutAsset(&am, descriptorSetLayouts[1], "phong");
+        }
+
+        mvAssetID pipelineLayout = mvGetPipelineLayoutAsset(&am, descriptorSetLayouts);
     }
 }

@@ -6,7 +6,7 @@
 #include "mvAssetManager.h"
 
 mvPipeline
-mvCreatePipeline(mvAssetManager& assetManager, mvScene& scene, mvMaterial& material)
+mvCreatePipeline(mvAssetManager& assetManager, mvMaterial& material)
 {
 
     //std::vector<VkDescriptorSetLayout> descriptorSetLayouts = { scene.descriptorSetLayout, material.descriptorSetLayout };

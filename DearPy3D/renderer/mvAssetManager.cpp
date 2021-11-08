@@ -13,6 +13,7 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->pipelineLayouts = new mvPipelineLayoutAsset[manager->maxPipelineLayoutCount];
 	manager->scenes = new mvSceneAsset[manager->maxSceneCount];
 	manager->descriptorSetLayouts = new mvDescriptorSetLayoutAsset[manager->maxDescriptorSetLayoutCount];
+	manager->nodes = new mvNodeAsset[manager->maxNodeCount];
 }
 
 void 
@@ -160,6 +161,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->pipelineLayouts;
 	delete[] manager->scenes;
 	delete[] manager->descriptorSetLayouts;
+	delete[] manager->nodes;
 
 	manager->samplers = nullptr;
 	manager->textures = nullptr;
@@ -171,6 +173,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	manager->pipelineLayouts = nullptr;
 	manager->scenes = nullptr;
 	manager->descriptorSetLayouts = nullptr;
+	manager->nodes = nullptr;
 
 	manager->samplerCount = 0u;
 	manager->textureCount = 0u;
@@ -181,6 +184,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	manager->pipelineCount = 0u;
 	manager->pipelineLayoutCount = 0u;
 	manager->sceneCount = 0u;
+	manager->nodeCount = 0u;
 	manager->descriptorSetLayoutCount = 0u;
 }
 
@@ -274,7 +278,7 @@ mvGetSamplerAsset(mvAssetManager* manager)
 }
 
 mvAssetID 
-mvGetPipelineAsset(mvAssetManager* manager, mvScene& scene, mvMaterial& material)
+mvGetPipelineAsset(mvAssetManager* manager, mvMaterial& material)
 {
 	std::string hash = std::string(material.pixelShader) + std::string(material.vertexShader);
 	for (s32 i = 0; i < manager->pipelineCount; i++)
@@ -284,7 +288,7 @@ mvGetPipelineAsset(mvAssetManager* manager, mvScene& scene, mvMaterial& material
 	}
 
 	manager->pipelines[manager->pipelineCount].hash = hash;
-	manager->pipelines[manager->pipelineCount].pipeline = mvCreatePipeline(*manager, scene, material);
+	manager->pipelines[manager->pipelineCount].pipeline = mvCreatePipeline(*manager, material);
 	manager->pipelineCount++;
 	return manager->pipelineCount - 1;
 }
@@ -313,7 +317,7 @@ mvGetPipelineLayoutAsset(mvAssetManager* manager, std::vector<VkDescriptorSetLay
 
 	for (s32 i = 0; i < manager->pipelineLayoutCount; i++)
 	{
-		if (manager->scenes[i].hash == hash)
+		if (manager->pipelineLayouts[i].hash == hash)
 			return i;
 	}
 
@@ -321,6 +325,18 @@ mvGetPipelineLayoutAsset(mvAssetManager* manager, std::vector<VkDescriptorSetLay
 	manager->pipelineLayouts[manager->pipelineLayoutCount].layout = mvCreatePipelineLayout(descriptorSetLayouts);
 	manager->pipelineLayoutCount++;
 	return manager->pipelineLayoutCount - 1;
+}
+
+mvAssetID
+mvGetPipelineLayoutAsset(mvAssetManager* manager, const std::string& tag)
+{
+
+	for (s32 i = 0; i < manager->pipelineLayoutCount; i++)
+	{
+		if (manager->pipelineLayouts[i].hash == tag)
+			return i;
+	}
+	return -1;
 }
 
 mvAssetID
@@ -342,4 +358,20 @@ mvGetDescriptorSetLayoutAsset(mvAssetManager* manager, const std::string& tag)
 	}
 
 	return -1;
+}
+
+mvAssetID
+mvRegistryNodeAsset(mvAssetManager* manager, mvNode node)
+{
+	manager->nodes[manager->nodeCount].node = node;
+	manager->nodeCount++;
+	return manager->nodeCount - 1;
+}
+
+mvAssetID
+mvRegistrySceneAsset(mvAssetManager* manager, mvScene scene)
+{
+	manager->scenes[manager->sceneCount].scene = scene;
+	manager->sceneCount++;
+	return manager->sceneCount - 1;
 }

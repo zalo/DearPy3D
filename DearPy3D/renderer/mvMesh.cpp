@@ -77,6 +77,10 @@ mvCreateTexturedCube(mvAssetManager& assetManager, float sideLength)
         sizeof(u32), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
         "textured_cube_vertex" + std::to_string(sideLength));
     mesh.indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, "textured_cube_index");
+    
+    mvMaterialData mat{};
+    mat.materialColor = { 0.0f, 1.0f, 0.0f, 1.0f };
+    mesh.phongMaterialID = mvGetPhongMaterialAsset(&assetManager, mat, "vs_shader.vert.spv", "ps_shader.frag.spv");
     return mesh;
 }
 
@@ -132,15 +136,67 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, float sideLength)
         sizeof(u32), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         "textured_quad_vertex" + std::to_string(sideLength));
     mesh.indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, "textured_quad_index");
+    
+    mvMaterialData mat{};
+    mat.materialColor = { 1.0f, 0.0f, 0.0f, 1.0f };
+    mesh.phongMaterialID = mvGetPhongMaterialAsset(&assetManager, mat, "vs_shader.vert.spv", "ps_shader.frag.spv");
     return mesh;
 }
 
-mvMesh
-mvCreateObjMesh(mvObjMesh& mesh)
+void
+mvLoadOBJAssets(mvAssetManager& assetManager, const std::string& root, const std::string& file)
 {
+    u32 nodeOffset = assetManager.nodeCount;
+    u32 meshOffset = assetManager.meshCount;
 
-    mvMesh drawable{};
-    //drawable.vertexBuffer = mvCreateBuffer(mesh.averticies.data(), mesh.averticies.size(), sizeof(mvObjVertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    //drawable.indexBuffer = mvCreateBuffer(mesh.indicies.data(), mesh.indicies.size(), sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-    return drawable;
+    std::vector<mvAssetID> diffuseTextureMaps;
+    std::vector<mvAssetID> normalTextureMaps;
+    std::vector<mvAssetID> specularTextureMaps;
+    std::vector<mvObjMaterial> objMaterials = mvLoadObjMaterials(root + file + ".mtl");
+    mvObjModel objModel = mvLoadObjModel(root + file + ".obj");
+
+    for (size_t i = 0; i < objModel.meshes.size(); i++)
+    {
+        for (size_t j = 0; j < objMaterials.size(); j++)
+        {
+            if (objMaterials[j].name == objModel.meshes[i]->material)
+            {
+                mvMesh newMesh{};
+                newMesh.pbr = false;
+                newMesh.name = objModel.meshes[i]->name;
+
+                if (!objMaterials[j].diffuseMap.empty())
+                    newMesh.diffuseTexture = mvGetTextureAsset(&assetManager, root + objMaterials[j].diffuseMap);
+                if (!objMaterials[j].normalMap.empty())
+                    newMesh.normalTexture = mvGetTextureAsset(&assetManager, root + objMaterials[j].normalMap);
+                if (!objMaterials[j].specularMap.empty())
+                    newMesh.specularTexture = mvGetTextureAsset(&assetManager, root + objMaterials[j].specularMap);
+
+                newMesh.vertexBuffer = mvGetBufferAsset(&assetManager, objModel.meshes[i]->averticies.data(), objModel.meshes[i]->averticies.size(), sizeof(f32) * 14, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, newMesh.name + "_vertex");
+                newMesh.indexBuffer = mvGetBufferAsset(&assetManager, objModel.meshes[i]->indicies.data(), objModel.meshes[i]->indicies.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, newMesh.name + "_index");
+
+                mvRegistryMeshAsset(&assetManager, newMesh);
+            }
+        }
+
+    }
+
+    mvScene newScene = mvCreateScene(assetManager, {});
+    newScene.nodeCount = objModel.meshes.size();
+    for (i32 i = 0; i < newScene.nodeCount; i++)
+    {
+        newScene.nodes[i] = i + nodeOffset;
+    }
+    mvRegistrySceneAsset(&assetManager, newScene);
+
+    for (u32 currentNode = 0u; currentNode < objModel.meshes.size(); currentNode++)
+    {
+        mvNode newNode{};
+        newNode.name = objModel.meshes[currentNode]->name;
+        newNode.mesh = newScene.nodes[currentNode] - nodeOffset + meshOffset;
+        newNode.childCount = 0;
+        mvRegistryNodeAsset(&assetManager, newNode);
+    }
+
+
 }

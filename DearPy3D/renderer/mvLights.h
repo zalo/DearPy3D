@@ -35,6 +35,7 @@ struct mvPointLight
 {
     mvPointLightBuffer    buffer;
     mvPointLightInfo      info;
+    mvMesh*               mesh = nullptr;
 };
 
 mvPointLight mvCreatePointLight (mvAssetManager& am, mvVec3 pos = { 0.0f,0.0f,0.5f });
