@@ -295,7 +295,7 @@ namespace Renderer {
             // create descriptor set layout
             //-----------------------------------------------------------------------------
             std::vector<VkDescriptorSetLayoutBinding> bindings;
-            bindings.resize(2);
+            bindings.resize(3);
 
             bindings[0].binding = 0u;
             bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -308,6 +308,12 @@ namespace Renderer {
             bindings[1].descriptorCount = 1;
             bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
             bindings[1].pImmutableSamplers = nullptr;
+
+            bindings[2].binding = 2u;
+            bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            bindings[2].descriptorCount = 1;
+            bindings[2].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[2].pImmutableSamplers = nullptr;
 
             VkDescriptorSetLayoutCreateInfo layoutInfo{};
             layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

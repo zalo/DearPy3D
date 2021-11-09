@@ -8,6 +8,7 @@
 
 struct mvAssetManager;
 struct mvPointLight;
+struct mvDirectionLight;
 
 struct mvNode
 {
@@ -46,5 +47,5 @@ struct mvScene
 };
 
 mvScene mvCreateScene(mvAssetManager& am, mvSceneData sceneData);
-void    mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light);
+void    mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light, mvDirectionLight& dlight);
 void    mvBindScene(mvAssetManager& am, mvAssetID scene);

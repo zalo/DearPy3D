@@ -47,8 +47,10 @@ int main()
 
     mvPointLight light = mvCreatePointLight(am, { 0.0f, 10.0f, 0.0f });
     mvMat4 lightTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 10.0f, 0.0f });
+
+    mvDirectionLight dlight = mvCreateDirectionLight(am, { 0.0, -1.0f, 0.0f });
     
-    mvUpdateSceneDescriptors(am, am.scenes[scene].scene, light);
+    mvUpdateSceneDescriptors(am, am.scenes[scene].scene, light, dlight);
 
     //---------------------------------------------------------------------
     // main loop
@@ -128,7 +130,7 @@ int main()
         if (ImGui::SliderFloat3("Position", &light.info.viewLightPos.x, -25.0f, 25.0f))
         {
             lightTransform = mvTranslate(mvIdentityMat4(), light.info.viewLightPos.xyz());
-            mvUpdateSceneDescriptors(am, am.scenes[scene].scene, light);
+            mvUpdateSceneDescriptors(am, am.scenes[scene].scene, light, dlight);
         }
         ImGui::End();
 
@@ -137,6 +139,7 @@ int main()
 
         mvBindScene(am, scene);
         mvBind(am, light, viewMatrix);
+        mvBind(am, dlight, viewMatrix);
 
         Renderer::mvRenderMesh(am, *light.mesh, lightTransform, viewMatrix, projMatrix);
         Renderer::mvRenderMesh(am, cube1, cubeTransform, viewMatrix, projMatrix);

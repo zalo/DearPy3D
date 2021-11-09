@@ -34,6 +34,19 @@ layout(set = 0, binding = 1) uniform mvPointLight
     //-------------------------- ( 4*16 = 64 bytes )
 } pointlight;
 
+layout(set = 0, binding = 2) uniform mvDirectionalLight
+{
+
+    vec3 viewLightDir;
+    float  diffuseIntensity;
+    //-------------------------- ( 16 bytes )
+    
+    vec3 diffuseColor;
+    //-------------------------- ( 16 bytes )
+    
+    //-------------------------- ( 2*16 = 32 bytes )
+} directionLight;
+
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
 
 layout(set = 1, binding = 1) uniform mvPhongMaterial
@@ -75,14 +88,16 @@ void main()
         return;
     }
 
+    vec4 materialColor = texture(texSampler, inTexCoord);
+    if(materialColor.a < 0.1) discard;
+
     vec3 diffuse = { 0.0, 0.0, 0.0 };
     vec3 specularReflected = { 0.0, 0.0, 0.0 };
     vec3 specularReflectedColor = specularColor;
-    vec4 materialColor = texture(texSampler, inTexCoord);
     vec3 viewNormal = inViewNormal;
 
     // flip normal when backface
-    if (dot(viewNormal, inViewPos) >= 0.0f)
+    if (dot(viewNormal, inViewPos) >= 0.0)
     {
         viewNormal = -inViewNormal;
     }
@@ -93,27 +108,57 @@ void main()
     // specular parameter determination (mapped or uniform)
     float specularPowerLoaded = specularGloss;
 
-    // fragment to light vector data
-    vec3 lightVec = pointlight.viewLightPos - inViewPos;
-    float lightDistFromFrag = length(lightVec);
-    vec3 lightDirVec = lightVec / lightDistFromFrag;
+    //-----------------------------------------------------------------------------
+    // point light
+    //-----------------------------------------------------------------------------
+    {
+        // fragment to light vector data
+        vec3 lightVec = pointlight.viewLightPos - inViewPos;
+        float lightDistFromFrag = length(lightVec);
+        vec3 lightDirVec = lightVec / lightDistFromFrag;
     
-	// attenuation
-    const float att = Attenuate(pointlight.attConst, pointlight.attLin, pointlight.attQuad, lightDistFromFrag);
+	    // attenuation
+        const float att = Attenuate(pointlight.attConst, pointlight.attLin, pointlight.attQuad, lightDistFromFrag);
     
-	// diffuse
-    diffuse += pointlight.diffuseColor * pointlight.diffuseIntensity * att * max(0.0, dot(lightDirVec, viewNormal));
+	    // diffuse
+        diffuse += pointlight.diffuseColor * pointlight.diffuseIntensity * att * max(0.0, dot(lightDirVec, viewNormal));
     
-    // specular
+        // specular
         
-    // calculate reflected light vector
-    const vec3 w = viewNormal * dot(lightVec, viewNormal);
-    const vec3 r = normalize(w * 2.0 - lightVec);
+        // calculate reflected light vector
+        const vec3 w = viewNormal * dot(lightVec, viewNormal);
+        const vec3 r = normalize(w * 2.0 - lightVec);
         
-    // vector from camera to fragment
-    const vec3 viewCamToFrag = normalize(inViewPos);
+        // vector from camera to fragment
+        const vec3 viewCamToFrag = normalize(inViewPos);
         
-    specularReflected += att * pointlight.diffuseColor * pointlight.diffuseIntensity * specularReflectedColor * 1.0 * pow(max(0.0, dot(-r, viewCamToFrag)), specularPowerLoaded);
-         
+        specularReflected += att * pointlight.diffuseColor * pointlight.diffuseIntensity * specularReflectedColor * 1.0 * pow(max(0.0, dot(-r, viewCamToFrag)), specularPowerLoaded);
+    }
+
+    //-----------------------------------------------------------------------------
+    // directional light
+    //-----------------------------------------------------------------------------
+    {
+
+        vec3 lightDir = -directionLight.viewLightDir;
+        {
+             // diffuse
+            diffuse += directionLight.diffuseColor * directionLight.diffuseIntensity * max(0.0, dot(normalize(lightDir), viewNormal));
+    
+            // specular
+        
+            // calculate reflected light vector
+            const vec3 w = viewNormal * dot(normalize(lightDir), viewNormal);
+            const vec3 r = normalize(w * 2.0 - normalize(lightDir));
+        
+            // vector from camera to fragment
+            const vec3 viewCamToFrag = normalize(inViewPos);
+        
+            specularReflected += directionLight.diffuseColor * directionLight.diffuseIntensity * specularReflectedColor * 1.0 * pow(max(0.0, dot(-r, viewCamToFrag)), specularPowerLoaded);
+            
+        }
+        
+    }
+
     outColor = clamp((vec4(diffuse, 1.0) + vec4(0.04, 0.04, 0.04, 1.0)) * materialColor + vec4(specularReflected, 1.0), 0.0, 1.0);   
 }

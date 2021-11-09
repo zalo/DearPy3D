@@ -36,6 +36,21 @@ mvCreatePointLight(mvAssetManager& am, mvVec3 pos)
     return light;
 }
 
+mvDirectionLight
+mvCreateDirectionLight(mvAssetManager& am, mvVec3 dir)
+{
+
+    mvDirectionLight light{};
+    light.info.viewLightDir = dir;
+    for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
+        light.buffer.buffers.push_back(mvGetDynamicBufferAsset(&am,
+            &light.info,
+            1,
+            sizeof(mvDirectionLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, "direction_light"));
+    return light;
+}
+
+
 void
 mvBind(mvAssetManager& am, mvPointLight& light, mvMat4 viewMatrix)
 {
@@ -53,4 +68,27 @@ mvBind(mvAssetManager& am, mvPointLight& light, mvMat4 viewMatrix)
     //    pipelineLayout, 0, 1, &light.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
 
     light.info.viewLightPos = posCopy;
+}
+
+void
+mvBind(mvAssetManager& am, mvDirectionLight& light, mvMat4 viewMatrix)
+{
+
+    mvVec3 posCopy = light.info.viewLightDir;
+
+    mvVec4 out = viewMatrix * mvVec4{
+        light.info.viewLightDir.x,
+        light.info.viewLightDir.y,
+        light.info.viewLightDir.z,
+        0.0f };
+    light.info.viewLightDir.x = out.x;
+    light.info.viewLightDir.y = out.y;
+    light.info.viewLightDir.z = out.z;
+
+    mvUpdateBuffer(am.dynBuffers[light.buffer.buffers[GContext->graphics.currentImageIndex]].buffer, &light.info);
+
+    //vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
+    //    pipelineLayout, 0, 1, &light.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
+
+    light.info.viewLightDir = posCopy;
 }

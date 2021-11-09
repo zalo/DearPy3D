@@ -34,7 +34,7 @@ mvCreateScene(mvAssetManager& am, mvSceneData sceneData)
 }
 
 void
-mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light)
+mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light, mvDirectionLight& dlight)
 {
     //-----------------------------------------------------------------------------
     // update descriptor sets
@@ -43,7 +43,7 @@ mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light
     for (int i = 0; i < GContext->graphics.swapChainImages.size(); i++)
     {
         std::vector<VkWriteDescriptorSet> descriptorWrites;
-        descriptorWrites.resize(2);
+        descriptorWrites.resize(3);
 
         VkDescriptorBufferInfo sceneInfo;
         sceneInfo.buffer = am.dynBuffers[scene.sceneBuffer.buffers[i]].buffer.buffer;
@@ -70,6 +70,19 @@ mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light
         descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         descriptorWrites[1].descriptorCount = 1;
         descriptorWrites[1].pBufferInfo = &lightInfo;
+
+        VkDescriptorBufferInfo dlightInfo;
+        dlightInfo.buffer = am.dynBuffers[dlight.buffer.buffers[i]].buffer.buffer;
+        dlightInfo.offset = 0;
+        dlightInfo.range = mvGetRequiredUniformBufferSize(sizeof(mvDirectionLightInfo));
+
+        descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[2].dstSet = scene.descriptorSets[i];
+        descriptorWrites[2].dstBinding = 2;
+        descriptorWrites[2].dstArrayElement = 0;
+        descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[2].descriptorCount = 1;
+        descriptorWrites[2].pBufferInfo = &dlightInfo;
 
         vkUpdateDescriptorSets(mvGetLogicalDevice(),
             static_cast<u32>(descriptorWrites.size()),
