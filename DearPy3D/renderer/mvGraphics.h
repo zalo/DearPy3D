@@ -25,8 +25,6 @@ void mvSetupGraphicsContext();
 void mvRecreateSwapChain();
 void mvCleanupGraphicsContext();
 
-void mvDraw(uint32_t vertexCount);
-
 // resource utilities
 void          mvCreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 void          mvCopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);

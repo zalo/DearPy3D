@@ -830,12 +830,6 @@ mvGetRequiredUniformBufferSize(size_t size)
     return alignedSize;
 }
 
-void 
-mvDraw(uint32_t vertexCount)
-{
-    vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), vertexCount, 1, 0, 0, 0);
-}
-
 VkCommandBuffer 
 mvBeginSingleTimeCommands()
 {

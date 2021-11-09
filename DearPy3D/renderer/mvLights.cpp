@@ -20,7 +20,16 @@ mvCreatePointLight(mvAssetManager& am, mvVec3 pos)
     mat1.materialColor = { 1.0f, 1.0f, 1.0f, 1.0f };
     mat1.doLighting = false;
     lightCube.phongMaterialID = mvGetPhongMaterialAsset(&am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    am.phongMaterials[lightCube.phongMaterialID].material.pipeline = mvGetPipelineAsset(&am, am.phongMaterials[lightCube.phongMaterialID].material);
+
+    mvPipelineSpec spec{};
+    spec.backfaceCulling = true;
+    spec.depthTest = true;
+    spec.depthWrite = true;
+    spec.vertexShader = "vs_shader.vert.spv";
+    spec.pixelShader = "ps_shader.frag.spv";
+    spec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+    am.phongMaterials[lightCube.phongMaterialID].material.pipeline = mvGetPipelineAsset(&am, spec);
     mvRegistryMeshAsset(&am, lightCube);
 
     light.mesh = &am.meshes[mvRegistryMeshAsset(&am, lightCube)].mesh;

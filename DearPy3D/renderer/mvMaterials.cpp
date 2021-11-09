@@ -7,16 +7,14 @@
 mvMaterial 
 mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, const char* vertexShader, const char* pixelShader)
 {
-    mv_local_persist int temp = 0;
-    temp++;
-    std::string hash = std::string(vertexShader) + std::string(pixelShader) + std::to_string(temp);
-
     mvMaterial material{};
+    material.data = materialData;
     material.descriptorSets = new VkDescriptorSet[GContext->graphics.swapChainImages.size()];
     material.texture = mvGetTextureAsset(&am, "../../Resources/brickwall.jpg");
-    material.sampler = mvGetSamplerAsset(&am);
     material.vertexShader = vertexShader;
     material.pixelShader = pixelShader;
+
+    std::string hash = mvCreateHash(materialData);
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
         material.materialBuffer.buffers.push_back(mvGetDynamicBufferAsset(&am,
@@ -48,8 +46,8 @@ mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, const char* ve
 
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = am.textures[material.texture].texture.textureImageView;
-        imageInfo.sampler = am.samplers[material.sampler].sampler.textureSampler;
+        imageInfo.imageView = am.textures[material.texture].texture.imageInfo.imageView;
+        imageInfo.sampler = am.textures[material.texture].texture.imageInfo.sampler;
 
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = material.descriptorSets[i];
@@ -87,18 +85,13 @@ mvUpdateMaterialDescriptors(mvAssetManager& am, mvMaterial& material, mvAssetID 
     std::vector<VkWriteDescriptorSet> descriptorWrites;
     descriptorWrites.resize(2);
 
-    VkDescriptorImageInfo imageInfo{};
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfo.imageView = am.textures[texture].texture.textureImageView;
-    imageInfo.sampler = am.samplers[material.sampler].sampler.textureSampler;
-
     descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptorWrites[0].dstSet = material.descriptorSets[GContext->graphics.currentImageIndex];
     descriptorWrites[0].dstBinding = 0;
     descriptorWrites[0].dstArrayElement = 0;
     descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptorWrites[0].descriptorCount = 1;
-    descriptorWrites[0].pImageInfo = &imageInfo;
+    descriptorWrites[0].pImageInfo = &am.textures[texture].texture.imageInfo;
 
     VkDescriptorBufferInfo materialInfo;
     materialInfo.buffer = am.dynBuffers[material.materialBuffer.buffers[GContext->graphics.currentImageIndex]].buffer.buffer;

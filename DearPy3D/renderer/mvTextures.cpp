@@ -1,6 +1,7 @@
 #include "mvTextures.h"
 #include <stdexcept>
 #include "mvContext.h"
+#include "imgui_impl_vulkan.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -41,19 +42,13 @@ mvCreateTexture(const std::string& file)
     vkDestroyBuffer(mvGetLogicalDevice(), stagingBuffer, nullptr);
     vkFreeMemory(mvGetLogicalDevice(), stagingBufferMemory, nullptr);
 
-    texture.textureImageView = mvCreateImageView(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
-
-    return texture;
-}
-
-mvSampler
-mvCreateSampler()
-{
-
-    mvSampler sampler{};
-
     VkPhysicalDeviceProperties properties{};
     vkGetPhysicalDeviceProperties(mvGetPhysicalDevice(), &properties);
+
+    texture.file = file;
+    texture.imageInfo = VkDescriptorImageInfo{};
+    texture.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    texture.imageInfo.imageView = mvCreateImageView(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -73,8 +68,8 @@ mvCreateSampler()
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = 0.0f;
 
-    if (vkCreateSampler(mvGetLogicalDevice(), &samplerInfo, nullptr, &sampler.textureSampler) != VK_SUCCESS)
+    if (vkCreateSampler(mvGetLogicalDevice(), &samplerInfo, nullptr, &texture.imageInfo.sampler) != VK_SUCCESS)
         throw std::runtime_error("failed to create texture sampler!");
-
-    return sampler;
+    texture.imguiID = ImGui_ImplVulkan_AddTexture(texture.imageInfo.sampler, texture.imageInfo.imageView, texture.imageInfo.imageLayout);
+    return texture;
 }

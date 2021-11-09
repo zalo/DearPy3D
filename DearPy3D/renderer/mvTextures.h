@@ -2,18 +2,15 @@
 
 #include <string>
 #include <vulkan/vulkan.h>
+#include <imgui.h>
 
 struct mvTexture
 {
-	VkImage        textureImage       = VK_NULL_HANDLE;
-	VkDeviceMemory textureImageMemory = VK_NULL_HANDLE;
-	VkImageView    textureImageView   = VK_NULL_HANDLE;
+	VkImage               textureImage       = VK_NULL_HANDLE;
+	VkDeviceMemory        textureImageMemory = VK_NULL_HANDLE;
+	std::string           file;
+	VkDescriptorImageInfo imageInfo;
+	ImTextureID           imguiID;
 };
 
-struct mvSampler
-{
-	VkSampler textureSampler;
-};
-
-mvSampler mvCreateSampler();
 mvTexture mvCreateTexture(const std::string& file);

@@ -14,7 +14,6 @@ struct mvMeshAsset;
 struct mvBufferAsset;
 struct mvTextureAsset;
 struct mvPhongMaterialAsset;
-struct mvSamplerAsset;
 struct mvPipelineAsset;
 struct mvPipelineLayoutAsset;
 struct mvSceneAsset;
@@ -28,11 +27,6 @@ struct mvAssetManager
 	u32                   maxSceneCount = 50u;
 	u32                   sceneCount = 0u;
 	mvSceneAsset*         scenes = nullptr;
-
-	// samplers
-	u32                   maxSamplerCount = 50u;
-	u32                   samplerCount = 0u;
-	mvSamplerAsset*       samplers = nullptr;
 
 	// textures
 	u32                   maxTextureCount = 500u;
@@ -88,8 +82,7 @@ mvAssetID mvGetTextureAsset       (mvAssetManager* manager, const std::string& p
 mvAssetID mvGetBufferAsset        (mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag);
 mvAssetID mvGetDynamicBufferAsset (mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag);
 mvAssetID mvGetPhongMaterialAsset (mvAssetManager* manager, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
-mvAssetID mvGetSamplerAsset       (mvAssetManager* manager);
-mvAssetID mvGetPipelineAsset      (mvAssetManager* manager, mvMaterial& material);
+mvAssetID mvGetPipelineAsset      (mvAssetManager* manager, mvPipelineSpec& spec);
 mvAssetID mvGetPipelineLayoutAsset(mvAssetManager* manager, std::vector<VkDescriptorSetLayout> descriptorSetLayouts);
 mvAssetID mvGetPipelineLayoutAsset(mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetSceneAsset         (mvAssetManager* manager, mvSceneData sceneData);
@@ -101,11 +94,9 @@ mvAssetID mvRegistryMeshAsset     (mvAssetManager* manager, mvMesh mesh);
 mvAssetID mvRegistryNodeAsset     (mvAssetManager* manager, mvNode node);
 mvAssetID mvRegistrySceneAsset    (mvAssetManager* manager, mvScene scene);
 
-struct mvSamplerAsset
-{
-	std::string hash;
-	mvSampler   sampler;
-};
+std::string mvCreateHash(mvMaterialData materialData);
+
+void mvShowAssetManager(mvAssetManager& assetManager);
 
 struct mvMeshAsset
 {

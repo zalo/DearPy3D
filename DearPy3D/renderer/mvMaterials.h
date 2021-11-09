@@ -41,9 +41,9 @@ struct mvMaterialBuffer
 
 struct mvMaterial
 {
+    mvMaterialData        data;
     mvAssetID             pipeline;
     mvAssetID             texture;
-    mvAssetID             sampler;
     u32                   offsetIndex = 0u;
     mvMaterialBuffer      materialBuffer;
     VkDescriptorSet*      descriptorSets;

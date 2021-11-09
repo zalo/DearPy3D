@@ -162,19 +162,31 @@ mvLoadOBJAssets(mvAssetManager& assetManager, const std::string& root, const std
             if (objMaterials[j].name == objModel.meshes[i]->material)
             {
                 mvMesh newMesh{};
+                mvMaterialData materialData{};
                 newMesh.pbr = false;
                 newMesh.name = objModel.meshes[i]->name;
 
                 if (!objMaterials[j].diffuseMap.empty())
+                {
                     newMesh.diffuseTexture = mvGetTextureAsset(&assetManager, root + objMaterials[j].diffuseMap);
+                    materialData.useTextureMap = true;
+                    materialData.hasAlpha = true;
+                }
                 if (!objMaterials[j].normalMap.empty())
+                {
                     newMesh.normalTexture = mvGetTextureAsset(&assetManager, root + objMaterials[j].normalMap);
+                    materialData.useNormalMap = true;
+                }
                 if (!objMaterials[j].specularMap.empty())
+                {
                     newMesh.specularTexture = mvGetTextureAsset(&assetManager, root + objMaterials[j].specularMap);
+                    materialData.useSpecularMap = true;
+                }
 
                 newMesh.vertexBuffer = mvGetBufferAsset(&assetManager, objModel.meshes[i]->averticies.data(), objModel.meshes[i]->averticies.size(), sizeof(f32) * 14, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, newMesh.name + "_vertex");
                 newMesh.indexBuffer = mvGetBufferAsset(&assetManager, objModel.meshes[i]->indicies.data(), objModel.meshes[i]->indicies.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, newMesh.name + "_index");
 
+                newMesh.phongMaterialID = mvGetPhongMaterialAsset(&assetManager, materialData, "vs_shader.vert.spv", "ps_shader.frag.spv");
                 mvRegistryMeshAsset(&assetManager, newMesh);
             }
         }

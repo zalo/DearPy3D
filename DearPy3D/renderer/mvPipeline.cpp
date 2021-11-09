@@ -6,15 +6,13 @@
 #include "mvAssetManager.h"
 
 mvPipeline
-mvCreatePipeline(mvAssetManager& assetManager, mvMaterial& material)
+mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
 {
-
-    //std::vector<VkDescriptorSetLayout> descriptorSetLayouts = { scene.descriptorSetLayout, material.descriptorSetLayout };
 
     mvPipeline pipeline{};
 
-    pipeline.vertexShader = mvCreateShader(material.vertexShader);
-    pipeline.fragShader = mvCreateShader(material.pixelShader);
+    pipeline.vertexShader = mvCreateShader(spec.vertexShader);
+    pipeline.fragShader = mvCreateShader(spec.pixelShader);
 
     pipeline.layout = mvCreateVertexLayout(
         {
@@ -31,7 +29,7 @@ mvCreatePipeline(mvAssetManager& assetManager, mvMaterial& material)
     //---------------------------------------------------------------------
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssembly.topology = spec.topology;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
     auto attributeDescriptions = pipeline.layout.attributeDescriptions;
@@ -88,10 +86,9 @@ mvCreatePipeline(mvAssetManager& assetManager, mvMaterial& material)
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.polygonMode = spec.wireFrame ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
-    //rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.cullMode = VK_CULL_MODE_NONE;
+    rasterizer.cullMode = spec.backfaceCulling ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
 
@@ -106,8 +103,8 @@ mvCreatePipeline(mvAssetManager& assetManager, mvMaterial& material)
 
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable = VK_TRUE;
-    depthStencil.depthWriteEnable = VK_TRUE;
+    depthStencil.depthTestEnable = spec.depthTest ? VK_TRUE : VK_FALSE;
+    depthStencil.depthWriteEnable = spec.depthWrite ? VK_TRUE : VK_FALSE;
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
     depthStencil.minDepthBounds = 0.0f; // Optional

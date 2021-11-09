@@ -174,7 +174,17 @@ namespace Renderer {
         if (mesh.phongMaterialID == -1)
         {
             mesh.phongMaterialID = mvGetPhongMaterialAsset(&am, {}, "vs_shader.vert.spv", "ps_shader.frag.spv");
-            am.phongMaterials[mesh.phongMaterialID].material.pipeline = mvGetPipelineAsset(&am, am.phongMaterials[mesh.phongMaterialID].material);
+
+            mvPipelineSpec spec{};
+            spec.backfaceCulling = true;
+            spec.depthTest = true;
+            spec.wireFrame = false;
+            spec.depthWrite = true;
+            spec.vertexShader = "vs_shader.vert.spv";
+            spec.pixelShader = "ps_shader.frag.spv";
+            spec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+            am.phongMaterials[mesh.phongMaterialID].material.pipeline = mvGetPipelineAsset(&am, spec);
         }
 
         mvAssetID materialID = mesh.phongMaterialID;
@@ -188,8 +198,7 @@ namespace Renderer {
         VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].buffer.buffer;
         VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].buffer.buffer;
 
-
-        if(mesh.diffuseTexture != -1)
+        if(mesh.diffuseTexture != -1) 
             mvUpdateMaterialDescriptors(am, am.phongMaterials[mesh.phongMaterialID].material, mesh.diffuseTexture);
         vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &descriptorSet, 0, nullptr);
         vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
@@ -203,7 +212,7 @@ namespace Renderer {
 
         vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
-        mvDraw(am.buffers[mesh.indexBuffer].buffer.count);
+        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].buffer.count, 1, 0, 0, 0);
     }
 
     void

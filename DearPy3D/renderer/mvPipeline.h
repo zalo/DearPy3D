@@ -7,13 +7,23 @@
 #include "mvTypes.h"
 
 struct mvScene;
-struct mvMaterial;
 struct mvAssetManager;
 
 struct mvPipelineLayout
 {
 	VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+};
+
+struct mvPipelineSpec
+{
+	VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	b8                  backfaceCulling = true;
+	b8                  depthTest       = true;
+	b8                  depthWrite      = true;
+	b8                  wireFrame       = false;
+	std::string         vertexShader;
+	std::string         pixelShader;
 };
 
 struct mvPipeline
@@ -26,5 +36,5 @@ struct mvPipeline
 };
 
 
-mvPipeline       mvCreatePipeline(mvAssetManager& assetManager, mvMaterial& material);
+mvPipeline       mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec);
 mvPipelineLayout mvCreatePipelineLayout(std::vector<VkDescriptorSetLayout> descriptorSetLayouts);

@@ -46,13 +46,12 @@ target_include_directories(dearpy3dsandbox
 		"../DearPy3D/"
 		"../DearPy3D/core/"
 		"../DearPy3D/renderer/"
+		"../DearPy3D/vendor/imgui/"
 
 	    "$ENV{VK_SDK_PATH}/Include/"
 		"../Dependencies/glfw/include/"
-		"../Dependencies/glm/"
 		"../Dependencies/stb/"
 		"../Dependencies/VulkanMemoryAllocator/"
-		"../Dependencies/imgui/"
 )
 
 target_link_directories(dearpy3dsandbox

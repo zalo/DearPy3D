@@ -17,7 +17,7 @@ mv_internal const char* gltfModel = "FlightHelmet";
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
 mv_internal const char* gltfPath = "C://dev//glTF-Sample-Models//2.0//";
 mv_internal b8 loadGLTF = false;
-mv_internal b8 loadSponza = false;
+mv_internal b8 loadSponza = true;
 mv_internal f32 shadowWidth = 100.0f;
 
 int main() 
@@ -121,6 +121,8 @@ int main()
         ImGuiIO& io = ImGui::GetIO();
         ImGui::GetForegroundDrawList()->AddText(ImVec2(45, 45),
             ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(io.Framerate) + " FPS").c_str());
+
+        mvShowAssetManager(am);
 
         ImGui::Begin("Light Controls");
         if (ImGui::SliderFloat3("Position", &light.info.viewLightPos.x, -25.0f, 25.0f))

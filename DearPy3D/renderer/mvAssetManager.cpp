@@ -1,4 +1,5 @@
 #include "mvAssetManager.h"
+#include <imgui.h>
 
 void 
 mvInitializeAssetManager(mvAssetManager* manager)
@@ -8,7 +9,6 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->dynBuffers = new mvBufferAsset[manager->maxDynBufferCount];
 	manager->meshes = new mvMeshAsset[manager->maxMeshCount];
 	manager->phongMaterials = new mvPhongMaterialAsset[manager->maxPhongMaterialCount];
-	manager->samplers = new mvSamplerAsset[manager->maxSamplerCount];
 	manager->pipelines = new mvPipelineAsset[manager->maxPipelineCount];
 	manager->pipelineLayouts = new mvPipelineLayoutAsset[manager->maxPipelineLayoutCount];
 	manager->scenes = new mvSceneAsset[manager->maxSceneCount];
@@ -30,7 +30,15 @@ mvPrepareResizeAssetManager(mvAssetManager* manager)
 
 	for (int i = 0; i < manager->phongMaterialCount; i++)
 	{
-		manager->phongMaterials[i].material.pipeline = mvGetPipelineAsset(manager, manager->phongMaterials[i].material);
+		mvPipelineSpec spec{};
+		spec.backfaceCulling = true;
+		spec.depthTest = true;
+		spec.wireFrame = false;
+		spec.depthWrite = true;
+		spec.vertexShader = manager->phongMaterials[i].material.vertexShader;
+		spec.pixelShader = manager->phongMaterials[i].material.pixelShader;
+		spec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		manager->phongMaterials[i].material.pipeline = mvGetPipelineAsset(manager, spec);
 	}
 
 }
@@ -39,14 +47,6 @@ void
 mvCleanupAssetManager(mvAssetManager* manager)
 {
 	vkDeviceWaitIdle(mvGetLogicalDevice());
-
-	// cleanup samplers
-	for (int i = 0; i < manager->samplerCount; i++)
-	{
-		vkDestroySampler(mvGetLogicalDevice(), manager->samplers[i].sampler.textureSampler, nullptr);
-		manager->samplers[i].sampler.textureSampler = VK_NULL_HANDLE;
-	}
-	manager->samplerCount = 0u;
 
 	// cleanup materials
 	for (int i = 0; i < manager->phongMaterialCount; i++)
@@ -87,7 +87,8 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	// textures
 	for (int i = 0; i < manager->textureCount; i++)
 	{
-		vkDestroyImageView(mvGetLogicalDevice(), manager->textures[i].texture.textureImageView, nullptr);
+		vkDestroySampler(mvGetLogicalDevice(), manager->textures[i].texture.imageInfo.sampler, nullptr);
+		vkDestroyImageView(mvGetLogicalDevice(), manager->textures[i].texture.imageInfo.imageView, nullptr);
 		vkDestroyImage(mvGetLogicalDevice(), manager->textures[i].texture.textureImage, nullptr);
 		vkFreeMemory(mvGetLogicalDevice(), manager->textures[i].texture.textureImageMemory, nullptr);
 	}
@@ -115,14 +116,12 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->buffers;
 	delete[] manager->dynBuffers;
 	delete[] manager->meshes;
-	delete[] manager->samplers;
 	delete[] manager->pipelines;
 	delete[] manager->pipelineLayouts;
 	delete[] manager->scenes;
 	delete[] manager->descriptorSetLayouts;
 	delete[] manager->nodes;
 
-	manager->samplers = nullptr;
 	manager->textures = nullptr;
 	manager->buffers = nullptr;
 	manager->dynBuffers = nullptr;
@@ -134,7 +133,6 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	manager->descriptorSetLayouts = nullptr;
 	manager->nodes = nullptr;
 
-	manager->samplerCount = 0u;
 	manager->textureCount = 0u;
 	manager->bufferCount = 0u;
 	manager->dynBufferCount = 0u;
@@ -203,9 +201,7 @@ mvRegistryMeshAsset(mvAssetManager* manager, mvMesh mesh)
 mvAssetID
 mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, const char* vertexShader, const char* pixelShader)
 {
-	mv_local_persist int temp = 0;
-	temp++;
-	std::string hash = std::string(pixelShader) + std::string(vertexShader) + std::to_string(temp);
+	std::string hash = mvCreateHash(materialData);
 
 	for (s32 i = 0; i < manager->phongMaterialCount; i++)
 	{
@@ -220,26 +216,16 @@ mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, co
 }
 
 mvAssetID 
-mvGetSamplerAsset(mvAssetManager* manager)
+mvGetPipelineAsset(mvAssetManager* manager, mvPipelineSpec& spec)
 {
-	mv_local_persist std::string tempHash = "sampler";
+	std::string hash =
+		std::string(spec.pixelShader)
+		+ std::string(spec.vertexShader)
+		+ std::string(spec.backfaceCulling ? "T" : "F")
+		+ std::string(spec.wireFrame ? "T" : "F")
+		+ std::string(spec.depthWrite ? "T" : "F")
+		+ std::string(spec.depthTest ? "T" : "F");
 
-	for (s32 i = 0; i < manager->samplerCount; i++)
-	{
-		if (manager->samplers[i].hash == tempHash)
-			return i;
-	}
-
-	manager->samplers[manager->samplerCount].hash = tempHash;
-	manager->samplers[manager->samplerCount].sampler = mvCreateSampler();
-	manager->samplerCount++;
-	return manager->samplerCount - 1;
-}
-
-mvAssetID 
-mvGetPipelineAsset(mvAssetManager* manager, mvMaterial& material)
-{
-	std::string hash = std::string(material.pixelShader) + std::string(material.vertexShader);
 	for (s32 i = 0; i < manager->pipelineCount; i++)
 	{
 		if (manager->pipelines[i].hash == hash)
@@ -247,7 +233,7 @@ mvGetPipelineAsset(mvAssetManager* manager, mvMaterial& material)
 	}
 
 	manager->pipelines[manager->pipelineCount].hash = hash;
-	manager->pipelines[manager->pipelineCount].pipeline = mvCreatePipeline(*manager, material);
+	manager->pipelines[manager->pipelineCount].pipeline = mvCreatePipeline(*manager, spec);
 	manager->pipelineCount++;
 	return manager->pipelineCount - 1;
 }
@@ -333,4 +319,42 @@ mvRegistrySceneAsset(mvAssetManager* manager, mvScene scene)
 	manager->scenes[manager->sceneCount].scene = scene;
 	manager->sceneCount++;
 	return manager->sceneCount - 1;
+}
+
+void 
+mvShowAssetManager(mvAssetManager& assetManager)
+{
+	if (ImGui::Begin("Asset Manager", nullptr))
+	{
+		if (ImGui::TreeNodeEx("Textures", assetManager.textureCount == 0u ? ImGuiTreeNodeFlags_Leaf : ImGuiTreeNodeFlags_None, "Textures: Count %d", assetManager.textureCount))
+		{
+			for (u32 i = 0; i < assetManager.textureCount; i++)
+			{
+				ImGui::Text("Texture: %s", assetManager.textures[i].texture.file.c_str());
+				ImGui::Image(assetManager.textures[i].texture.imguiID, ImVec2(50, 50));
+			}
+			ImGui::TreePop();
+		}
+	}
+	ImGui::End();
+}
+
+std::string
+mvCreateHash(mvMaterialData materialData)
+{
+	std::string hash =
+		std::string(materialData.useTextureMap ? "T" : "F")
+		+ std::string(materialData.useNormalMap ? "T" : "F")
+		+ std::string(materialData.useSpecularMap ? "T" : "F")
+		+ std::string(materialData.useGlossAlpha ? "T" : "F")
+		+ std::string(materialData.hasAlpha ? "T" : "F")
+		+ std::string(materialData.doLighting ? "T" : "F");
+
+	// temporary until we have a "bindless" solution
+	// to descriptor set updates
+	mv_local_persist int i = 0;
+	i++;
+	hash.append(std::to_string(i));
+
+	return hash;
 }
