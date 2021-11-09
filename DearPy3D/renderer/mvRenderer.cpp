@@ -199,7 +199,7 @@ namespace Renderer {
         VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].buffer.buffer;
 
         if(mesh.diffuseTexture != -1) 
-            mvUpdateMaterialDescriptors(am, am.phongMaterials[mesh.phongMaterialID].material, mesh.diffuseTexture);
+            mvUpdateMaterialDescriptors(am, am.phongMaterials[mesh.phongMaterialID].material, mesh.diffuseTexture, mesh.normalTexture, mesh.specularTexture);
         vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &descriptorSet, 0, nullptr);
         vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &vertexBuffer, &offsets);
@@ -331,7 +331,7 @@ namespace Renderer {
             // create descriptor set layout
             //-----------------------------------------------------------------------------
             std::vector<VkDescriptorSetLayoutBinding> bindings;
-            bindings.resize(2);
+            bindings.resize(4);
 
             bindings[0].binding = 0u;
             bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -340,10 +340,22 @@ namespace Renderer {
             bindings[0].pImmutableSamplers = nullptr;
 
             bindings[1].binding = 1u;
-            bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             bindings[1].descriptorCount = 1;
-            bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
             bindings[1].pImmutableSamplers = nullptr;
+
+            bindings[2].binding = 2u;
+            bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            bindings[2].descriptorCount = 1;
+            bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[2].pImmutableSamplers = nullptr;
+
+            bindings[3].binding = 3u;
+            bindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            bindings[3].descriptorCount = 1;
+            bindings[3].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[3].pImmutableSamplers = nullptr;
 
             VkDescriptorSetLayoutCreateInfo layoutInfo{};
             layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

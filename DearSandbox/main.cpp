@@ -31,9 +31,9 @@ int main()
     mvInitializeAssetManager(&am);
     Renderer::mvPreLoadAssets(am);
 
-    mvAssetID scene = mvGetSceneAsset(&am, {});
-
     if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
+
+    mvAssetID scene = mvGetSceneAsset(&am, {});
 
     mvCamera camera{};
     camera.pos = {5.0f, 5.0f, -15.0f};
@@ -132,6 +132,12 @@ int main()
             lightTransform = mvTranslate(mvIdentityMat4(), light.info.viewLightPos.xyz());
             mvUpdateSceneDescriptors(am, am.scenes[scene].scene, light, dlight);
         }
+        ImGui::End();
+
+        ImGui::Begin("Scene");
+        ImGui::Checkbox("Diffuse Mapping", (bool*)&am.scenes[scene].scene.data.doDiffuse);
+        ImGui::Checkbox("Normal Mapping", (bool*)&am.scenes[scene].scene.data.doNormal);
+        ImGui::Checkbox("Specular Mapping", (bool*)&am.scenes[scene].scene.data.doSpecular);
         ImGui::End();
 
         mvMat4 viewMatrix = mvBuildCameraMatrix(camera);

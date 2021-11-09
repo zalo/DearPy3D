@@ -52,4 +52,4 @@ struct mvMaterial
 };
 
 mvMaterial mvCreateMaterial           (mvAssetManager& am, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
-void       mvUpdateMaterialDescriptors(mvAssetManager& am, mvMaterial& material, mvAssetID texture);
+void       mvUpdateMaterialDescriptors(mvAssetManager& am, mvMaterial& material, mvAssetID colorTexture, mvAssetID normalTexture, mvAssetID specularTexture);

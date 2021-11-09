@@ -25,7 +25,9 @@ struct mvNode
 struct mvSceneData
 {
     b32 doLighting = true;
-    char _pad1[12];
+    b32 doNormal = true;
+    b32 doSpecular = true;
+    b32 doDiffuse = true;
     //-------------------------- ( 16 bytes )
 
     // 
@@ -44,6 +46,7 @@ struct mvScene
     mvAssetID        nodes[256];
     u32              nodeCount = 0u;
     u32              meshOffset = 0u;
+    mvSceneData      data;
 };
 
 mvScene mvCreateScene(mvAssetManager& am, mvSceneData sceneData);

@@ -13,6 +13,9 @@ layout(set = 0, binding = 0) uniform mvScene
 {
 
     bool doLighting;
+    bool doNormal;
+    bool doSpecular;
+    bool doDiffuse;
     //-------------------------- ( 16 bytes )
     //-------------------------- ( 1* 16 = 16 bytes )
 } scene;
@@ -47,9 +50,11 @@ layout(set = 0, binding = 2) uniform mvDirectionalLight
     //-------------------------- ( 2*16 = 32 bytes )
 } directionLight;
 
-layout(set = 1, binding = 0) uniform sampler2D texSampler;
+layout(set = 1, binding = 0) uniform sampler2D colorSampler;
+layout(set = 1, binding = 1) uniform sampler2D normalSampler;
+layout(set = 1, binding = 2) uniform sampler2D specularSampler;
 
-layout(set = 1, binding = 1) uniform mvPhongMaterial
+layout(set = 1, binding = 3) uniform mvPhongMaterial
 {
     vec3 materialColor;
     //-------------------------- ( 16 bytes )
@@ -73,8 +78,6 @@ layout(set = 1, binding = 1) uniform mvPhongMaterial
     //-------------------------- ( 4 * 16 = 64 bytes )
 };
 
-
-
 float Attenuate(float attConst, float attLin, float attQuad, in float distFragToL)
 {
     return 1.0 / (attConst + attLin * distFragToL + attQuad * (distFragToL * distFragToL));
@@ -88,25 +91,61 @@ void main()
         return;
     }
 
-    vec4 materialColor = texture(texSampler, inTexCoord);
-    if(materialColor.a < 0.1) discard;
+    vec4 materialColor = vec4(materialColor, 1.0);
+
+    if(scene.doDiffuse)
+    {
+        if(useTextureMap) materialColor = texture(colorSampler, inTexCoord);
+    }
+    
 
     vec3 diffuse = { 0.0, 0.0, 0.0 };
     vec3 specularReflected = { 0.0, 0.0, 0.0 };
     vec3 specularReflectedColor = specularColor;
     vec3 viewNormal = inViewNormal;
 
-    // flip normal when backface
-    if (dot(viewNormal, inViewPos) >= 0.0)
+    if(hasAlpha)
     {
-        viewNormal = -inViewNormal;
+        if(materialColor.a < 0.1) discard;
+
+        // flip normal when backface
+        if (dot(viewNormal, inViewPos) >= 0.0)
+        {
+            viewNormal = -inViewNormal;
+        }
     }
 
     // normalize the mesh normal
     viewNormal = normalize(viewNormal);
 
+    if(useNormalMap)
+    {
+        if(scene.doNormal)
+        {
+            const vec4 normalSample = texture(normalSampler, inTexCoord);
+            const vec4 tanNormal = normalSample * 2.0 - 1.0;
+            const vec3 mappedNormal = normalize(inTangentBasis * tanNormal.rgb);
+            viewNormal = mix(viewNormal, mappedNormal, normalMapWeight);
+        }
+    }
+
     // specular parameter determination (mapped or uniform)
     float specularPowerLoaded = specularGloss;
+
+    if(useSpecularMap)
+    {
+        if(scene.doSpecular)
+        {
+            const vec4 specularSample = texture(specularSampler, inTexCoord);
+            specularReflectedColor = specularSample.rgb;
+            //specularReflectedColor = vec3(specularSample.x, specularSample.y, specularSample.z);
+        
+            if (useGlossAlpha)
+            {
+                specularPowerLoaded = pow(2.0, specularSample.a * 13.0f);
+            }
+        }
+    }
 
     //-----------------------------------------------------------------------------
     // point light

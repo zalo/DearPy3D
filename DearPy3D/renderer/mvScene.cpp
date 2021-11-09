@@ -8,6 +8,7 @@ mvCreateScene(mvAssetManager& am, mvSceneData sceneData)
     std::string hash = "scene_" + std::string(sceneData.doLighting ? "T" : "F");
 
     mvScene scene{};
+    scene.data = sceneData;
     scene.descriptorSets = new VkDescriptorSet[GContext->graphics.swapChainImages.size()];
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
@@ -93,11 +94,14 @@ mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light
 }
 
 void
-mvBindScene(mvAssetManager& am, mvAssetID scene)
+mvBindScene(mvAssetManager& am, mvAssetID sceneId)
 {
+    mvScene& scene = am.scenes[sceneId].scene;
+    mvUpdateBuffer(am.dynBuffers[scene.sceneBuffer.buffers[GContext->graphics.currentImageIndex]].buffer, &scene.data);
+
     mvAssetID layoutID = mvGetPipelineLayoutAsset(&am, "layout_2");
     VkPipelineLayout layout = am.pipelineLayouts[layoutID].layout.pipelineLayout;
     vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
         layout,
-        0, 1, &am.scenes[scene].scene.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
+        0, 1, &scene.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
 }
