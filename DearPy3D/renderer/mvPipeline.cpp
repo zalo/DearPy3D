@@ -65,15 +65,16 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
 
     VkViewport viewport{};
     viewport.x = 0.0f;
-    viewport.y = (float)GContext->graphics.swapChainExtent.height;
-    viewport.width = (float)GContext->graphics.swapChainExtent.width;
-    viewport.height = -(float)GContext->graphics.swapChainExtent.height;
+    viewport.y = spec.height == 0.0f ? (float)GContext->graphics.swapChainExtent.height : spec.height;
+    viewport.width = spec.width == 0.0f ? (float)GContext->graphics.swapChainExtent.width : spec.width;
+    viewport.height = spec.height == 0.0f ? -(float)GContext->graphics.swapChainExtent.height : -spec.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     VkRect2D scissor{};
     scissor.offset = { 0, 0 };
-    scissor.extent = GContext->graphics.swapChainExtent;
+    scissor.extent.width = (u32)viewport.width;
+    scissor.extent.height = (u32)viewport.y;
 
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -159,7 +160,7 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.layout = assetManager.pipelineLayouts[pipeline.pipelineLayout].layout.pipelineLayout;
-    pipelineInfo.renderPass = GContext->graphics.renderPass;
+    pipelineInfo.renderPass = spec.renderPass == VK_NULL_HANDLE ? GContext->graphics.renderPass : spec.renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.pDepthStencilState = &depthStencil;

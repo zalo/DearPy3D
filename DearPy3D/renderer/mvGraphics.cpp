@@ -292,7 +292,7 @@ mvCreatePhysicalDevice()
         if (mvIsDeviceSuitable(device, GContext->graphics.deviceProperties, GContext->graphics.deviceExtensions))
         {
             GContext->graphics.physicalDevice = device;
-            break;
+            //break;
         }
     }
         

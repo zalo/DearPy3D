@@ -24,6 +24,9 @@ struct mvPipelineSpec
 	b8                  wireFrame       = false;
 	std::string         vertexShader;
 	std::string         pixelShader;
+	f32                 width = 0.0f;  // viewport
+	f32                 height = 0.0f; // viewport
+	VkRenderPass        renderPass = VK_NULL_HANDLE;
 };
 
 struct mvPipeline
