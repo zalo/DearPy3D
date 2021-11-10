@@ -38,9 +38,7 @@ mv_internal void mvCreateLogicalDevice();
 mv_internal void mvCreateSwapChain();
 mv_internal void mvCreateMainCommandPool();
 mv_internal void mvCreateMainDescriptorPool();
-mv_internal void mvCreateMainRenderPass();
 mv_internal void mvCreateMainDepthResources();
-mv_internal void mvCreateFrameBuffers();
 mv_internal void mvCreateSyncObjects();
 
 //-----------------------------------------------------------------------------
@@ -507,11 +505,11 @@ mvCreateMainDescriptorPool()
         throw std::runtime_error("failed to create descriptor pool!");
 }
 
-mv_internal void 
-mvCreateMainRenderPass()
+void 
+mvCreateRenderPass(VkFormat format, VkRenderPass* renderPass)
 {
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = GContext->graphics.swapChainImageFormat;
+    colorAttachment.format = format;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -562,7 +560,7 @@ mvCreateMainRenderPass()
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
-    if (vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, &GContext->graphics.renderPass) != VK_SUCCESS)
+    if (vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, renderPass) != VK_SUCCESS)
         throw std::runtime_error("failed to create render pass!");
 }
 
@@ -578,29 +576,29 @@ mvCreateMainDepthResources()
     GContext->graphics.depthImageView = mvCreateImageView(GContext->graphics.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 }
 
-mv_internal void 
-mvCreateFrameBuffers()
+void
+mvCreateFrameBuffers(VkRenderPass renderPass, std::vector<VkFramebuffer>& frameBuffers, uint32_t width, uint32_t height, std::vector<VkImageView>& imageViews, VkImageView& depthView)
 {
     GContext->graphics.swapChainFramebuffers.resize(GContext->graphics.swapChainImageViews.size());
 
     for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
     {
         VkImageView attachments[] = {
-            GContext->graphics.swapChainImageViews[i],
-            GContext->graphics.depthImageView
+            imageViews[i],
+            depthView
         };
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = GContext->graphics.renderPass;
+        framebufferInfo.renderPass = renderPass;
         framebufferInfo.attachmentCount = 2;
 
         framebufferInfo.pAttachments = attachments;
-        framebufferInfo.width = GContext->graphics.swapChainExtent.width;
-        framebufferInfo.height = GContext->graphics.swapChainExtent.height;
+        framebufferInfo.width = width;
+        framebufferInfo.height = height;
         framebufferInfo.layers = 1;
 
-        if (vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &GContext->graphics.swapChainFramebuffers[i]) != VK_SUCCESS)
+        if (vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &frameBuffers[i]) != VK_SUCCESS)
             throw std::runtime_error("failed to create framebuffer!");
     }
 }
@@ -694,9 +692,14 @@ mvSetupGraphicsContext()
     mvCreateSwapChain();
     mvCreateMainCommandPool();
     mvCreateMainDescriptorPool();
-    mvCreateMainRenderPass();
+    mvCreateRenderPass(GContext->graphics.swapChainImageFormat, &GContext->graphics.renderPass);
     mvCreateMainDepthResources();
-    mvCreateFrameBuffers();
+    mvCreateFrameBuffers(GContext->graphics.renderPass, 
+        GContext->graphics.swapChainFramebuffers, 
+        GContext->graphics.swapChainExtent.width, 
+        GContext->graphics.swapChainExtent.height,
+        GContext->graphics.swapChainImageViews,
+        GContext->graphics.depthImageView);
     mvCreateSyncObjects();
 }
 
@@ -806,16 +809,17 @@ void
 mvRecreateSwapChain()
 {
     vkDeviceWaitIdle(mvGetLogicalDevice());
-
     mvFlushResources();
-
-    //mvShutdownAllocator();
-    //mvInitializeAllocator();
     mvCreateSwapChain();
     mvCreateMainCommandPool();
-    mvCreateMainRenderPass();
+    mvCreateRenderPass(GContext->graphics.swapChainImageFormat, &GContext->graphics.renderPass);
     mvCreateMainDepthResources();
-    mvCreateFrameBuffers();
+    mvCreateFrameBuffers(GContext->graphics.renderPass,
+        GContext->graphics.swapChainFramebuffers,
+        GContext->graphics.swapChainExtent.width,
+        GContext->graphics.swapChainExtent.height,
+        GContext->graphics.swapChainImageViews,
+        GContext->graphics.depthImageView);
 }
 
 size_t 

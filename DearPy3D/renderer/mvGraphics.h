@@ -24,6 +24,9 @@ VkCommandBuffer  mvGetCurrentCommandBuffer();
 void mvSetupGraphicsContext();
 void mvRecreateSwapChain();
 void mvCleanupGraphicsContext();
+void mvCreateRenderPass(VkFormat format, VkRenderPass** renderPass);
+void mvCreateMainDepthResources();
+void mvCreateFrameBuffers(VkRenderPass renderPass, std::vector<VkFramebuffer>& frameBuffers, uint32_t width, uint32_t height, std::vector<VkImageView>& imageViews, VkImageView& depthView);
 
 // resource utilities
 void          mvCreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
