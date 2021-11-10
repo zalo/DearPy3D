@@ -32,8 +32,8 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     inputAssembly.topology = spec.topology;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    auto attributeDescriptions = pipeline.layout.attributeDescriptions;
-    auto bindingDescriptions = pipeline.layout.bindingDescriptions;
+    std::vector<VkVertexInputAttributeDescription> attributeDescriptions = pipeline.layout.attributeDescriptions;
+    std::vector<VkVertexInputBindingDescription> bindingDescriptions = pipeline.layout.bindingDescriptions;
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -65,9 +65,9 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
 
     VkViewport viewport{};
     viewport.x = 0.0f;
-    viewport.y = 0.0f;
+    viewport.y = (float)GContext->graphics.swapChainExtent.height;
     viewport.width = (float)GContext->graphics.swapChainExtent.width;
-    viewport.height = (float)GContext->graphics.swapChainExtent.height;
+    viewport.height = -(float)GContext->graphics.swapChainExtent.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 

@@ -80,7 +80,9 @@ mvCreateTexturedCube(mvAssetManager& assetManager, float sideLength)
     
     mvMaterialData mat{};
     mat.materialColor = { 0.0f, 1.0f, 0.0f, 1.0f };
+    mat.useTextureMap = true;
     mesh.phongMaterialID = mvGetPhongMaterialAsset(&assetManager, mat, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mesh.diffuseTexture = mvGetTextureAsset(&assetManager, "../../Resources/brickwall.jpg");
     return mesh;
 }
 
@@ -139,7 +141,9 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, float sideLength)
     
     mvMaterialData mat{};
     mat.materialColor = { 1.0f, 0.0f, 0.0f, 1.0f };
+    mat.useTextureMap = true;
     mesh.phongMaterialID = mvGetPhongMaterialAsset(&assetManager, mat, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mesh.diffuseTexture = mvGetTextureAsset(&assetManager, "../../Resources/brickwall.jpg");
     return mesh;
 }
 

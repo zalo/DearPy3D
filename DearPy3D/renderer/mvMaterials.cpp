@@ -117,50 +117,57 @@ mvUpdateMaterialDescriptors(mvAssetManager& am, mvMaterial& material, mvAssetID 
     std::vector<VkWriteDescriptorSet> descriptorWrites;
     descriptorWrites.resize(4);
 
-    descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[0].dstSet = material.descriptorSets[GContext->graphics.currentImageIndex];
-    descriptorWrites[0].dstBinding = 0;
-    descriptorWrites[0].dstArrayElement = 0;
-    descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorWrites[0].descriptorCount = 1;
-    descriptorWrites[0].pImageInfo = &am.textures[colorTexture].texture.imageInfo;
+    s32 currentIndex = 0;
 
-    descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[1].dstSet = material.descriptorSets[GContext->graphics.currentImageIndex];
-    descriptorWrites[1].dstBinding = 1;
-    descriptorWrites[1].dstArrayElement = 0;
-    descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorWrites[1].descriptorCount = 1;
-    descriptorWrites[1].pImageInfo = &am.textures[normalTexture].texture.imageInfo;
+    if (colorTexture > -1)
+    {
+        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[0].dstSet = material.descriptorSets[GContext->graphics.currentImageIndex];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pImageInfo = &am.textures[colorTexture].texture.imageInfo;
+        currentIndex++;
+    }
 
+    if (normalTexture > -1)
+    {
+        descriptorWrites[currentIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[currentIndex].dstSet = material.descriptorSets[GContext->graphics.currentImageIndex];
+        descriptorWrites[currentIndex].dstBinding = 1;
+        descriptorWrites[currentIndex].dstArrayElement = 0;
+        descriptorWrites[currentIndex].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[currentIndex].descriptorCount = 1;
+        descriptorWrites[currentIndex].pImageInfo = &am.textures[normalTexture].texture.imageInfo;
+        currentIndex++;
+    }
 
+    if (specularTexture > -1)
+    {
+        descriptorWrites[currentIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[currentIndex].dstSet = material.descriptorSets[GContext->graphics.currentImageIndex];
+        descriptorWrites[currentIndex].dstBinding = 2;
+        descriptorWrites[currentIndex].dstArrayElement = 0;
+        descriptorWrites[currentIndex].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[currentIndex].descriptorCount = 1;
+        descriptorWrites[currentIndex].pImageInfo = &am.textures[specularTexture].texture.imageInfo;
+        currentIndex++;
+    }
 
     VkDescriptorBufferInfo materialInfo;
     materialInfo.buffer = am.dynBuffers[material.materialBuffer.buffers[GContext->graphics.currentImageIndex]].buffer.buffer;
     materialInfo.offset = 0;
     materialInfo.range = mvGetRequiredUniformBufferSize(sizeof(mvMaterialData));
 
-    descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[2].dstSet = material.descriptorSets[GContext->graphics.currentImageIndex];
-    descriptorWrites[2].dstBinding = 3;
-    descriptorWrites[2].dstArrayElement = 0;
-    descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorWrites[2].descriptorCount = 1;
-    descriptorWrites[2].pBufferInfo = &materialInfo;
+    descriptorWrites[currentIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrites[currentIndex].dstSet = material.descriptorSets[GContext->graphics.currentImageIndex];
+    descriptorWrites[currentIndex].dstBinding = 3;
+    descriptorWrites[currentIndex].dstArrayElement = 0;
+    descriptorWrites[currentIndex].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorWrites[currentIndex].descriptorCount = 1;
+    descriptorWrites[currentIndex].pBufferInfo = &materialInfo;
+    currentIndex++;
 
-    if (specularTexture > -1)
-    {
-        descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[3].dstSet = material.descriptorSets[GContext->graphics.currentImageIndex];
-        descriptorWrites[3].dstBinding = 2;
-        descriptorWrites[3].dstArrayElement = 0;
-        descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[3].descriptorCount = 1;
-        descriptorWrites[3].pImageInfo = &am.textures[specularTexture].texture.imageInfo;
-    }
-
-    if(specularTexture > -1)
-        vkUpdateDescriptorSets(mvGetLogicalDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-    else
-        vkUpdateDescriptorSets(mvGetLogicalDevice(), static_cast<uint32_t>(3), descriptorWrites.data(), 0, nullptr);
+    vkUpdateDescriptorSets(mvGetLogicalDevice(), static_cast<uint32_t>(currentIndex), descriptorWrites.data(), 0, nullptr);
 }

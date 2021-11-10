@@ -36,8 +36,12 @@ int main()
     mvAssetID scene = mvGetSceneAsset(&am, {});
 
     mvCamera camera{};
-    camera.pos = {5.0f, 5.0f, -15.0f};
-    camera.aspect = GContext->viewport.width/GContext->viewport.height;
+    camera.pos = { -13.5f, 6.0f, 3.5f };
+    camera.front = { 0.0f, 0.0f, 1.0f };
+    camera.up = { 0.0f, -1.0f, 0.0f };
+    camera.pitch = 0.0f;
+    camera.yaw = 0.0f;
+    camera.aspect = GContext->viewport.width / GContext->viewport.height;
     
     mvMesh quad1 = mvCreateTexturedQuad(am);
     mvMat4 quadTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 5.0f, 5.0f, 5.0f });
@@ -99,14 +103,8 @@ int main()
         //---------------------------------------------------------------------
         // input handling
         //---------------------------------------------------------------------
-        if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_W) == GLFW_PRESS) mvTranslateCamera(camera, 0.0f, 0.0f, dt);
-        if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_S) == GLFW_PRESS) mvTranslateCamera(camera, 0.0f, 0.0f, -dt);
-        if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_A) == GLFW_PRESS) mvTranslateCamera(camera, -dt, 0.0f, 0.0f);
-        if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_D) == GLFW_PRESS) mvTranslateCamera(camera, dt, 0.0f, 0.0f);
-        if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_R) == GLFW_PRESS) mvTranslateCamera(camera, 0.0f, dt, 0.0f);
-        if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_F) == GLFW_PRESS) mvTranslateCamera(camera, 0.0f, -dt, 0.0f);
-        if (!GContext->viewport.cursorEnabled) mvRotateCamera(camera, GContext->viewport.deltaX, GContext->viewport.deltaY);
-        
+        mvUpdateCameraFPSCamera(camera, dt, 12.0f, 0.004f);
+ 
         //---------------------------------------------------------------------
         // wait for fences and acquire next image
         //---------------------------------------------------------------------
@@ -140,8 +138,8 @@ int main()
         ImGui::Checkbox("Specular Mapping", (bool*)&am.scenes[scene].scene.data.doSpecular);
         ImGui::End();
 
-        mvMat4 viewMatrix = mvBuildCameraMatrix(camera);
-        mvMat4 projMatrix = mvBuildProjectionMatrix(camera);
+        mvMat4 viewMatrix = mvCreateFPSView(camera);
+        mvMat4 projMatrix = mvCreateLookAtProjection(camera);
 
         mvBindScene(am, scene);
         mvBind(am, light, viewMatrix);
