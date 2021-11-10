@@ -1,12 +1,12 @@
 #include "mvGraphics.h"
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>
 #include <stdexcept>
 #include <iostream>
 #include <set>
 #include <optional>
 #include <array>
 #include "mvContext.h"
-
-mv_internal VmaAllocator gallocator;
 
 mv_internal VKAPI_ATTR VkBool32 VKAPI_CALL
 debugCallback(
@@ -20,37 +20,8 @@ debugCallback(
 
 
 //-----------------------------------------------------------------------------
-// forward declarations
-//-----------------------------------------------------------------------------
-
-struct SwapChainSupportDetails;
-struct QueueFamilyIndices;
-
-mv_internal SwapChainSupportDetails mvQuerySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
-mv_internal bool                    mvCheckValidationLayerSupport(const std::vector<const char*> layers);
-mv_internal bool                    mvIsDeviceSuitable(VkPhysicalDevice device, VkPhysicalDeviceProperties& properties, std::vector<const char*> deviceExtensions);
-mv_internal bool                    mvCheckDeviceExtensionSupport(VkPhysicalDevice device, std::vector<const char*> deviceExtensions);
-    
-// initialization
-mv_internal void mvSetupDebugMessenger();
-mv_internal void mvCreateVulkanInstance();
-mv_internal void mvCreateLogicalDevice();
-mv_internal void mvCreateSwapChain();
-mv_internal void mvCreateMainCommandPool();
-mv_internal void mvCreateMainDescriptorPool();
-mv_internal void mvCreateMainDepthResources();
-mv_internal void mvCreateSyncObjects();
-
-//-----------------------------------------------------------------------------
 // internals
 //-----------------------------------------------------------------------------
-
-struct SwapChainSupportDetails
-{
-    VkSurfaceCapabilitiesKHR        capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR>   presentModes;
-};
 
 struct QueueFamilyIndices
 {
@@ -62,63 +33,6 @@ struct QueueFamilyIndices
         return graphicsFamily.has_value() && presentFamily.has_value();
     }
 };
-
-mv_internal SwapChainSupportDetails 
-mvQuerySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface)
-{
-    SwapChainSupportDetails details;
-
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
-
-    uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-
-    // todo: put in appropriate spot
-    VkBool32 presentSupport = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(device, 0, surface, &presentSupport);
-
-    if (formatCount != 0) {
-        details.formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
-    }
-
-    uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
-
-    if (presentModeCount != 0) {
-        details.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
-    }
-
-    return details;
-}
-
-mv_internal bool 
-mvCheckValidationLayerSupport(const std::vector<const char*> layers)
-{
-    uint32_t layerCount;
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-    std::vector<VkLayerProperties> availableLayers(layerCount);
-    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-    for (const char* layerName : layers) {
-        bool layerFound = false;
-
-        for (const auto& layerProperties : availableLayers) {
-            if (strcmp(layerName, layerProperties.layerName) == 0) {
-                layerFound = true;
-                break;
-            }
-        }
-
-        if (!layerFound) {
-            return false;
-        }
-    }
-
-    return true;
-}
 
 mv_internal QueueFamilyIndices 
 mvFindQueueFamilies(VkPhysicalDevice device)
@@ -153,183 +67,44 @@ mvFindQueueFamilies(VkPhysicalDevice device)
     return indices;
 }
 
-mv_internal bool 
-mvIsDeviceSuitable(VkPhysicalDevice device, VkPhysicalDeviceProperties& properties, std::vector<const char*> deviceExtensions)
-{
-    QueueFamilyIndices indices = mvFindQueueFamilies(device);
-
-    bool extensionsSupported = mvCheckDeviceExtensionSupport(device, deviceExtensions);
-
-    bool swapChainAdequate = false;
-    if (extensionsSupported)
-    {
-        swapChainAdequate = true;
-        //SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
-        //swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
-    }
-
-    vkGetPhysicalDeviceProperties(device, &properties);
-
-    std::cout << "The GPU has a minimum buffer alignment of " << properties.limits.minUniformBufferOffsetAlignment << std::endl;
-    std::cout << "The GPU has a max push constants size of " << properties.limits.maxPushConstantsSize << std::endl;
-
-    return extensionsSupported && swapChainAdequate && properties.limits.maxPushConstantsSize >= 256;
-}
-
-mv_internal bool 
-mvCheckDeviceExtensionSupport(VkPhysicalDevice device, std::vector<const char*> deviceExtensions)
-{
-    uint32_t extensionCount;
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-
-    std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
-
-    for (const auto& extension : availableExtensions)
-        requiredExtensions.erase(extension.extensionName);
-
-    return requiredExtensions.empty();
-}
-
-mv_internal void 
-mvCreateVulkanInstance()
-{
-
-    if (GContext->graphics.enableValidationLayers && !mvCheckValidationLayerSupport(GContext->graphics.validationLayers))
-        throw std::runtime_error("validation layers requested, but not available!");
-
-    VkApplicationInfo appInfo{};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.apiVersion = VK_API_VERSION_1_2;
-
-    VkInstanceCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo = &appInfo;
-
-    // get extensions required to load glfw
-    uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions;
-    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-    std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-    if (GContext->graphics.enableValidationLayers)
-        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-    createInfo.ppEnabledExtensionNames = extensions.data();
-
-    // Setup debug messenger for vulkan instance
-    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
-    if (GContext->graphics.enableValidationLayers)
-    {
-        createInfo.enabledLayerCount = static_cast<uint32_t>(GContext->graphics.validationLayers.size());
-        createInfo.ppEnabledLayerNames = GContext->graphics.validationLayers.data();
-        createInfo.pNext = VK_NULL_HANDLE;
-
-        debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-        debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-        debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-        debugCreateInfo.pfnUserCallback = debugCallback;
-        debugCreateInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
-    }
-    else
-    {
-        createInfo.enabledLayerCount = 0;
-        createInfo.pNext = VK_NULL_HANDLE;
-    }
-
-    // create the instance
-    if (vkCreateInstance(&createInfo, nullptr, &GContext->graphics.instance) != VK_SUCCESS)
-        throw std::runtime_error("failed to create instance!");
-}
-
-mv_internal void 
-mvSetupDebugMessenger()
-{
-
-    if (!GContext->graphics.enableValidationLayers)
-        return;
-
-    VkDebugUtilsMessengerCreateInfoEXT createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    createInfo.pfnUserCallback = debugCallback;
-    createInfo.pNext = VK_NULL_HANDLE;
-
-    auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(mvGetVkInstance(), "vkCreateDebugUtilsMessengerEXT");
-    if (func != nullptr)
-    {
-        VkResult result = func(mvGetVkInstance(), &createInfo, nullptr, &GContext->graphics.debugMessenger);
-        if (result != VK_SUCCESS)
-            throw std::runtime_error("failed to set up debug messenger!");
-    }
-    else
-        throw std::runtime_error("failed to set up debug messenger!");
-}
-
-mv_internal void 
-mvCreateLogicalDevice()
-{
-
-    QueueFamilyIndices indices = mvFindQueueFamilies(mvGetPhysicalDevice());
-
-    GContext->graphics.graphicsQueueFamily = indices.graphicsFamily.value();
-
-    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
-
-    float queuePriority = 1.0f;
-    for (uint32_t queueFamily : uniqueQueueFamilies)
-    {
-        VkDeviceQueueCreateInfo queueCreateInfo{};
-        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo.queueFamilyIndex = queueFamily;
-        queueCreateInfo.queueCount = 1;
-        queueCreateInfo.pQueuePriorities = &queuePriority;
-        queueCreateInfos.push_back(queueCreateInfo);
-    }
-
-    VkPhysicalDeviceFeatures deviceFeatures{};
-    deviceFeatures.samplerAnisotropy = VK_TRUE;
-    {
-        VkDeviceCreateInfo createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-
-        createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-        createInfo.pQueueCreateInfos = queueCreateInfos.data();
-
-        createInfo.pEnabledFeatures = &deviceFeatures;
-
-        createInfo.enabledExtensionCount = GContext->graphics.deviceExtensions.size();
-        createInfo.ppEnabledExtensionNames = GContext->graphics.deviceExtensions.data();
-
-        if (GContext->graphics.enableValidationLayers)
-        {
-            createInfo.enabledLayerCount = static_cast<uint32_t>(GContext->graphics.validationLayers.size());
-            createInfo.ppEnabledLayerNames = GContext->graphics.validationLayers.data();
-        }
-        else
-            createInfo.enabledLayerCount = 0;
-
-        auto code = vkCreateDevice(mvGetPhysicalDevice(), &createInfo, nullptr, &GContext->graphics.logicalDevice);
-        if (code != VK_SUCCESS)
-        {
-            std::cout << code<< std::endl;
-            throw std::runtime_error("failed to create logical device!");
-        }
-    }
-
-    vkGetDeviceQueue(mvGetLogicalDevice(), indices.graphicsFamily.value(), 0, &GContext->graphics.graphicsQueue);
-    vkGetDeviceQueue(mvGetLogicalDevice(), indices.presentFamily.value(), 0, &GContext->graphics.presentQueue);
-
-}
-
 mv_internal void 
 mvCreateSwapChain()
 {
-    SwapChainSupportDetails swapChainSupport = mvQuerySwapChainSupport(mvGetPhysicalDevice(), GContext->graphics.surface);
+
+    struct SwapChainSupportDetails
+    {
+        VkSurfaceCapabilitiesKHR        capabilities;
+        std::vector<VkSurfaceFormatKHR> formats;
+        std::vector<VkPresentModeKHR>   presentModes;
+    };
+   
+    //-----------------------------------------------------------------------------
+    // query swapchain support
+    //-----------------------------------------------------------------------------
+    SwapChainSupportDetails swapChainSupport;
+    {
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &swapChainSupport.capabilities);
+
+        uint32_t formatCount;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &formatCount, nullptr);
+
+        // todo: put in appropriate spot
+        VkBool32 presentSupport = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR(GContext->graphics.physicalDevice, 0, GContext->graphics.surface, &presentSupport);
+
+        if (formatCount != 0) {
+            swapChainSupport.formats.resize(formatCount);
+            vkGetPhysicalDeviceSurfaceFormatsKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &formatCount, swapChainSupport.formats.data());
+        }
+
+        uint32_t presentModeCount;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &presentModeCount, nullptr);
+
+        if (presentModeCount != 0) {
+            swapChainSupport.presentModes.resize(presentModeCount);
+            vkGetPhysicalDeviceSurfacePresentModesKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &presentModeCount, swapChainSupport.presentModes.data());
+        }
+    }
 
     // choose swap surface Format
     VkSurfaceFormatKHR surfaceFormat = swapChainSupport.formats[0];
@@ -385,7 +160,7 @@ mvCreateSwapChain()
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        QueueFamilyIndices indices = mvFindQueueFamilies(mvGetPhysicalDevice());
+        QueueFamilyIndices indices = mvFindQueueFamilies(GContext->graphics.physicalDevice);
         uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
         if (indices.graphicsFamily != indices.presentFamily)
@@ -421,95 +196,84 @@ mvCreateSwapChain()
         GContext->graphics.swapChainImageViews[i] = mvCreateImageView(GContext->graphics.swapChainImages[i], GContext->graphics.swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
-mv_internal void 
-mvCreateMainCommandPool()
+mv_internal void
+mvSetupImGui(GLFWwindow* window)
 {
-    QueueFamilyIndices queueFamilyIndices = mvFindQueueFamilies(mvGetPhysicalDevice());
 
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
 
-    if (vkCreateCommandPool(mvGetLogicalDevice(), &poolInfo, nullptr, &GContext->graphics.commandPool) != VK_SUCCESS)
-        throw std::runtime_error("failed to create command pool!");
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
 
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = GContext->graphics.commandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = (uint32_t)(GContext->graphics.swapChainImages.size());
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForVulkan(window, true);
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.Instance = GContext->graphics.instance;
+    init_info.PhysicalDevice = GContext->graphics.physicalDevice;
+    init_info.Device = GContext->graphics.logicalDevice;
+    init_info.QueueFamily = GContext->graphics.graphicsQueueFamily;
+    init_info.Queue = GContext->graphics.graphicsQueue;
+    init_info.PipelineCache = nullptr;
+    init_info.DescriptorPool = GContext->graphics.descriptorPool;
+    init_info.Allocator = nullptr;
+    init_info.MinImageCount = GContext->graphics.minImageCount;
+    init_info.ImageCount = GContext->graphics.minImageCount;
+    init_info.CheckVkResultFn = nullptr;
+    ImGui_ImplVulkan_Init(&init_info, GContext->graphics.renderPass);
 
-    GContext->graphics.commandBuffers.resize(GContext->graphics.swapChainImages.size());
-
-    if (vkAllocateCommandBuffers(mvGetLogicalDevice(), &allocInfo, GContext->graphics.commandBuffers.data()) != VK_SUCCESS)
-        throw std::runtime_error("failed to allocate command buffers!");
-}
-
-mv_internal void 
-mvCreateMainDescriptorPool()
-{
-    VkDescriptorPoolSize poolSizes[] =
+    // Upload Fonts
     {
-        { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-    };
-    VkDescriptorPoolCreateInfo poolInfo = {};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    poolInfo.maxSets = 1000 * 11;
-    poolInfo.poolSizeCount = 11u;
-    poolInfo.pPoolSizes = poolSizes;
+        // Use any command queue
+        VkCommandBuffer command_buffer = mvBeginSingleTimeCommands();
+        ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+        mvEndSingleTimeCommands(command_buffer);
+        ImGui_ImplVulkan_DestroyFontUploadObjects();
+    }
 
-    if (vkCreateDescriptorPool(mvGetLogicalDevice(), &poolInfo, nullptr, &GContext->graphics.descriptorPool) != VK_SUCCESS)
-        throw std::runtime_error("failed to create descriptor pool!");
 }
 
 void 
 mvCreateRenderPass(VkFormat format, VkRenderPass* renderPass)
 {
-    VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = format;
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    VkAttachmentDescription attachments[2];
 
-    VkAttachmentReference colorAttachmentRef{};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    // color attachment
+    attachments[0].flags = VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT;
+    attachments[0].format = format;
+    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-    VkAttachmentDescription depthAttachment{};
-    depthAttachment.format = VK_FORMAT_D32_SFLOAT;
-    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    // depth attachment
+    attachments[1].flags = VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT;
+    attachments[1].format = VK_FORMAT_D32_SFLOAT;
+    attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-    VkAttachmentReference depthAttachmentRef{};
-    depthAttachmentRef.attachment = 1;
-    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    VkAttachmentReference references[] = 
+    {
+        {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
+        {1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL}
+    };
 
     VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.pDepthStencilAttachment = &depthAttachmentRef;
+    subpass.pColorAttachments = references;
+    subpass.pDepthStencilAttachment = &references[1];
 
     VkSubpassDependency dependency{};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -519,11 +283,10 @@ mvCreateRenderPass(VkFormat format, VkRenderPass* renderPass)
     dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-    std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    renderPassInfo.pAttachments = attachments.data();
+    renderPassInfo.attachmentCount = 2u;
+    renderPassInfo.pAttachments = attachments;
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = 1;
@@ -533,20 +296,8 @@ mvCreateRenderPass(VkFormat format, VkRenderPass* renderPass)
         throw std::runtime_error("failed to create render pass!");
 }
 
-mv_internal void 
-mvCreateMainDepthResources()
-{
-    VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
-
-    mvCreateImage(GContext->graphics.swapChainExtent.width, GContext->graphics.swapChainExtent.height, depthFormat,
-        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        GContext->graphics.depthImage, GContext->graphics.depthImageMemory);
-
-    GContext->graphics.depthImageView = mvCreateImageView(GContext->graphics.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-}
-
 void
-mvCreateFrameBuffers(VkRenderPass renderPass, std::vector<VkFramebuffer>& frameBuffers, uint32_t width, uint32_t height, std::vector<VkImageView>& imageViews, VkImageView& depthView)
+mvCreateFrameBuffers(VkRenderPass renderPass, std::vector<VkFramebuffer>& frameBuffers, u32 width, u32 height, std::vector<VkImageView>& imageViews, VkImageView& depthView)
 {
     GContext->graphics.swapChainFramebuffers.resize(GContext->graphics.swapChainImageViews.size());
 
@@ -572,52 +323,18 @@ mvCreateFrameBuffers(VkRenderPass renderPass, std::vector<VkFramebuffer>& frameB
     }
 }
 
-mv_internal void 
-mvCreateSyncObjects()
-{
-    GContext->graphics.imageAvailableSemaphores.resize(MV_MAX_FRAMES_IN_FLIGHT);
-    GContext->graphics.renderFinishedSemaphores.resize(MV_MAX_FRAMES_IN_FLIGHT);
-    GContext->graphics.inFlightFences.resize(MV_MAX_FRAMES_IN_FLIGHT);
-    GContext->graphics.imagesInFlight.resize(GContext->graphics.swapChainImages.size(), VK_NULL_HANDLE);
-
-    VkSemaphoreCreateInfo semaphoreInfo{};
-    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-    VkFenceCreateInfo fenceInfo{};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    for (size_t i = 0; i < MV_MAX_FRAMES_IN_FLIGHT; i++)
-    {
-        if (vkCreateSemaphore(mvGetLogicalDevice(), &semaphoreInfo, nullptr, &GContext->graphics.imageAvailableSemaphores[i]) != VK_SUCCESS ||
-            vkCreateSemaphore(mvGetLogicalDevice(), &semaphoreInfo, nullptr, &GContext->graphics.renderFinishedSemaphores[i]) != VK_SUCCESS ||
-            vkCreateFence(mvGetLogicalDevice(), &fenceInfo, nullptr, &GContext->graphics.inFlightFences[i]) != VK_SUCCESS)
-            throw std::runtime_error("failed to create synchronization objects for a frame!");
-    }
-}
-
 mv_internal void
 mvFlushResources()
 {
-
     for (int i = 0; i < GContext->graphics.swapChainFramebuffers.size(); i++)
     {
         vkDestroyImageView(mvGetLogicalDevice(), GContext->graphics.swapChainImageViews[i], nullptr);
         vkDestroyFramebuffer(mvGetLogicalDevice(), GContext->graphics.swapChainFramebuffers[i], nullptr);
     }
-
     vkFreeMemory(mvGetLogicalDevice(), GContext->graphics.depthImageMemory, nullptr);
     vkDestroyImage(mvGetLogicalDevice(), GContext->graphics.depthImage, nullptr);
     vkDestroyImageView(mvGetLogicalDevice(), GContext->graphics.depthImageView, nullptr);
-
     vkDestroyRenderPass(mvGetLogicalDevice(), GContext->graphics.renderPass, nullptr);
-
-    vkFreeCommandBuffers(mvGetLogicalDevice(),
-        GContext->graphics.commandPool,
-        static_cast<uint32_t>(GContext->graphics.commandBuffers.size()),
-        GContext->graphics.commandBuffers.data());
-
-    vkDestroyCommandPool(mvGetLogicalDevice(), GContext->graphics.commandPool, nullptr);
     vkDestroySwapchainKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, nullptr);
 }
 
@@ -625,22 +342,10 @@ mvFlushResources()
 // declarations for public API
 //-----------------------------------------------------------------------------
 
-VkInstance 
-mvGetVkInstance()
-{
-    return GContext->graphics.instance;
-}
-
 VkDevice 
 mvGetLogicalDevice()
 {
     return GContext->graphics.logicalDevice;
-}
-
-VkPhysicalDevice 
-mvGetPhysicalDevice()
-{
-    return GContext->graphics.physicalDevice;
 }
 
 VkCommandBuffer  
@@ -652,14 +357,109 @@ mvGetCurrentCommandBuffer()
 void 
 mvSetupGraphicsContext()
 {
-    mvCreateVulkanInstance();
-    mvSetupDebugMessenger();
+    //-----------------------------------------------------------------------------
+    // create vulkan instance
+    //-----------------------------------------------------------------------------
+    {
+        if (GContext->graphics.enableValidationLayers)
+        {
+            uint32_t layerCount;
+            vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+            std::vector<VkLayerProperties> availableLayers(layerCount);
+            vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+            for (const char* layerName : GContext->graphics.validationLayers)
+            {
+                bool layerFound = false;
+
+                for (const auto& layerProperties : availableLayers)
+                {
+                    if (strcmp(layerName, layerProperties.layerName) == 0)
+                    {
+                        layerFound = true;
+                        break;
+                    }
+                }
+
+                if (!layerFound)
+                    throw std::runtime_error("validation layers requested, but not available!");
+            }
+        }
+
+        VkApplicationInfo appInfo{};
+        appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        appInfo.apiVersion = VK_API_VERSION_1_2;
+
+        VkInstanceCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        createInfo.pApplicationInfo = &appInfo;
+
+        // get extensions required to load glfw
+        uint32_t glfwExtensionCount = 0;
+        const char** glfwExtensions;
+        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+        std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+        if (GContext->graphics.enableValidationLayers)
+            extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+        createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+        createInfo.ppEnabledExtensionNames = extensions.data();
+
+        // Setup debug messenger for vulkan instance
+        VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
+        if (GContext->graphics.enableValidationLayers)
+        {
+            createInfo.enabledLayerCount = static_cast<uint32_t>(GContext->graphics.validationLayers.size());
+            createInfo.ppEnabledLayerNames = GContext->graphics.validationLayers.data();
+            createInfo.pNext = VK_NULL_HANDLE;
+
+            debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+            debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+            debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+            debugCreateInfo.pfnUserCallback = debugCallback;
+            debugCreateInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+        }
+        else
+        {
+            createInfo.enabledLayerCount = 0;
+            createInfo.pNext = VK_NULL_HANDLE;
+        }
+
+        // create the instance
+        if (vkCreateInstance(&createInfo, nullptr, &GContext->graphics.instance) != VK_SUCCESS)
+            throw std::runtime_error("failed to create instance!");
+    }
+
+    //-----------------------------------------------------------------------------
+    // setup debug messenger
+    //-----------------------------------------------------------------------------
+    if (GContext->graphics.enableValidationLayers)
+    {
+
+        VkDebugUtilsMessengerCreateInfoEXT createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+        createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        createInfo.pfnUserCallback = debugCallback;
+        createInfo.pNext = VK_NULL_HANDLE;
+
+        auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(GContext->graphics.instance, "vkCreateDebugUtilsMessengerEXT");
+        if (func != nullptr)
+        {
+            VkResult result = func(GContext->graphics.instance, &createInfo, nullptr, &GContext->graphics.debugMessenger);
+            if (result != VK_SUCCESS)
+                throw std::runtime_error("failed to set up debug messenger!");
+        }
+        else
+            throw std::runtime_error("failed to set up debug messenger!");
+    }
 
     //-----------------------------------------------------------------------------
     // create surface
     //-----------------------------------------------------------------------------
     {
-        if (glfwCreateWindowSurface(mvGetVkInstance(), GContext->viewport.handle, nullptr, &GContext->graphics.surface) != VK_SUCCESS)
+        if (glfwCreateWindowSurface(GContext->graphics.instance, GContext->viewport.handle, nullptr, &GContext->graphics.surface) != VK_SUCCESS)
             throw std::runtime_error("failed to create window surface!");
     }
 
@@ -668,19 +468,54 @@ mvSetupGraphicsContext()
     //-----------------------------------------------------------------------------
     {
         uint32_t deviceCount = 0;
-        vkEnumeratePhysicalDevices(mvGetVkInstance(), &deviceCount, nullptr);
+        vkEnumeratePhysicalDevices(GContext->graphics.instance, &deviceCount, nullptr);
 
         if (deviceCount == 0)
             throw std::runtime_error("failed to find GPUs with Vulkan support!");
 
+        //-----------------------------------------------------------------------------
+        // check if device is suitable
+        //-----------------------------------------------------------------------------
         std::vector<VkPhysicalDevice> devices(deviceCount);
-        vkEnumeratePhysicalDevices(mvGetVkInstance(), &deviceCount, devices.data());
+        vkEnumeratePhysicalDevices(GContext->graphics.instance, &deviceCount, devices.data());
         for (const auto& device : devices)
         {
-            if (mvIsDeviceSuitable(device, GContext->graphics.deviceProperties, GContext->graphics.deviceExtensions))
+            QueueFamilyIndices indices = mvFindQueueFamilies(device);
+
+            //-----------------------------------------------------------------------------
+            // check if device supports extensions
+            //-----------------------------------------------------------------------------
+            bool extensionsSupported = false;
+            {
+                uint32_t extensionCount;
+                vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+                std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+                vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+                std::set<std::string> requiredExtensions(GContext->graphics.deviceExtensions.begin(), GContext->graphics.deviceExtensions.end());
+
+                for (const auto& extension : availableExtensions)
+                    requiredExtensions.erase(extension.extensionName);
+
+                extensionsSupported = requiredExtensions.empty();
+            }
+
+
+            bool swapChainAdequate = false;
+            if (extensionsSupported)
+            {
+                swapChainAdequate = true;
+                //SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+                //swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+            }
+
+            vkGetPhysicalDeviceProperties(device, &GContext->graphics.deviceProperties);
+
+            if (extensionsSupported && swapChainAdequate && GContext->graphics.deviceProperties.limits.maxPushConstantsSize >= 256)
             {
                 GContext->graphics.physicalDevice = device;
-                //break;
+                // TODO: add logic to pick best device (not the last device)
             }
         }
 
@@ -688,7 +523,61 @@ mvSetupGraphicsContext()
             throw std::runtime_error("failed to find a suitable GPU!");
     }
 
-    mvCreateLogicalDevice();
+    //-----------------------------------------------------------------------------
+    // create logical device
+    //-----------------------------------------------------------------------------
+    {
+        QueueFamilyIndices indices = mvFindQueueFamilies(GContext->graphics.physicalDevice);
+
+        GContext->graphics.graphicsQueueFamily = indices.graphicsFamily.value();
+
+        std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+        std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+
+        float queuePriority = 1.0f;
+        for (uint32_t queueFamily : uniqueQueueFamilies)
+        {
+            VkDeviceQueueCreateInfo queueCreateInfo{};
+            queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            queueCreateInfo.queueFamilyIndex = queueFamily;
+            queueCreateInfo.queueCount = 1;
+            queueCreateInfo.pQueuePriorities = &queuePriority;
+            queueCreateInfos.push_back(queueCreateInfo);
+        }
+
+        VkPhysicalDeviceFeatures deviceFeatures{};
+        deviceFeatures.samplerAnisotropy = VK_TRUE;
+        {
+            VkDeviceCreateInfo createInfo{};
+            createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+            createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+            createInfo.pQueueCreateInfos = queueCreateInfos.data();
+
+            createInfo.pEnabledFeatures = &deviceFeatures;
+
+            createInfo.enabledExtensionCount = GContext->graphics.deviceExtensions.size();
+            createInfo.ppEnabledExtensionNames = GContext->graphics.deviceExtensions.data();
+
+            if (GContext->graphics.enableValidationLayers)
+            {
+                createInfo.enabledLayerCount = static_cast<uint32_t>(GContext->graphics.validationLayers.size());
+                createInfo.ppEnabledLayerNames = GContext->graphics.validationLayers.data();
+            }
+            else
+                createInfo.enabledLayerCount = 0;
+
+            auto code = vkCreateDevice(GContext->graphics.physicalDevice, &createInfo, nullptr, &GContext->graphics.logicalDevice);
+            if (code != VK_SUCCESS)
+            {
+                std::cout << code << std::endl;
+                throw std::runtime_error("failed to create logical device!");
+            }
+        }
+
+        vkGetDeviceQueue(mvGetLogicalDevice(), indices.graphicsFamily.value(), 0, &GContext->graphics.graphicsQueue);
+        vkGetDeviceQueue(mvGetLogicalDevice(), indices.presentFamily.value(), 0, &GContext->graphics.presentQueue);
+    }
 
     //-----------------------------------------------------------------------------
     // initialize VulkanMemoryAllocator
@@ -697,25 +586,130 @@ mvSetupGraphicsContext()
         // Initialize VulkanMemoryAllocator
         VmaAllocatorCreateInfo allocatorInfo = {};
         allocatorInfo.vulkanApiVersion = 0;
-        allocatorInfo.physicalDevice = mvGetPhysicalDevice();
+        allocatorInfo.physicalDevice = GContext->graphics.physicalDevice;
         allocatorInfo.device = mvGetLogicalDevice();
-        allocatorInfo.instance = mvGetVkInstance();
+        allocatorInfo.instance = GContext->graphics.instance;
 
-        vmaCreateAllocator(&allocatorInfo, &gallocator);
+        vmaCreateAllocator(&allocatorInfo, &GContext->graphics.allocator);
     }
 
+    //-----------------------------------------------------------------------------
+    // create swapchain
+    //-----------------------------------------------------------------------------
     mvCreateSwapChain();
-    mvCreateMainCommandPool();
-    mvCreateMainDescriptorPool();
+
+    //-----------------------------------------------------------------------------
+    // create command pool and command buffers
+    //-----------------------------------------------------------------------------
+    {
+        QueueFamilyIndices queueFamilyIndices = mvFindQueueFamilies(GContext->graphics.physicalDevice);
+
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+        if (vkCreateCommandPool(mvGetLogicalDevice(), &poolInfo, nullptr, &GContext->graphics.commandPool) != VK_SUCCESS)
+            throw std::runtime_error("failed to create command pool!");
+
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool = GContext->graphics.commandPool;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = (uint32_t)(GContext->graphics.swapChainImages.size());
+
+        GContext->graphics.commandBuffers.resize(GContext->graphics.swapChainImages.size());
+
+        if (vkAllocateCommandBuffers(mvGetLogicalDevice(), &allocInfo, GContext->graphics.commandBuffers.data()) != VK_SUCCESS)
+            throw std::runtime_error("failed to allocate command buffers!");
+    }
+
+    //-----------------------------------------------------------------------------
+    // create descriptor pool
+    //-----------------------------------------------------------------------------
+    {
+        VkDescriptorPoolSize poolSizes[] =
+        {
+            { VK_DESCRIPTOR_TYPE_SAMPLER,                1000 },
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+            { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       1000 }
+        };
+        VkDescriptorPoolCreateInfo poolInfo = {};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        poolInfo.maxSets = 1000 * 11;
+        poolInfo.poolSizeCount = 11u;
+        poolInfo.pPoolSizes = poolSizes;
+
+        if (vkCreateDescriptorPool(mvGetLogicalDevice(), &poolInfo, nullptr, &GContext->graphics.descriptorPool) != VK_SUCCESS)
+            throw std::runtime_error("failed to create descriptor pool!");
+    }
+    
+    //-----------------------------------------------------------------------------
+    // create render pass
+    //-----------------------------------------------------------------------------
     mvCreateRenderPass(GContext->graphics.swapChainImageFormat, &GContext->graphics.renderPass);
-    mvCreateMainDepthResources();
+   
+    //-----------------------------------------------------------------------------
+    // create depth resources
+    //-----------------------------------------------------------------------------
+    {
+        VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
+
+        mvCreateImage(GContext->graphics.swapChainExtent.width, GContext->graphics.swapChainExtent.height, depthFormat,
+            VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            GContext->graphics.depthImage, GContext->graphics.depthImageMemory);
+
+        GContext->graphics.depthImageView = mvCreateImageView(GContext->graphics.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+    }
+
+    //-----------------------------------------------------------------------------
+    // create frame buffers
+    //-----------------------------------------------------------------------------
     mvCreateFrameBuffers(GContext->graphics.renderPass, 
         GContext->graphics.swapChainFramebuffers, 
         GContext->graphics.swapChainExtent.width, 
         GContext->graphics.swapChainExtent.height,
         GContext->graphics.swapChainImageViews,
         GContext->graphics.depthImageView);
-    mvCreateSyncObjects();
+
+    //-----------------------------------------------------------------------------
+    // create syncronization primitives
+    //-----------------------------------------------------------------------------
+    {
+        GContext->graphics.imageAvailableSemaphores.resize(MV_MAX_FRAMES_IN_FLIGHT);
+        GContext->graphics.renderFinishedSemaphores.resize(MV_MAX_FRAMES_IN_FLIGHT);
+        GContext->graphics.inFlightFences.resize(MV_MAX_FRAMES_IN_FLIGHT);
+        GContext->graphics.imagesInFlight.resize(GContext->graphics.swapChainImages.size(), VK_NULL_HANDLE);
+
+        VkSemaphoreCreateInfo semaphoreInfo{};
+        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+        for (size_t i = 0; i < MV_MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            if (vkCreateSemaphore(mvGetLogicalDevice(), &semaphoreInfo, nullptr, &GContext->graphics.imageAvailableSemaphores[i]) != VK_SUCCESS ||
+                vkCreateSemaphore(mvGetLogicalDevice(), &semaphoreInfo, nullptr, &GContext->graphics.renderFinishedSemaphores[i]) != VK_SUCCESS ||
+                vkCreateFence(mvGetLogicalDevice(), &fenceInfo, nullptr, &GContext->graphics.inFlightFences[i]) != VK_SUCCESS)
+                throw std::runtime_error("failed to create synchronization objects for a frame!");
+        }
+    }
+
+    //-----------------------------------------------------------------------------
+    // Dear ImGui
+    //-----------------------------------------------------------------------------
+    mvSetupImGui(GContext->viewport.handle);
 }
 
 void 
@@ -796,9 +790,20 @@ mvFindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryP
 void 
 mvCleanupGraphicsContext()
 {
+    // cleanup imgui
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
         
     mvFlushResources();
-    vmaDestroyAllocator(gallocator);
+
+    vkFreeCommandBuffers(mvGetLogicalDevice(),
+    GContext->graphics.commandPool,
+    static_cast<uint32_t>(GContext->graphics.commandBuffers.size()),
+    GContext->graphics.commandBuffers.data());
+    vkDestroyCommandPool(mvGetLogicalDevice(), GContext->graphics.commandPool, nullptr);
+
+    vmaDestroyAllocator(GContext->graphics.allocator);
     vkDestroyDescriptorPool(GContext->graphics.logicalDevice, GContext->graphics.descriptorPool, nullptr);
 
     for (size_t i = 0; i < MV_MAX_FRAMES_IN_FLIGHT; i++)
@@ -810,14 +815,14 @@ mvCleanupGraphicsContext()
 
     if (GContext->graphics.enableValidationLayers)
     {
-        auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(mvGetVkInstance(), "vkDestroyDebugUtilsMessengerEXT");
+        auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(GContext->graphics.instance, "vkDestroyDebugUtilsMessengerEXT");
         if (func != nullptr)
-            func(mvGetVkInstance(), GContext->graphics.debugMessenger, nullptr);
+            func(GContext->graphics.instance, GContext->graphics.debugMessenger, nullptr);
     }
 
-    vkDestroySurfaceKHR(mvGetVkInstance(), GContext->graphics.surface, nullptr);
+    vkDestroySurfaceKHR(GContext->graphics.instance, GContext->graphics.surface, nullptr);
     vkDestroyDevice(GContext->graphics.logicalDevice, nullptr);
-    vkDestroyInstance(mvGetVkInstance(), nullptr);
+    vkDestroyInstance(GContext->graphics.instance, nullptr);
 }
 
 void 
@@ -826,15 +831,29 @@ mvRecreateSwapChain()
     vkDeviceWaitIdle(mvGetLogicalDevice());
     mvFlushResources();
     mvCreateSwapChain();
-    mvCreateMainCommandPool();
     mvCreateRenderPass(GContext->graphics.swapChainImageFormat, &GContext->graphics.renderPass);
-    mvCreateMainDepthResources();
+
+    //-----------------------------------------------------------------------------
+    // create depth resources
+    //-----------------------------------------------------------------------------
+    {
+        VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
+
+        mvCreateImage(GContext->graphics.swapChainExtent.width, GContext->graphics.swapChainExtent.height, depthFormat,
+            VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            GContext->graphics.depthImage, GContext->graphics.depthImageMemory);
+
+        GContext->graphics.depthImageView = mvCreateImageView(GContext->graphics.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+    }
+
     mvCreateFrameBuffers(GContext->graphics.renderPass,
         GContext->graphics.swapChainFramebuffers,
         GContext->graphics.swapChainExtent.width,
         GContext->graphics.swapChainExtent.height,
         GContext->graphics.swapChainImageViews,
         GContext->graphics.depthImageView);
+
+    ImGui_ImplVulkan_SetMinImageCount(GContext->graphics.minImageCount);
 }
 
 size_t 
@@ -848,6 +867,33 @@ mvGetRequiredUniformBufferSize(size_t size)
         alignedSize = (alignedSize + minUboAlignment - 1) & ~(minUboAlignment - 1);
 
     return alignedSize;
+}
+
+void mvRecordImGui(VkCommandBuffer commandBuffer)
+{
+    // Record dear imgui primitives into command buffer
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+}
+
+void
+mvPresent()
+{
+
+    VkSemaphore signalSemaphores[] = { GContext->graphics.renderFinishedSemaphores[GContext->graphics.currentFrame] };
+
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    VkSwapchainKHR swapChains[] = { GContext->graphics.swapChain };
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &GContext->graphics.currentImageIndex;
+
+    VkResult result = vkQueuePresentKHR(GContext->graphics.presentQueue, &presentInfo);
+
+    GContext->graphics.currentFrame = (GContext->graphics.currentFrame + 1) % MV_MAX_FRAMES_IN_FLIGHT;
 }
 
 VkCommandBuffer 
@@ -1032,6 +1078,10 @@ mvCopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t hei
     mvEndSingleTimeCommands(commandBuffer);
 }
 
+//-----------------------------------------------------------------------------
+// Vulkan Memory Allocator
+//-----------------------------------------------------------------------------
+
 VmaAllocation
 mvAllocateBuffer(VkBufferCreateInfo bufferCreateInfo, VmaMemoryUsage usage, VkBuffer& outBuffer)
 {
@@ -1039,7 +1089,7 @@ mvAllocateBuffer(VkBufferCreateInfo bufferCreateInfo, VmaMemoryUsage usage, VkBu
     allocCreateInfo.usage = usage;
 
     VmaAllocation allocation;
-    vmaCreateBuffer(gallocator, &bufferCreateInfo, &allocCreateInfo, &outBuffer, &allocation, nullptr);
+    vmaCreateBuffer(GContext->graphics.allocator, &bufferCreateInfo, &allocCreateInfo, &outBuffer, &allocation, nullptr);
 
     //VmaAllocationInfo allocInfo{};
     //vmaGetAllocationInfo(GetVmaAllocator(), allocation, &allocInfo);
@@ -1054,7 +1104,7 @@ mvAllocateImage(VkImageCreateInfo imageCreateInfo, VmaMemoryUsage usage, VkImage
     allocCreateInfo.usage = usage;
 
     VmaAllocation allocation;
-    vmaCreateImage(gallocator, &imageCreateInfo, &allocCreateInfo, &outImage, &allocation, nullptr);
+    vmaCreateImage(GContext->graphics.allocator, &imageCreateInfo, &allocCreateInfo, &outImage, &allocation, nullptr);
 
     //VmaAllocationInfo allocInfo;
     //vmaGetAllocationInfo(GetVmaAllocator(), allocation, &allocInfo);
@@ -1065,31 +1115,31 @@ mvAllocateImage(VkImageCreateInfo imageCreateInfo, VmaMemoryUsage usage, VkImage
 void
 mvFree(VmaAllocation allocation)
 {
-    vmaFreeMemory(gallocator, allocation);
+    vmaFreeMemory(GContext->graphics.allocator, allocation);
 }
 
 void
 mvDestroyImage(VkImage image, VmaAllocation allocation)
 {
-    vmaDestroyImage(gallocator, image, allocation);
+    vmaDestroyImage(GContext->graphics.allocator, image, allocation);
 }
 
 void
 mvDestroyBuffer(VkBuffer buffer, VmaAllocation allocation)
 {
-    vmaDestroyBuffer(gallocator, buffer, allocation);
+    vmaDestroyBuffer(GContext->graphics.allocator, buffer, allocation);
 }
 
 void*
 mvMapMemory(VmaAllocation allocation)
 {
     void* mappedMemory;
-    vmaMapMemory(gallocator, allocation, (void**)&mappedMemory);
+    vmaMapMemory(GContext->graphics.allocator, allocation, (void**)&mappedMemory);
     return mappedMemory;
 }
 
 void
 mvUnmapMemory(VmaAllocation allocation)
 {
-    vmaUnmapMemory(gallocator, allocation);
+    vmaUnmapMemory(GContext->graphics.allocator, allocation);
 }

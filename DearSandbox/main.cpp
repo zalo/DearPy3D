@@ -1,4 +1,5 @@
 #include <imgui.h>
+#include <array>
 #include "mvContext.h"
 #include "mvMesh.h"
 #include "mvCamera.h"
@@ -25,15 +26,20 @@ int main()
 
     CreateContext();
     
-    Renderer::mvStartRenderer();
+    mvInitializeViewport(500, 500);
+    GContext->IO.shaderDirectory = "../../DearPy3D/shaders/";
+    GContext->graphics.enableValidationLayers = true;
+    GContext->graphics.validationLayers = { "VK_LAYER_KHRONOS_validation" };
+    GContext->graphics.deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
+    mvSetupGraphicsContext();
 
     mvAssetManager am{};
     mvInitializeAssetManager(&am);
-    Renderer::mvPreLoadAssets(am);
-
-    if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
 
     mvAssetID scene = mvGetSceneAsset(&am, {});
+
+    if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
 
     mvCamera camera{};
     camera.pos = { -13.5f, 6.0f, 3.5f };
@@ -55,6 +61,31 @@ int main()
     mvDirectionLight dlight = mvCreateDirectionLight(am, { 0.0, -1.0f, 0.0f });
     
     mvUpdateSceneDescriptors(am, am.scenes[scene].scene, light, dlight);
+
+    //---------------------------------------------------------------------
+    // passes
+    //---------------------------------------------------------------------
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = (float)GContext->graphics.swapChainExtent.height;
+    viewport.width = (float)GContext->graphics.swapChainExtent.width;
+    viewport.height = -(float)GContext->graphics.swapChainExtent.height;
+
+    mvPass mainPass{
+        GContext->graphics.renderPass,
+        GContext->graphics.swapChainExtent,
+        GContext->graphics.swapChainFramebuffers,
+        viewport
+    };
+
+    mvPass overlayPass{
+        GContext->graphics.renderPass,
+        GContext->graphics.swapChainExtent,
+        GContext->graphics.swapChainFramebuffers,
+        viewport
+    };
+
 
     //---------------------------------------------------------------------
     // main loop
@@ -87,8 +118,12 @@ int main()
             // cleanup
             GContext->viewport.width = newwidth;
             GContext->viewport.height = newheight;
-            Renderer::mvResize();
+            mvRecreateSwapChain();
             mvPrepareResizeAssetManager(&am);
+
+            mainPass.renderPass = GContext->graphics.renderPass;
+            mainPass.extent = GContext->graphics.swapChainExtent;
+            mainPass.frameBuffers = GContext->graphics.swapChainFramebuffers;
 
             GContext->viewport.resized = false;
 
@@ -116,7 +151,7 @@ int main()
 
         auto currentCommandBuffer = mvGetCurrentCommandBuffer();
 
-        Renderer::mvBeginPass(currentCommandBuffer, GContext->graphics.renderPass);
+        Renderer::mvBeginPass(currentCommandBuffer, mainPass);
 
         ImGuiIO& io = ImGui::GetIO();
         ImGui::GetForegroundDrawList()->AddText(ImVec2(45, 45),
@@ -152,16 +187,26 @@ int main()
         for (int i = 0; i < am.sceneCount; i++)
             Renderer::mvRenderScene(am, am.scenes[i].scene, viewMatrix, projMatrix);
 
+        ImGui::Render();
+        mvRecordImGui(currentCommandBuffer);
+
         Renderer::mvEndPass(currentCommandBuffer);
+
+        //---------------------------------------------------------------------
+        // secondary pass
+        //---------------------------------------------------------------------
+        //Renderer::mvBeginPass(currentCommandBuffer, overlayPass);
+
+        //Renderer::mvEndPass(currentCommandBuffer);
 
         //---------------------------------------------------------------------
         // submit command buffers & present
         //---------------------------------------------------------------------
         Renderer::mvEndFrame();
-        Renderer::mvPresent();
+        mvPresent();
     }
 
     mvCleanupAssetManager(&am);
-    Renderer::mvStopRenderer();
+    mvCleanupGraphicsContext();
     DestroyContext();
 }

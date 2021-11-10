@@ -1,9 +1,144 @@
 #include "mvPipeline.h"
 #include <stdexcept>
+#include <fstream>
 #include "mvContext.h"
 #include "mvScene.h"
 #include "mvMaterials.h"
 #include "mvAssetManager.h"
+
+mv_internal std::vector<char>
+ReadFile(const std::string& filename)
+{
+    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+    if (!file.is_open())
+        throw std::runtime_error("failed to open file!");
+
+    size_t fileSize = (size_t)file.tellg();
+    std::vector<char> buffer(fileSize);
+
+    file.seekg(0);
+    file.read(buffer.data(), fileSize);
+
+    file.close();
+
+    return buffer;
+}
+
+mv_internal mvShader
+mvCreateShader(const std::string& file)
+{
+    mvShader shader{};
+    shader.file = file;
+
+    auto shaderCode = ReadFile(GContext->IO.shaderDirectory + file);
+
+    VkShaderModuleCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.codeSize = shaderCode.size();
+    createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
+
+    VkShaderModule shaderModule;
+    if (vkCreateShaderModule(mvGetLogicalDevice(), &createInfo, nullptr, &shader.shaderModule) != VK_SUCCESS)
+        throw std::runtime_error("failed to create shader module!");
+
+    return shader;
+}
+
+struct mvVertexElement
+{
+    int                 itemCount = 0;
+    size_t              size = 0;
+    size_t              offset = 0;
+    VkFormat            format = VK_FORMAT_UNDEFINED;
+    mvVertexElementType type;
+};
+
+mv_internal mvVertexLayout
+mvCreateVertexLayout(std::vector<mvVertexElementType> elements)
+{
+    std::vector<mvVertexElement> velements;
+    size_t stride = 0;
+    size_t size = 0;
+
+    for (auto& element : elements)
+    {
+        mvVertexElement newelement;
+        newelement.type = element;
+        switch (element)
+        {
+
+        case mvVertexElementType::Position2D:
+            newelement.format = VK_FORMAT_R32G32_SFLOAT;
+            newelement.itemCount = 2;
+            newelement.size = sizeof(float) * 2;
+            break;
+
+        case mvVertexElementType::Position3D:
+            newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
+            newelement.itemCount = 3;
+            newelement.size = sizeof(float) * 3;
+            break;
+
+        case mvVertexElementType::Tangent:
+            newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
+            newelement.itemCount = 3;
+            newelement.size = sizeof(float) * 3;
+            break;
+
+        case mvVertexElementType::Bitangent:
+            newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
+            newelement.itemCount = 3;
+            newelement.size = sizeof(float) * 3;
+            break;
+
+        case mvVertexElementType::Normal:
+            newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
+            newelement.itemCount = 3;
+            newelement.size = sizeof(float) * 3;
+            break;
+
+        case mvVertexElementType::Texture2D:
+            newelement.format = VK_FORMAT_R32G32_SFLOAT;
+            newelement.itemCount = 2;
+            newelement.size = sizeof(float) * 2;
+            break;
+
+        case mvVertexElementType::Color:
+            newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
+            newelement.itemCount = 3;
+            newelement.size = sizeof(float) * 3;
+            break;
+
+        }
+
+        newelement.offset = stride;
+        stride += newelement.size;
+        velements.push_back(newelement);
+    }
+
+    mvVertexLayout vertexLayout{};
+
+    VkVertexInputBindingDescription description{};
+    description.binding = 0;
+    description.stride = stride;
+    description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    vertexLayout.bindingDescriptions.push_back(description);
+
+    int index = 0;
+    for (const auto& element : velements)
+    {
+        VkVertexInputAttributeDescription description{};
+        description.binding = 0;
+        description.location = index++;
+        description.format = element.format;
+        description.offset = element.offset;
+
+        vertexLayout.attributeDescriptions.push_back(description);
+    }
+
+    return vertexLayout;
+}
 
 mvPipeline
 mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)

@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <vk_mem_alloc.h>
+#include "mvTypes.h"
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -15,9 +16,7 @@ struct mvGraphicsContext;
 //-----------------------------------------------------------------------------
 
 // convenience
-VkInstance       mvGetVkInstance();
 VkDevice         mvGetLogicalDevice();
-VkPhysicalDevice mvGetPhysicalDevice();
 VkCommandBuffer  mvGetCurrentCommandBuffer();
     
 // initialization
@@ -25,8 +24,7 @@ void mvSetupGraphicsContext();
 void mvRecreateSwapChain();
 void mvCleanupGraphicsContext();
 void mvCreateRenderPass(VkFormat format, VkRenderPass* renderPass);
-void mvCreateMainDepthResources();
-void mvCreateFrameBuffers(VkRenderPass renderPass, std::vector<VkFramebuffer>& frameBuffers, uint32_t width, uint32_t height, std::vector<VkImageView>& imageViews, VkImageView& depthView);
+void mvCreateFrameBuffers(VkRenderPass renderPass, std::vector<VkFramebuffer>& frameBuffers, u32 width, u32 height, std::vector<VkImageView>& imageViews, VkImageView& depthView);
 
 // allocator
 VmaAllocation mvAllocateBuffer(VkBufferCreateInfo bufferCreateInfo, VmaMemoryUsage usage, VkBuffer& outBuffer);
@@ -47,7 +45,8 @@ std::uint32_t mvFindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFil
 size_t        mvGetRequiredUniformBufferSize(size_t size);
 void          mvCreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 
-
+void            mvRecordImGui(VkCommandBuffer commandBuffer);
+void            mvPresent();
 VkCommandBuffer mvBeginSingleTimeCommands();
 void            mvEndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
@@ -83,6 +82,7 @@ struct mvGraphics
     uint32_t                       currentImageIndex = 0;
     size_t                         currentFrame = 0;
     VkSurfaceKHR                   surface = VK_NULL_HANDLE;
+    VmaAllocator                   allocator;
 
     // maybe can remove
     std::vector<const char*> validationLayers;

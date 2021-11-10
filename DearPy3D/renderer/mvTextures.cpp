@@ -43,7 +43,7 @@ mvCreateTexture(const std::string& file)
     vkFreeMemory(mvGetLogicalDevice(), stagingBufferMemory, nullptr);
 
     VkPhysicalDeviceProperties properties{};
-    vkGetPhysicalDeviceProperties(mvGetPhysicalDevice(), &properties);
+    vkGetPhysicalDeviceProperties(GContext->graphics.physicalDevice, &properties);
 
     texture.file = file;
     texture.imageInfo = VkDescriptorImageInfo{};

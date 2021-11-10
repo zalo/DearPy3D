@@ -18,6 +18,99 @@ mvCreateScene(mvAssetManager& am, mvSceneData sceneData)
             sizeof(mvSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, hash));
 
     //-----------------------------------------------------------------------------
+    // create descriptor set layout
+    //-----------------------------------------------------------------------------
+
+    if (mvGetPipelineLayoutAsset(&am, "layout_2") == -1)
+    {
+
+        std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+        descriptorSetLayouts.resize(2);
+
+        {
+            //-----------------------------------------------------------------------------
+            // create descriptor set layout
+            //-----------------------------------------------------------------------------
+            std::vector<VkDescriptorSetLayoutBinding> bindings;
+            bindings.resize(3);
+
+            bindings[0].binding = 0u;
+            bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            bindings[0].descriptorCount = 1;
+            bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[0].pImmutableSamplers = nullptr;
+
+            bindings[1].binding = 1u;
+            bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            bindings[1].descriptorCount = 1;
+            bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[1].pImmutableSamplers = nullptr;
+
+            bindings[2].binding = 2u;
+            bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            bindings[2].descriptorCount = 1;
+            bindings[2].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[2].pImmutableSamplers = nullptr;
+
+            VkDescriptorSetLayoutCreateInfo layoutInfo{};
+            layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layoutInfo.bindingCount = static_cast<u32>(bindings.size());
+            layoutInfo.pBindings = bindings.data();
+
+            if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &descriptorSetLayouts[0]) != VK_SUCCESS)
+                throw std::runtime_error("failed to create descriptor set layout!");
+
+            mvRegisterDescriptorSetLayoutAsset(&am, descriptorSetLayouts[0], "scene");
+        }
+
+        {
+            //-----------------------------------------------------------------------------
+            // create descriptor set layout
+            //-----------------------------------------------------------------------------
+            std::vector<VkDescriptorSetLayoutBinding> bindings;
+            bindings.resize(4);
+
+            bindings[0].binding = 0u;
+            bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            bindings[0].descriptorCount = 1;
+            bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[0].pImmutableSamplers = nullptr;
+
+            bindings[1].binding = 1u;
+            bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            bindings[1].descriptorCount = 1;
+            bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[1].pImmutableSamplers = nullptr;
+
+            bindings[2].binding = 2u;
+            bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            bindings[2].descriptorCount = 1;
+            bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[2].pImmutableSamplers = nullptr;
+
+            bindings[3].binding = 3u;
+            bindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            bindings[3].descriptorCount = 1;
+            bindings[3].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings[3].pImmutableSamplers = nullptr;
+
+            VkDescriptorSetLayoutCreateInfo layoutInfo{};
+            layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layoutInfo.bindingCount = static_cast<u32>(bindings.size());
+            layoutInfo.pBindings = bindings.data();
+
+            if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &descriptorSetLayouts[1]) != VK_SUCCESS)
+                throw std::runtime_error("failed to create descriptor set layout!");
+
+            mvRegisterDescriptorSetLayoutAsset(&am, descriptorSetLayouts[1], "phong");
+        }
+
+
+        mvAssetID pipelineLayout = mvGetPipelineLayoutAsset(&am, descriptorSetLayouts);
+
+    }
+
+    //-----------------------------------------------------------------------------
     // allocate descriptor sets
     //-----------------------------------------------------------------------------
     std::vector<VkDescriptorSetLayout> layouts(GContext->graphics.swapChainImages.size(), 

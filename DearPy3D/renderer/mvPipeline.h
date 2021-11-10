@@ -1,13 +1,37 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <vector>
 #include <vulkan/vulkan.h>
-#include "mvShader.h"
-#include "mvVertexLayout.h"
 #include "mvTypes.h"
 
+// forward declarations
 struct mvScene;
 struct mvAssetManager;
+
+enum mvVertexElementType
+{
+	Position2D,
+	Position3D,
+	Texture2D,
+	Normal,
+	Tangent,
+	Bitangent,
+	Color
+};
+
+struct mvVertexLayout
+{
+	std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+	std::vector<VkVertexInputBindingDescription>   bindingDescriptions;
+};
+
+struct mvShader
+{
+	std::string    file;
+	VkShaderModule shaderModule = VK_NULL_HANDLE;
+};
 
 struct mvPipelineLayout
 {

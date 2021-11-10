@@ -6,106 +6,6 @@
 
 namespace Renderer {
 
-    mv_internal void
-    mvSetupImGui(GLFWwindow* window)
-    {
-
-        // Setup Dear ImGui context
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO(); (void)io;
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
-
-        // Setup Dear ImGui style
-        ImGui::StyleColorsDark();
-
-        // Setup Platform/Renderer backends
-        ImGui_ImplGlfw_InitForVulkan(window, true);
-        ImGui_ImplVulkan_InitInfo init_info = {};
-        init_info.Instance = mvGetVkInstance();
-        init_info.PhysicalDevice = mvGetPhysicalDevice();
-        init_info.Device = mvGetLogicalDevice();
-        init_info.QueueFamily = GContext->graphics.graphicsQueueFamily;
-        init_info.Queue = GContext->graphics.graphicsQueue;
-        init_info.PipelineCache = nullptr;
-        init_info.DescriptorPool = GContext->graphics.descriptorPool;
-        init_info.Allocator = nullptr;
-        init_info.MinImageCount = GContext->graphics.minImageCount;
-        init_info.ImageCount = GContext->graphics.minImageCount;
-        init_info.CheckVkResultFn = nullptr;
-        ImGui_ImplVulkan_Init(&init_info, GContext->graphics.renderPass);
-
-        // Upload Fonts
-        {
-            // Use any command queue
-            VkCommandBuffer command_buffer = mvBeginSingleTimeCommands();
-            ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
-            mvEndSingleTimeCommands(command_buffer);
-            ImGui_ImplVulkan_DestroyFontUploadObjects();
-        }
-
-    }
-
-    mv_internal void
-    mvCleanupImGui()
-    {
-        ImGui_ImplVulkan_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
-        ImGui::DestroyContext();
-    }
-
-    mv_internal void
-    mvResizeImGui()
-    {
-        vkDeviceWaitIdle(mvGetLogicalDevice());
-        ImGui_ImplVulkan_SetMinImageCount(GContext->graphics.minImageCount);
-    }
-
-    mv_internal void
-    mvBeginImGuiFrame()
-    {
-        ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-    }
-
-    mv_internal void
-    mvEndImGuiFrame()
-    {
-        ImGui::Render();
-
-        ImDrawData* main_draw_data = ImGui::GetDrawData();
-
-        // Record dear imgui primitives into command buffer
-        ImGui_ImplVulkan_RenderDrawData(main_draw_data, mvGetCurrentCommandBuffer());
-    }
-
-    void
-    mvResize()
-    {
-        mvRecreateSwapChain();
-        mvResizeImGui();
-    }
-
-    void
-    mvStartRenderer()
-    {
-        mvInitializeViewport(500, 500);
-        GContext->IO.shaderDirectory = "../../DearPy3D/shaders/";
-        GContext->graphics.enableValidationLayers = true;
-        GContext->graphics.validationLayers = { "VK_LAYER_KHRONOS_validation" };
-        GContext->graphics.deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-        mvSetupGraphicsContext();
-        mvSetupImGui(GContext->viewport.handle);
-    }
-
-    void
-    mvStopRenderer()
-    {
-        mvCleanupImGui();
-        mvCleanupGraphicsContext();
-    }
-
     void
     mvBeginFrame()
     {
@@ -119,6 +19,10 @@ namespace Renderer {
 
         // just in case the acquired image is out of order
         GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex] = GContext->graphics.inFlightFences[GContext->graphics.currentFrame];
+
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
     }
 
     void
@@ -143,27 +47,6 @@ namespace Renderer {
 
         if (vkQueueSubmit(GContext->graphics.graphicsQueue, 1, &submitInfo, GContext->graphics.inFlightFences[GContext->graphics.currentFrame]) != VK_SUCCESS)
             throw std::runtime_error("failed to submit draw command buffer!");
-    }
-
-    void
-    mvPresent()
-    {
-
-        VkSemaphore signalSemaphores[] = { GContext->graphics.renderFinishedSemaphores[GContext->graphics.currentFrame] };
-
-        VkPresentInfoKHR presentInfo{};
-        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = signalSemaphores;
-
-        VkSwapchainKHR swapChains[] = { GContext->graphics.swapChain };
-        presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = swapChains;
-        presentInfo.pImageIndices = &GContext->graphics.currentImageIndex;
-
-        VkResult result = vkQueuePresentKHR(GContext->graphics.presentQueue, &presentInfo);
-
-        GContext->graphics.currentFrame = (GContext->graphics.currentFrame + 1) % MV_MAX_FRAMES_IN_FLIGHT;
     }
 
     void
@@ -216,7 +99,7 @@ namespace Renderer {
     }
 
     void
-    mvBeginPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass)
+    mvBeginPass(VkCommandBuffer commandBuffer, mvPass& pass, b8 clear)
     {
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -226,27 +109,32 @@ namespace Renderer {
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = renderPass;
-        renderPassInfo.framebuffer = GContext->graphics.swapChainFramebuffers[GContext->graphics.currentImageIndex];
+        renderPassInfo.renderPass = pass.renderPass;
+        renderPassInfo.framebuffer = pass.frameBuffers[GContext->graphics.currentImageIndex];
         renderPassInfo.renderArea.offset = { 0, 0 };
-        renderPassInfo.renderArea.extent = GContext->graphics.swapChainExtent;
+        renderPassInfo.renderArea.extent = pass.extent;
 
         VkClearValue clearValues[2];
         clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
         clearValues[1].depthStencil = { 1.0f, 0 };
-
-        renderPassInfo.clearValueCount = 2;
-        renderPassInfo.pClearValues = clearValues;
+        if (clear)
+        {
+            renderPassInfo.clearValueCount = 2;
+            renderPassInfo.pClearValues = clearValues;
+        }
 
         vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        mvBeginImGuiFrame();
+        vkCmdSetViewport(commandBuffer, 0, 1, &pass.viewport);
+
+        VkRect2D scissor{};
+        scissor.extent = pass.extent;
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
     }
 
     void
     mvEndPass(VkCommandBuffer commandBuffer)
     {
-        mvEndImGuiFrame();
 
         vkCmdEndRenderPass(commandBuffer);
 
@@ -284,90 +172,4 @@ namespace Renderer {
         }
     }
 
-    void 
-    mvPreLoadAssets(mvAssetManager& am)
-    {
-        std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
-        descriptorSetLayouts.resize(2);
-
-        {
-            //-----------------------------------------------------------------------------
-            // create descriptor set layout
-            //-----------------------------------------------------------------------------
-            std::vector<VkDescriptorSetLayoutBinding> bindings;
-            bindings.resize(3);
-
-            bindings[0].binding = 0u;
-            bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            bindings[0].descriptorCount = 1;
-            bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-            bindings[0].pImmutableSamplers = nullptr;
-
-            bindings[1].binding = 1u;
-            bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            bindings[1].descriptorCount = 1;
-            bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-            bindings[1].pImmutableSamplers = nullptr;
-
-            bindings[2].binding = 2u;
-            bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            bindings[2].descriptorCount = 1;
-            bindings[2].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-            bindings[2].pImmutableSamplers = nullptr;
-
-            VkDescriptorSetLayoutCreateInfo layoutInfo{};
-            layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            layoutInfo.bindingCount = static_cast<u32>(bindings.size());
-            layoutInfo.pBindings = bindings.data();
-
-            if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &descriptorSetLayouts[0]) != VK_SUCCESS)
-                throw std::runtime_error("failed to create descriptor set layout!");
-
-            mvRegisterDescriptorSetLayoutAsset(&am, descriptorSetLayouts[0], "scene");
-        }
-
-        {
-            //-----------------------------------------------------------------------------
-            // create descriptor set layout
-            //-----------------------------------------------------------------------------
-            std::vector<VkDescriptorSetLayoutBinding> bindings;
-            bindings.resize(4);
-
-            bindings[0].binding = 0u;
-            bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            bindings[0].descriptorCount = 1;
-            bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-            bindings[0].pImmutableSamplers = nullptr;
-
-            bindings[1].binding = 1u;
-            bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            bindings[1].descriptorCount = 1;
-            bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-            bindings[1].pImmutableSamplers = nullptr;
-
-            bindings[2].binding = 2u;
-            bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            bindings[2].descriptorCount = 1;
-            bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-            bindings[2].pImmutableSamplers = nullptr;
-
-            bindings[3].binding = 3u;
-            bindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            bindings[3].descriptorCount = 1;
-            bindings[3].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-            bindings[3].pImmutableSamplers = nullptr;
-
-            VkDescriptorSetLayoutCreateInfo layoutInfo{};
-            layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            layoutInfo.bindingCount = static_cast<u32>(bindings.size());
-            layoutInfo.pBindings = bindings.data();
-
-            if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &descriptorSetLayouts[1]) != VK_SUCCESS)
-                throw std::runtime_error("failed to create descriptor set layout!");
-
-            mvRegisterDescriptorSetLayoutAsset(&am, descriptorSetLayouts[1], "phong");
-        }
-
-        mvAssetID pipelineLayout = mvGetPipelineLayoutAsset(&am, descriptorSetLayouts);
-    }
 }
