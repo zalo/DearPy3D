@@ -6,6 +6,8 @@
 #include <array>
 #include "mvContext.h"
 
+mv_internal VmaAllocator gallocator;
+
 mv_internal VKAPI_ATTR VkBool32 VKAPI_CALL
 debugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, 
@@ -32,8 +34,6 @@ mv_internal bool                    mvCheckDeviceExtensionSupport(VkPhysicalDevi
 // initialization
 mv_internal void mvSetupDebugMessenger();
 mv_internal void mvCreateVulkanInstance();
-mv_internal void mvCreateSurface();
-mv_internal void mvCreatePhysicalDevice();
 mv_internal void mvCreateLogicalDevice();
 mv_internal void mvCreateSwapChain();
 mv_internal void mvCreateMainCommandPool();
@@ -267,37 +267,6 @@ mvSetupDebugMessenger()
     }
     else
         throw std::runtime_error("failed to set up debug messenger!");
-}
-
-mv_internal void 
-mvCreateSurface()
-{
-    if (glfwCreateWindowSurface(mvGetVkInstance(), GContext->viewport.handle, nullptr, &GContext->graphics.surface) != VK_SUCCESS)
-        throw std::runtime_error("failed to create window surface!");
-}
-
-mv_internal void 
-mvCreatePhysicalDevice()
-{
-    uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(mvGetVkInstance(), &deviceCount, nullptr);
-
-    if (deviceCount == 0)
-        throw std::runtime_error("failed to find GPUs with Vulkan support!");
-
-    std::vector<VkPhysicalDevice> devices(deviceCount);
-    vkEnumeratePhysicalDevices(mvGetVkInstance(), &deviceCount, devices.data());
-    for (const auto& device : devices)
-    {
-        if (mvIsDeviceSuitable(device, GContext->graphics.deviceProperties, GContext->graphics.deviceExtensions))
-        {
-            GContext->graphics.physicalDevice = device;
-            //break;
-        }
-    }
-        
-    if (GContext->graphics.physicalDevice == VK_NULL_HANDLE)
-        throw std::runtime_error("failed to find a suitable GPU!");
 }
 
 mv_internal void 
@@ -685,10 +654,56 @@ mvSetupGraphicsContext()
 {
     mvCreateVulkanInstance();
     mvSetupDebugMessenger();
-    mvCreateSurface();
-    mvCreatePhysicalDevice();
+
+    //-----------------------------------------------------------------------------
+    // create surface
+    //-----------------------------------------------------------------------------
+    {
+        if (glfwCreateWindowSurface(mvGetVkInstance(), GContext->viewport.handle, nullptr, &GContext->graphics.surface) != VK_SUCCESS)
+            throw std::runtime_error("failed to create window surface!");
+    }
+
+    //-----------------------------------------------------------------------------
+    // create physical device
+    //-----------------------------------------------------------------------------
+    {
+        uint32_t deviceCount = 0;
+        vkEnumeratePhysicalDevices(mvGetVkInstance(), &deviceCount, nullptr);
+
+        if (deviceCount == 0)
+            throw std::runtime_error("failed to find GPUs with Vulkan support!");
+
+        std::vector<VkPhysicalDevice> devices(deviceCount);
+        vkEnumeratePhysicalDevices(mvGetVkInstance(), &deviceCount, devices.data());
+        for (const auto& device : devices)
+        {
+            if (mvIsDeviceSuitable(device, GContext->graphics.deviceProperties, GContext->graphics.deviceExtensions))
+            {
+                GContext->graphics.physicalDevice = device;
+                //break;
+            }
+        }
+
+        if (GContext->graphics.physicalDevice == VK_NULL_HANDLE)
+            throw std::runtime_error("failed to find a suitable GPU!");
+    }
+
     mvCreateLogicalDevice();
-    mvInitializeAllocator();
+
+    //-----------------------------------------------------------------------------
+    // initialize VulkanMemoryAllocator
+    //-----------------------------------------------------------------------------
+    {
+        // Initialize VulkanMemoryAllocator
+        VmaAllocatorCreateInfo allocatorInfo = {};
+        allocatorInfo.vulkanApiVersion = 0;
+        allocatorInfo.physicalDevice = mvGetPhysicalDevice();
+        allocatorInfo.device = mvGetLogicalDevice();
+        allocatorInfo.instance = mvGetVkInstance();
+
+        vmaCreateAllocator(&allocatorInfo, &gallocator);
+    }
+
     mvCreateSwapChain();
     mvCreateMainCommandPool();
     mvCreateMainDescriptorPool();
@@ -783,7 +798,7 @@ mvCleanupGraphicsContext()
 {
         
     mvFlushResources();
-    mvShutdownAllocator();
+    vmaDestroyAllocator(gallocator);
     vkDestroyDescriptorPool(GContext->graphics.logicalDevice, GContext->graphics.descriptorPool, nullptr);
 
     for (size_t i = 0; i < MV_MAX_FRAMES_IN_FLIGHT; i++)
@@ -1015,4 +1030,66 @@ mvCopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t hei
     );
 
     mvEndSingleTimeCommands(commandBuffer);
+}
+
+VmaAllocation
+mvAllocateBuffer(VkBufferCreateInfo bufferCreateInfo, VmaMemoryUsage usage, VkBuffer& outBuffer)
+{
+    VmaAllocationCreateInfo allocCreateInfo = {};
+    allocCreateInfo.usage = usage;
+
+    VmaAllocation allocation;
+    vmaCreateBuffer(gallocator, &bufferCreateInfo, &allocCreateInfo, &outBuffer, &allocation, nullptr);
+
+    //VmaAllocationInfo allocInfo{};
+    //vmaGetAllocationInfo(GetVmaAllocator(), allocation, &allocInfo);
+
+    return allocation;
+}
+
+VmaAllocation
+mvAllocateImage(VkImageCreateInfo imageCreateInfo, VmaMemoryUsage usage, VkImage& outImage)
+{
+    VmaAllocationCreateInfo allocCreateInfo = {};
+    allocCreateInfo.usage = usage;
+
+    VmaAllocation allocation;
+    vmaCreateImage(gallocator, &imageCreateInfo, &allocCreateInfo, &outImage, &allocation, nullptr);
+
+    //VmaAllocationInfo allocInfo;
+    //vmaGetAllocationInfo(GetVmaAllocator(), allocation, &allocInfo);
+
+    return allocation;
+}
+
+void
+mvFree(VmaAllocation allocation)
+{
+    vmaFreeMemory(gallocator, allocation);
+}
+
+void
+mvDestroyImage(VkImage image, VmaAllocation allocation)
+{
+    vmaDestroyImage(gallocator, image, allocation);
+}
+
+void
+mvDestroyBuffer(VkBuffer buffer, VmaAllocation allocation)
+{
+    vmaDestroyBuffer(gallocator, buffer, allocation);
+}
+
+void*
+mvMapMemory(VmaAllocation allocation)
+{
+    void* mappedMemory;
+    vmaMapMemory(gallocator, allocation, (void**)&mappedMemory);
+    return mappedMemory;
+}
+
+void
+mvUnmapMemory(VmaAllocation allocation)
+{
+    vmaUnmapMemory(gallocator, allocation);
 }

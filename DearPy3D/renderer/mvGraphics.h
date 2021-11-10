@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <vector>
-#include "mvAllocator.h"
+#include <vk_mem_alloc.h>
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -24,9 +24,18 @@ VkCommandBuffer  mvGetCurrentCommandBuffer();
 void mvSetupGraphicsContext();
 void mvRecreateSwapChain();
 void mvCleanupGraphicsContext();
-void mvCreateRenderPass(VkFormat format, VkRenderPass** renderPass);
+void mvCreateRenderPass(VkFormat format, VkRenderPass* renderPass);
 void mvCreateMainDepthResources();
 void mvCreateFrameBuffers(VkRenderPass renderPass, std::vector<VkFramebuffer>& frameBuffers, uint32_t width, uint32_t height, std::vector<VkImageView>& imageViews, VkImageView& depthView);
+
+// allocator
+VmaAllocation mvAllocateBuffer(VkBufferCreateInfo bufferCreateInfo, VmaMemoryUsage usage, VkBuffer& outBuffer);
+VmaAllocation mvAllocateImage(VkImageCreateInfo imageCreateInfo, VmaMemoryUsage usage, VkImage& outImage);
+void          mvFree(VmaAllocation allocation);
+void          mvDestroyImage(VkImage image, VmaAllocation allocation);
+void          mvDestroyBuffer(VkBuffer buffer, VmaAllocation allocation);
+void*         mvMapMemory(VmaAllocation allocation);
+void          mvUnmapMemory(VmaAllocation allocation);
 
 // resource utilities
 void          mvCreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
