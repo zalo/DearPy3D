@@ -294,7 +294,7 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.layout = assetManager.pipelineLayouts[pipeline.pipelineLayout].layout.pipelineLayout;
+    pipelineInfo.layout = mvGetRawPipelineLayoutAsset(&assetManager, "main_pass");
     pipelineInfo.renderPass = spec.renderPass == VK_NULL_HANDLE ? GContext->graphics.renderPass : spec.renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -312,32 +312,3 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     return pipeline;
 }
 
-mvPipelineLayout 
-mvCreatePipelineLayout(std::vector<VkDescriptorSetLayout> descriptorSetLayouts)
-{
-    mvPipelineLayout layout{};
-    layout.descriptorSetLayouts = descriptorSetLayouts;
-
-    //setup push constants
-    VkPushConstantRange push_constant;
-    push_constant.offset = 0;
-    push_constant.size = 192;
-    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-    VkPipelineMultisampleStateCreateInfo multisampling{};
-    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisampling.sampleShadingEnable = VK_FALSE;
-    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
-    pipelineLayoutInfo.pPushConstantRanges = &push_constant;
-    pipelineLayoutInfo.pushConstantRangeCount = 1;
-    pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
-
-    if (vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &layout.pipelineLayout) != VK_SUCCESS)
-        throw std::runtime_error("failed to create pipeline layout!");
-
-    return layout;
-}

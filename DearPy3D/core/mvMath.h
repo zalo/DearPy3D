@@ -1,10 +1,21 @@
 #pragma once
 
-#include <cmath>
+//#include <cmath>
 #include "mvTypes.h"
 
-mv_global constexpr f32 PI = 3.14159265f;
-mv_global constexpr f64 PI_D = 3.1415926535897932;
+mv_global constexpr f32 MV_E        = 2.71828182f; // e
+mv_global constexpr f32 MV_LOG2E    = 1.44269504f; // log2(e)
+mv_global constexpr f32 MV_LOG10E   = 0.43429448f; // log10(e)
+mv_global constexpr f32 MV_LN2      = 0.69314718f; // ln(2)
+mv_global constexpr f32 MV_LN10     = 2.30258509f; // ln(10)
+mv_global constexpr f32 MV_PI       = 3.14159265f; // pi
+mv_global constexpr f32 MV_PI_2     = 1.57079632f; // pi/2
+mv_global constexpr f32 MV_PI_4     = 0.78539816f; // pi/4
+mv_global constexpr f32 MV_1_PI     = 0.31830988f; // 1/pi
+mv_global constexpr f32 MV_2_PI     = 0.63661977f; // 2/pi
+mv_global constexpr f32 MV_2_SQRTPI = 1.12837916f; // 2/sqrt(pi)
+mv_global constexpr f32 MV_SQRT2    = 1.41421356f; // sqrt(2)
+mv_global constexpr f32 MV_SQRT1_2  = 0.70710678f; // 1/sqrt(2)
 
 struct mvVec2
 {
@@ -82,7 +93,7 @@ f32    mvRadians(f32 degrees);
 mvMat4 mvYawPitchRoll(f32 yaw, f32 pitch, f32 roll);
 mvMat4 mvLookAtLH(mvVec3 eye, mvVec3 center, mvVec3 up); // world space eye, center, up
 mvMat4 mvLookAtRH(mvVec3 eye, mvVec3 center, mvVec3 up); // world space eye, center, up
-mvMat4 mvFPSViewRH(mvVec3 eye, float pitch, float yaw);   // world space eye, center, up
+mvMat4 mvFPSViewRH(mvVec3 eye, f32 pitch, float yaw);   // world space eye, center, up
 mvMat4 mvTranslate(mvMat4 m, mvVec3 v);
 mvMat4 mvRotate(mvMat4 m, f32 angle, mvVec3 v);
 mvMat4 mvScale(mvMat4 m, mvVec3 v);

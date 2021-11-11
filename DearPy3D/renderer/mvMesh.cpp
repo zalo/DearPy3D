@@ -72,17 +72,20 @@ mvCreateTexturedCube(mvAssetManager& assetManager, float sideLength)
 
     mvMesh mesh{};
     mesh.name = "textured cube";
-    mesh.vertexBuffer = mvGetBufferAsset(&assetManager, 
-        vertices.data(), vertices.size(), 
-        sizeof(u32), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
-        "textured_cube_vertex" + std::to_string(sideLength));
-    mesh.indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, "textured_cube_index");
+    mesh.vertexBuffer = mvRegisterAsset(&assetManager, "textured_cube_vertex" + std::to_string(sideLength),
+        mvCreateBuffer(vertices.data(), vertices.size(), sizeof(u32), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT));
+    if(mvGetBufferAssetID(&assetManager, "textured_cube_index") == MV_INVALID_ASSET_ID)
+        mesh.indexBuffer = mvRegisterAsset(&assetManager, "textured_cube_index",
+            mvCreateBuffer(indices.data(), indices.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT));
+    else
+        mesh.indexBuffer = mvGetBufferAssetID(&assetManager, "textured_cube_index");
     
     mvMaterialData mat{};
     mat.materialColor = { 0.0f, 1.0f, 0.0f, 1.0f };
     mat.useTextureMap = true;
-    mesh.phongMaterialID = mvGetPhongMaterialAsset(&assetManager, mat, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    mesh.diffuseTexture = mvGetTextureAsset(&assetManager, "../../Resources/brickwall.jpg");
+    mvMaterial material = mvCreateMaterial(assetManager, mat, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mesh.phongMaterialID = mvRegisterAsset(&assetManager, "textured_cube_material", material);
+    mesh.diffuseTexture = mvGetTextureAssetID(&assetManager, "../../Resources/brickwall.jpg");
     return mesh;
 }
 
@@ -133,17 +136,20 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, float sideLength)
 
     mvMesh mesh{};
     mesh.name = "textured quad";
-    mesh.vertexBuffer = mvGetBufferAsset(&assetManager,
-        vertices.data(), vertices.size(),
-        sizeof(u32), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        "textured_quad_vertex" + std::to_string(sideLength));
-    mesh.indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, "textured_quad_index");
-    
+    mesh.vertexBuffer = mvRegisterAsset(&assetManager, "textured_cube_vertex" + std::to_string(sideLength),
+        mvCreateBuffer(vertices.data(), vertices.size(), sizeof(u32), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT));
+    if (mvGetBufferAssetID(&assetManager, "textured_quad_vertex") == MV_INVALID_ASSET_ID)
+        mesh.indexBuffer = mvRegisterAsset(&assetManager, "textured_quad_index",
+            mvCreateBuffer(indices.data(), indices.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT));
+    else
+        mesh.indexBuffer = mvGetBufferAssetID(&assetManager, "textured_quad_index");
+
     mvMaterialData mat{};
     mat.materialColor = { 1.0f, 0.0f, 0.0f, 1.0f };
     mat.useTextureMap = true;
-    mesh.phongMaterialID = mvGetPhongMaterialAsset(&assetManager, mat, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    mesh.diffuseTexture = mvGetTextureAsset(&assetManager, "../../Resources/brickwall.jpg");
+    mvMaterial material = mvCreateMaterial(assetManager, mat, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mesh.phongMaterialID = mvRegisterAsset(&assetManager, "textured_cube_material", material);
+    mesh.diffuseTexture = mvGetTextureAssetID(&assetManager, "../../Resources/brickwall.jpg");
     return mesh;
 }
 
@@ -172,26 +178,28 @@ mvLoadOBJAssets(mvAssetManager& assetManager, const std::string& root, const std
 
                 if (!objMaterials[j].diffuseMap.empty())
                 {
-                    newMesh.diffuseTexture = mvGetTextureAsset(&assetManager, root + objMaterials[j].diffuseMap);
+                    newMesh.diffuseTexture = mvGetTextureAssetID(&assetManager, root + objMaterials[j].diffuseMap);
                     materialData.useTextureMap = true;
                     materialData.hasAlpha = true;
                 }
                 if (!objMaterials[j].normalMap.empty())
                 {
-                    newMesh.normalTexture = mvGetTextureAsset(&assetManager, root + objMaterials[j].normalMap);
+                    newMesh.normalTexture = mvGetTextureAssetID(&assetManager, root + objMaterials[j].normalMap);
                     materialData.useNormalMap = true;
                 }
                 if (!objMaterials[j].specularMap.empty())
                 {
-                    newMesh.specularTexture = mvGetTextureAsset(&assetManager, root + objMaterials[j].specularMap);
+                    newMesh.specularTexture = mvGetTextureAssetID(&assetManager, root + objMaterials[j].specularMap);
                     materialData.useSpecularMap = true;
                 }
 
-                newMesh.vertexBuffer = mvGetBufferAsset(&assetManager, objModel.meshes[i]->averticies.data(), objModel.meshes[i]->averticies.size(), sizeof(f32) * 14, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, newMesh.name + "_vertex");
-                newMesh.indexBuffer = mvGetBufferAsset(&assetManager, objModel.meshes[i]->indicies.data(), objModel.meshes[i]->indicies.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, newMesh.name + "_index");
+                newMesh.vertexBuffer = mvRegisterAsset(&assetManager, newMesh.name + "_vertex", mvCreateBuffer(objModel.meshes[i]->averticies.data(), objModel.meshes[i]->averticies.size(), sizeof(f32) * 14, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT));
+                newMesh.indexBuffer = mvRegisterAsset(&assetManager, newMesh.name + "_index", mvCreateBuffer(objModel.meshes[i]->indicies.data(), objModel.meshes[i]->indicies.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT));
+                
+                mvMaterial material = mvCreateMaterial(assetManager, materialData, "vs_shader.vert.spv", "ps_shader.frag.spv");
+                newMesh.phongMaterialID = mvRegisterAsset(&assetManager, newMesh.name + "material", material);
 
-                newMesh.phongMaterialID = mvGetPhongMaterialAsset(&assetManager, materialData, "vs_shader.vert.spv", "ps_shader.frag.spv");
-                mvRegistryMeshAsset(&assetManager, newMesh);
+                mvRegisterAsset(&assetManager, file + std::to_string(i), newMesh);
             }
         }
 
@@ -203,7 +211,7 @@ mvLoadOBJAssets(mvAssetManager& assetManager, const std::string& root, const std
     {
         newScene.nodes[i] = i + nodeOffset;
     }
-    mvRegistrySceneAsset(&assetManager, newScene);
+    mvRegisterAsset(&assetManager, file, newScene);
 
     for (u32 currentNode = 0u; currentNode < objModel.meshes.size(); currentNode++)
     {
@@ -211,7 +219,7 @@ mvLoadOBJAssets(mvAssetManager& assetManager, const std::string& root, const std
         newNode.name = objModel.meshes[currentNode]->name;
         newNode.mesh = newScene.nodes[currentNode] - nodeOffset + meshOffset;
         newNode.childCount = 0;
-        mvRegistryNodeAsset(&assetManager, newNode);
+        mvRegisterAsset(&assetManager, file + std::to_string(currentNode), newNode);
     }
 
 

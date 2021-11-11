@@ -37,7 +37,7 @@ int main()
     mvAssetManager am{};
     mvInitializeAssetManager(&am);
 
-    mvAssetID scene = mvGetSceneAsset(&am, {});
+    mvAssetID scene = mvRegisterAsset(&am, "test_scene", mvCreateScene(am, {}));
 
     if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
 
@@ -60,7 +60,7 @@ int main()
 
     mvDirectionLight dlight = mvCreateDirectionLight(am, { 0.0, -1.0f, 0.0f });
     
-    mvUpdateSceneDescriptors(am, am.scenes[scene].scene, light, dlight);
+    mvUpdateSceneDescriptors(am, am.scenes[scene].asset, light, dlight);
 
     //---------------------------------------------------------------------
     // passes
@@ -85,7 +85,6 @@ int main()
         GContext->graphics.swapChainFramebuffers,
         viewport
     };
-
 
     //---------------------------------------------------------------------
     // main loop
@@ -126,19 +125,12 @@ int main()
             mainPass.frameBuffers = GContext->graphics.swapChainFramebuffers;
 
             GContext->viewport.resized = false;
-
-            // hacky but works
-            // window only seems to repaint if moved, so we move the window
-            // slightly
-            int x, y;
-            glfwGetWindowPos(GContext->viewport.handle, &x, &y);
-            glfwSetWindowPos(GContext->viewport.handle, ++x, y);
         }
 
         //---------------------------------------------------------------------
         // input handling
         //---------------------------------------------------------------------
-        mvUpdateCameraFPSCamera(camera, dt, 12.0f, 0.004f);
+        mvUpdateCameraFPSCamera(camera, dt, 12.0f, 1.0f);
  
         //---------------------------------------------------------------------
         // wait for fences and acquire next image
@@ -163,14 +155,14 @@ int main()
         if (ImGui::SliderFloat3("Position", &light.info.viewLightPos.x, -25.0f, 25.0f))
         {
             lightTransform = mvTranslate(mvIdentityMat4(), light.info.viewLightPos.xyz());
-            mvUpdateSceneDescriptors(am, am.scenes[scene].scene, light, dlight);
+            mvUpdateSceneDescriptors(am, am.scenes[scene].asset, light, dlight);
         }
         ImGui::End();
 
         ImGui::Begin("Scene");
-        ImGui::Checkbox("Diffuse Mapping", (bool*)&am.scenes[scene].scene.data.doDiffuse);
-        ImGui::Checkbox("Normal Mapping", (bool*)&am.scenes[scene].scene.data.doNormal);
-        ImGui::Checkbox("Specular Mapping", (bool*)&am.scenes[scene].scene.data.doSpecular);
+        ImGui::Checkbox("Diffuse Mapping", (bool*)&am.scenes[scene].asset.data.doDiffuse);
+        ImGui::Checkbox("Normal Mapping", (bool*)&am.scenes[scene].asset.data.doNormal);
+        ImGui::Checkbox("Specular Mapping", (bool*)&am.scenes[scene].asset.data.doSpecular);
         ImGui::End();
 
         mvMat4 viewMatrix = mvCreateFPSView(camera);
@@ -185,7 +177,7 @@ int main()
         Renderer::mvRenderMesh(am, quad1, quadTransform, viewMatrix, projMatrix);
 
         for (int i = 0; i < am.sceneCount; i++)
-            Renderer::mvRenderScene(am, am.scenes[i].scene, viewMatrix, projMatrix);
+            Renderer::mvRenderScene(am, am.scenes[i].asset, viewMatrix, projMatrix);
 
         ImGui::Render();
         mvRecordImGui(currentCommandBuffer);

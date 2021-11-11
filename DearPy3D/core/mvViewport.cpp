@@ -1,11 +1,13 @@
 #include "mvViewport.h"
 #include "mvContext.h"
 
+
 mv_internal void 
 EnableCursor()
 {
 	GContext->viewport.cursorEnabled = true;
 	glfwSetInputMode(GContext->viewport.handle, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	glfwSetInputMode(GContext->viewport.handle, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
 }
 
 mv_internal void 
@@ -13,6 +15,7 @@ DisableCursor()
 {
 	GContext->viewport.cursorEnabled = false;
 	glfwSetInputMode(GContext->viewport.handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetInputMode(GContext->viewport.handle, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 }
 
 mv_internal void 

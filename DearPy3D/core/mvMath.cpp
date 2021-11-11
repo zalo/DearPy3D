@@ -1,3 +1,4 @@
+#include <cmath>
 #include "mvMath.h"
 
 f32

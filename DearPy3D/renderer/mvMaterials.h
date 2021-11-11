@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include "mvPipeline.h"
 #include "mvTextures.h"
 #include "mvBuffer.h"

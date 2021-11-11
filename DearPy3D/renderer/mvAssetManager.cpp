@@ -1,12 +1,152 @@
 #include "mvAssetManager.h"
 #include <imgui.h>
 
+mv_internal void
+mvPreloadAssetManager(mvAssetManager& am)
+{
+
+	// only need to recreate the pipeline
+	if (mvGetDescriptorSetLayoutAssetID(&am, "scene") == MV_INVALID_ASSET_ID)
+	{
+
+		//-----------------------------------------------------------------------------
+		// create descriptor set layout
+		//-----------------------------------------------------------------------------
+
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+		descriptorSetLayouts.resize(2);
+
+		{
+			//-----------------------------------------------------------------------------
+			// create descriptor set layout
+			//-----------------------------------------------------------------------------
+			std::vector<VkDescriptorSetLayoutBinding> bindings;
+			bindings.resize(3);
+
+			bindings[0].binding = 0u;
+			bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			bindings[0].descriptorCount = 1;
+			bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[0].pImmutableSamplers = nullptr;
+
+			bindings[1].binding = 1u;
+			bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			bindings[1].descriptorCount = 1;
+			bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[1].pImmutableSamplers = nullptr;
+
+			bindings[2].binding = 2u;
+			bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			bindings[2].descriptorCount = 1;
+			bindings[2].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[2].pImmutableSamplers = nullptr;
+
+			VkDescriptorSetLayoutCreateInfo layoutInfo{};
+			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+			layoutInfo.bindingCount = static_cast<u32>(bindings.size());
+			layoutInfo.pBindings = bindings.data();
+
+			if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &descriptorSetLayouts[0]) != VK_SUCCESS)
+				throw std::runtime_error("failed to create descriptor set layout!");
+
+			mvRegisterAsset(&am, "scene", descriptorSetLayouts[0]);
+		}
+
+		{
+			//-----------------------------------------------------------------------------
+			// create descriptor set layout
+			//-----------------------------------------------------------------------------
+			std::vector<VkDescriptorSetLayoutBinding> bindings;
+			bindings.resize(4);
+
+			bindings[0].binding = 0u;
+			bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			bindings[0].descriptorCount = 1;
+			bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[0].pImmutableSamplers = nullptr;
+
+			bindings[1].binding = 1u;
+			bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			bindings[1].descriptorCount = 1;
+			bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[1].pImmutableSamplers = nullptr;
+
+			bindings[2].binding = 2u;
+			bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			bindings[2].descriptorCount = 1;
+			bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[2].pImmutableSamplers = nullptr;
+
+			bindings[3].binding = 3u;
+			bindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			bindings[3].descriptorCount = 1;
+			bindings[3].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[3].pImmutableSamplers = nullptr;
+
+			VkDescriptorSetLayoutCreateInfo layoutInfo{};
+			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+			layoutInfo.bindingCount = static_cast<u32>(bindings.size());
+			layoutInfo.pBindings = bindings.data();
+
+			if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &descriptorSetLayouts[1]) != VK_SUCCESS)
+				throw std::runtime_error("failed to create descriptor set layout!");
+
+			mvRegisterAsset(&am, "phong", descriptorSetLayouts[1]);
+		}
+
+		//-----------------------------------------------------------------------------
+		// create pipeline layouts
+		//-----------------------------------------------------------------------------
+
+		//setup push constants
+		VkPipelineLayout pipelineLayout;
+		VkPushConstantRange push_constant;
+		push_constant.offset = 0;
+		push_constant.size = 192;
+		push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		VkPipelineMultisampleStateCreateInfo multisampling{};
+		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampling.sampleShadingEnable = VK_FALSE;
+		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
+		pipelineLayoutInfo.pPushConstantRanges = &push_constant;
+		pipelineLayoutInfo.pushConstantRangeCount = 1;
+		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
+
+		if (vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
+			throw std::runtime_error("failed to create pipeline layout!");
+
+		mvRegisterAsset(&am, "main_pass", pipelineLayout);
+	}
+
+	//-----------------------------------------------------------------------------
+	// create pipeline
+	//-----------------------------------------------------------------------------
+	mvPipelineSpec pipelineSpec{};
+	pipelineSpec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	pipelineSpec.backfaceCulling = true;
+	pipelineSpec.depthTest = true;
+	pipelineSpec.depthWrite = true;
+	pipelineSpec.wireFrame = false;
+	pipelineSpec.vertexShader = "vs_shader.vert.spv";
+	pipelineSpec.pixelShader = "ps_shader.frag.spv";
+	pipelineSpec.width = 0.0f;  // use viewport
+	pipelineSpec.height = 0.0f; // use viewport
+	pipelineSpec.renderPass = VK_NULL_HANDLE;
+
+	mvPipeline pipeline = mvCreatePipeline(am, pipelineSpec);
+	mvRegisterAsset(&am, "main_pass", pipeline);
+}
+
 void 
 mvInitializeAssetManager(mvAssetManager* manager)
 {
 	manager->textures = new mvTextureAsset[manager->maxTextureCount];
 	manager->buffers = new mvBufferAsset[manager->maxBufferCount];
-	manager->dynBuffers = new mvBufferAsset[manager->maxDynBufferCount];
 	manager->meshes = new mvMeshAsset[manager->maxMeshCount];
 	manager->phongMaterials = new mvPhongMaterialAsset[manager->maxPhongMaterialCount];
 	manager->pipelines = new mvPipelineAsset[manager->maxPipelineCount];
@@ -14,6 +154,8 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->scenes = new mvSceneAsset[manager->maxSceneCount];
 	manager->descriptorSetLayouts = new mvDescriptorSetLayoutAsset[manager->maxDescriptorSetLayoutCount];
 	manager->nodes = new mvNodeAsset[manager->maxNodeCount];
+
+	mvPreloadAssetManager(*manager);
 }
 
 void
@@ -24,9 +166,11 @@ mvPrepareResizeAssetManager(mvAssetManager* manager)
 	// cleanup pipelines
 	for (int i = 0; i < manager->pipelineCount; i++)
 	{
-		vkDestroyPipeline(mvGetLogicalDevice(), manager->pipelines[i].pipeline.pipeline, nullptr);
+		vkDestroyPipeline(mvGetLogicalDevice(), manager->pipelines[i].asset.pipeline, nullptr);
 	}
 	manager->pipelineCount = 0u;
+
+	mvPreloadAssetManager(*manager);
 
 	for (int i = 0; i < manager->phongMaterialCount; i++)
 	{
@@ -35,10 +179,10 @@ mvPrepareResizeAssetManager(mvAssetManager* manager)
 		spec.depthTest = true;
 		spec.wireFrame = false;
 		spec.depthWrite = true;
-		spec.vertexShader = manager->phongMaterials[i].material.vertexShader;
-		spec.pixelShader = manager->phongMaterials[i].material.pixelShader;
+		spec.vertexShader = manager->phongMaterials[i].asset.vertexShader;
+		spec.pixelShader = manager->phongMaterials[i].asset.pixelShader;
 		spec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		manager->phongMaterials[i].material.pipeline = mvGetPipelineAsset(manager, spec);
+		manager->phongMaterials[i].asset.pipeline = mvGetPipelineLayoutAssetID(manager, "main_pass");
 	}
 
 }
@@ -51,70 +195,58 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	// cleanup materials
 	for (int i = 0; i < manager->phongMaterialCount; i++)
 	{
-		delete[] manager->phongMaterials[i].material.descriptorSets;
+		delete[] manager->phongMaterials[i].asset.descriptorSets;
 	}
 	manager->phongMaterialCount = 0u;
 
 	// cleanup scene
 	for (int i = 0; i < manager->sceneCount; i++)
 	{
-		delete[] manager->scenes[i].scene.descriptorSets;
+		delete[] manager->scenes[i].asset.descriptorSets;
 	}
 	manager->sceneCount = 0u;
 
 	// buffers
 	for (int i = 0; i < manager->bufferCount; i++)
 	{
-		vkDestroyBuffer(mvGetLogicalDevice(), manager->buffers[i].buffer.buffer, nullptr);
-		mvFree(manager->buffers[i].buffer.memoryAllocation);
+		vkDestroyBuffer(mvGetLogicalDevice(), manager->buffers[i].asset.buffer, nullptr);
+		mvFree(manager->buffers[i].asset.memoryAllocation);
 
-		manager->buffers[i].buffer.buffer = VK_NULL_HANDLE;
-		manager->buffers[i].buffer.memoryAllocation = VK_NULL_HANDLE;
-		manager->buffers[i].buffer.count = 0u;
-	}
-
-	// dynamic buffers
-	for (int i = 0; i < manager->dynBufferCount; i++)
-	{
-		vkDestroyBuffer(mvGetLogicalDevice(), manager->dynBuffers[i].buffer.buffer, nullptr);
-		mvFree(manager->dynBuffers[i].buffer.memoryAllocation);
-
-		manager->dynBuffers[i].buffer.buffer = VK_NULL_HANDLE;
-		manager->dynBuffers[i].buffer.memoryAllocation = VK_NULL_HANDLE;
-		manager->dynBuffers[i].buffer.count = 0u;
+		manager->buffers[i].asset.buffer = VK_NULL_HANDLE;
+		manager->buffers[i].asset.memoryAllocation = VK_NULL_HANDLE;
+		manager->buffers[i].asset.count = 0u;
 	}
 
 	// textures
 	for (int i = 0; i < manager->textureCount; i++)
 	{
-		vkDestroySampler(mvGetLogicalDevice(), manager->textures[i].texture.imageInfo.sampler, nullptr);
-		vkDestroyImageView(mvGetLogicalDevice(), manager->textures[i].texture.imageInfo.imageView, nullptr);
-		vkDestroyImage(mvGetLogicalDevice(), manager->textures[i].texture.textureImage, nullptr);
-		vkFreeMemory(mvGetLogicalDevice(), manager->textures[i].texture.textureImageMemory, nullptr);
+		vkDestroySampler(mvGetLogicalDevice(), manager->textures[i].asset.imageInfo.sampler, nullptr);
+		vkDestroyImageView(mvGetLogicalDevice(), manager->textures[i].asset.imageInfo.imageView, nullptr);
+		vkDestroyImage(mvGetLogicalDevice(), manager->textures[i].asset.textureImage, nullptr);
+		vkFreeMemory(mvGetLogicalDevice(), manager->textures[i].asset.textureImageMemory, nullptr);
 	}
 
 	// descriptor set layouts
 	for (int i = 0; i < manager->descriptorSetLayoutCount; i++)
 	{
-		vkDestroyDescriptorSetLayout(mvGetLogicalDevice(), manager->descriptorSetLayouts[i].layout, nullptr);
+		vkDestroyDescriptorSetLayout(mvGetLogicalDevice(), manager->descriptorSetLayouts[i].asset, nullptr);
 	}
 
 	// pipeline layouts
 	for (int i = 0; i < manager->pipelineLayoutCount; i++)
 	{
-		vkDestroyPipelineLayout(mvGetLogicalDevice(), manager->pipelineLayouts[i].layout.pipelineLayout, nullptr);
+		vkDestroyPipelineLayout(mvGetLogicalDevice(), manager->pipelineLayouts[i].asset, nullptr);
 	}
 
 	// cleanup pipelines
 	for (int i = 0; i < manager->pipelineCount; i++)
 	{
-		vkDestroyPipeline(mvGetLogicalDevice(), manager->pipelines[i].pipeline.pipeline, nullptr);
+		vkDestroyPipeline(mvGetLogicalDevice(), manager->pipelines[i].asset.pipeline, nullptr);
 	}
 	manager->pipelineCount = 0u;
 
 	delete[] manager->textures;
 	delete[] manager->buffers;
-	delete[] manager->dynBuffers;
 	delete[] manager->meshes;
 	delete[] manager->pipelines;
 	delete[] manager->pipelineLayouts;
@@ -124,7 +256,6 @@ mvCleanupAssetManager(mvAssetManager* manager)
 
 	manager->textures = nullptr;
 	manager->buffers = nullptr;
-	manager->dynBuffers = nullptr;
 	manager->meshes = nullptr;
 	manager->phongMaterials = nullptr;
 	manager->pipelines = nullptr;
@@ -135,7 +266,6 @@ mvCleanupAssetManager(mvAssetManager* manager)
 
 	manager->textureCount = 0u;
 	manager->bufferCount = 0u;
-	manager->dynBufferCount = 0u;
 	manager->meshCount = 0u;
 	manager->phongMaterialCount = 0u;
 	manager->pipelineCount = 0u;
@@ -145,8 +275,161 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	manager->descriptorSetLayoutCount = 0u;
 }
 
+//-----------------------------------------------------------------------------
+// pipelines
+//-----------------------------------------------------------------------------
+
 mvAssetID
-mvGetTextureAsset(mvAssetManager* manager, const std::string& path)
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvPipeline asset)
+{
+	manager->pipelines[manager->pipelineCount].asset = asset;
+	manager->pipelines[manager->pipelineCount].hash = tag;
+	manager->pipelineCount++;
+	return manager->pipelineCount - 1;
+}
+
+mvAssetID
+mvGetPipelineAssetID(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->pipelineCount; i++)
+	{
+		if (manager->pipelines[i].hash == tag)
+			return i;
+	}
+
+	return MV_INVALID_ASSET_ID;
+}
+
+mvPipeline*
+mvGetRawPipelineAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->pipelineCount; i++)
+	{
+		if (manager->pipelines[i].hash == tag)
+			return &manager->pipelines[i].asset;
+	}
+
+	return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+// pipeline layouts
+//-----------------------------------------------------------------------------
+
+mvAssetID
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, VkPipelineLayout asset)
+{
+	manager->pipelineLayouts[manager->pipelineLayoutCount].asset = asset;
+	manager->pipelineLayouts[manager->pipelineLayoutCount].hash = tag;
+	manager->pipelineLayoutCount++;
+	return manager->pipelineLayoutCount - 1;
+}
+
+mvAssetID
+mvGetPipelineLayoutAssetID(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->pipelineLayoutCount; i++)
+	{
+		if (manager->pipelineLayouts[i].hash == tag)
+			return i;
+	}
+
+	return MV_INVALID_ASSET_ID;
+}
+
+VkPipelineLayout
+mvGetRawPipelineLayoutAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->pipelineLayoutCount; i++)
+	{
+		if (manager->pipelineLayouts[i].hash == tag)
+			return manager->pipelineLayouts[i].asset;
+	}
+
+	return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+// descriptor set layouts
+//-----------------------------------------------------------------------------
+
+mvAssetID
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, VkDescriptorSetLayout asset)
+{
+	manager->descriptorSetLayouts[manager->descriptorSetLayoutCount].hash = tag;
+	manager->descriptorSetLayouts[manager->descriptorSetLayoutCount].asset = asset;
+	manager->descriptorSetLayoutCount++;
+	return manager->descriptorSetLayoutCount - 1;
+}
+
+mvAssetID
+mvGetDescriptorSetLayoutAssetID(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->descriptorSetLayoutCount; i++)
+	{
+		if (manager->descriptorSetLayouts[i].hash == tag)
+			return i;
+	}
+
+	return MV_INVALID_ASSET_ID;
+}
+
+VkDescriptorSetLayout
+mvGetRawDescriptorSetLayoutAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->descriptorSetLayoutCount; i++)
+	{
+		if (manager->descriptorSetLayouts[i].hash == tag)
+			return manager->descriptorSetLayouts[i].asset;
+	}
+
+	return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+// scenes
+//-----------------------------------------------------------------------------
+
+mvAssetID
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvScene asset)
+{
+	manager->scenes[manager->sceneCount].asset = asset;
+	manager->scenes[manager->sceneCount].hash = tag;
+	manager->sceneCount++;
+	return manager->sceneCount - 1;
+}
+
+mvAssetID
+mvGetSceneAssetID(mvAssetManager* manager, const std::string& tag)
+{
+
+	for (s32 i = 0; i < manager->sceneCount; i++)
+	{
+		if (manager->scenes[i].hash == tag)
+			return i;
+	}
+
+	return MV_INVALID_ASSET_ID;
+}
+
+mvScene*
+mvGetRawSceneAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->sceneCount; i++)
+	{
+		if (manager->scenes[i].hash == tag)
+			return &manager->scenes[i].asset;
+	}
+
+	return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+// textures
+//-----------------------------------------------------------------------------
+
+mvAssetID
+mvGetTextureAssetID(mvAssetManager* manager, const std::string& path)
 {
 	for (s32 i = 0; i < manager->textureCount; i++)
 	{
@@ -155,13 +438,66 @@ mvGetTextureAsset(mvAssetManager* manager, const std::string& path)
 	}
 
 	manager->textures[manager->textureCount].hash = path;
-	manager->textures[manager->textureCount].texture = mvCreateTexture(path);
+	manager->textures[manager->textureCount].asset = mvCreateTexture(path);
 	manager->textureCount++;
 	return manager->textureCount - 1;
 }
 
+mvTexture*
+mvGetRawTextureAsset(mvAssetManager* manager, const std::string& path)
+{
+	for (s32 i = 0; i < manager->textureCount; i++)
+	{
+		if (manager->textures[i].hash == path)
+			return &manager->textures[i].asset;
+	}
+
+	manager->textures[manager->textureCount].hash = path;
+	manager->textures[manager->textureCount].asset = mvCreateTexture(path);
+	manager->textureCount++;
+	return &manager->textures[manager->textureCount - 1].asset;
+}
+
+//-----------------------------------------------------------------------------
+// meshes
+//-----------------------------------------------------------------------------
+
 mvAssetID
-mvGetBufferAsset(mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag)
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvMesh asset)
+{
+	manager->meshes[manager->meshCount].asset = asset;
+	manager->meshes[manager->meshCount].hash = tag;
+	manager->meshCount++;
+	return manager->meshCount - 1;
+}
+
+mvMesh*
+mvGetRawMeshAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->meshCount; i++)
+	{
+		if (manager->meshes[i].hash == tag)
+			return &manager->meshes[i].asset;
+	}
+
+	return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+// uniform buffers
+//-----------------------------------------------------------------------------
+
+mvAssetID
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvBuffer asset)
+{
+	manager->buffers[manager->bufferCount].asset = asset;
+	manager->buffers[manager->bufferCount].hash = tag;
+	manager->bufferCount++;
+	return manager->bufferCount - 1;
+}
+
+mvAssetID
+mvGetBufferAssetID(mvAssetManager* manager, const std::string& tag)
 {
 	for (s32 i = 0; i < manager->bufferCount; i++)
 	{
@@ -169,156 +505,93 @@ mvGetBufferAsset(mvAssetManager* manager, void* data, u64 count, u64 size, VkBuf
 			return i;
 	}
 
-	manager->buffers[manager->bufferCount].hash = tag;
-	manager->buffers[manager->bufferCount].buffer = mvCreateBuffer(data, count, size, flags);
-	manager->bufferCount++;
-	return manager->bufferCount - 1;
+	return MV_INVALID_ASSET_ID;
 }
 
-mvAssetID
-mvGetDynamicBufferAsset(mvAssetManager* manager, void* data, u64 count, u64 size, VkBufferUsageFlags flags, const std::string& tag)
+mvBuffer*
+mvGetRawBufferAsset(mvAssetManager* manager, const std::string& tag)
 {
-	for (s32 i = 0; i < manager->dynBufferCount; i++)
+	for (s32 i = 0; i < manager->bufferCount; i++)
 	{
-		if (manager->dynBuffers[i].hash == tag)
-			return i;
+		if (manager->buffers[i].hash == tag)
+			return &manager->buffers[i].asset;
 	}
 
-	manager->dynBuffers[manager->dynBufferCount].hash = tag;
-	manager->dynBuffers[manager->dynBufferCount].buffer = mvCreateDynamicBuffer(data, count, size, flags);
-	manager->dynBufferCount++;
-	return manager->dynBufferCount - 1;
+	return nullptr;
 }
 
-mvAssetID
-mvRegistryMeshAsset(mvAssetManager* manager, mvMesh mesh)
-{
-	manager->meshes[manager->meshCount].mesh = mesh;
-	manager->meshCount++;
-	return manager->meshCount - 1;
-}
+//-----------------------------------------------------------------------------
+// materials
+//-----------------------------------------------------------------------------
 
 mvAssetID
-mvGetPhongMaterialAsset(mvAssetManager* manager, mvMaterialData materialData, const char* vertexShader, const char* pixelShader)
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvMaterial asset)
 {
-	std::string hash = mvCreateHash(materialData);
-
-	for (s32 i = 0; i < manager->phongMaterialCount; i++)
-	{
-		if (manager->phongMaterials[i].hash == hash)
-			return i;
-	}
-
-	manager->phongMaterials[manager->phongMaterialCount].hash = hash;
-	manager->phongMaterials[manager->phongMaterialCount].material = mvCreateMaterial(*manager, materialData, vertexShader, pixelShader);
+	manager->phongMaterials[manager->phongMaterialCount].asset = asset;
+	manager->phongMaterials[manager->phongMaterialCount].hash = tag;
 	manager->phongMaterialCount++;
 	return manager->phongMaterialCount - 1;
 }
 
-mvAssetID 
-mvGetPipelineAsset(mvAssetManager* manager, mvPipelineSpec& spec)
+mvAssetID
+mvGetMaterialAssetID(mvAssetManager* manager, const std::string& tag)
 {
-	std::string hash =
-		std::string(spec.pixelShader)
-		+ std::string(spec.vertexShader)
-		+ std::string(spec.backfaceCulling ? "T" : "F")
-		+ std::string(spec.wireFrame ? "T" : "F")
-		+ std::string(spec.depthWrite ? "T" : "F")
-		+ std::string(spec.depthTest ? "T" : "F");
-
-	for (s32 i = 0; i < manager->pipelineCount; i++)
+	for (s32 i = 0; i < manager->phongMaterialCount; i++)
 	{
-		if (manager->pipelines[i].hash == hash)
+		if (manager->phongMaterials[i].hash == tag)
 			return i;
 	}
 
-	manager->pipelines[manager->pipelineCount].hash = hash;
-	manager->pipelines[manager->pipelineCount].pipeline = mvCreatePipeline(*manager, spec);
-	manager->pipelineCount++;
-	return manager->pipelineCount - 1;
+	return MV_INVALID_ASSET_ID;
 }
 
-mvAssetID 
-mvGetSceneAsset(mvAssetManager* manager, mvSceneData sceneData)
+mvMaterial*
+mvGetRawMaterialAsset(mvAssetManager* manager, const std::string& tag)
 {
-	std::string hash = "scene_" + std::string(sceneData.doLighting ? "T" : "F");
-
-	for (s32 i = 0; i < manager->sceneCount; i++)
+	for (s32 i = 0; i < manager->phongMaterialCount; i++)
 	{
-		if (manager->scenes[i].hash == hash)
-			return i;
+		if (manager->phongMaterials[i].hash == tag)
+			return &manager->phongMaterials[i].asset;
 	}
 
-	manager->scenes[manager->sceneCount].hash = hash;
-	manager->scenes[manager->sceneCount].scene = mvCreateScene(*manager, sceneData);
-	manager->sceneCount++;
-	return manager->sceneCount - 1;
+	return nullptr;
 }
 
-mvAssetID 
-mvGetPipelineLayoutAsset(mvAssetManager* manager, std::vector<VkDescriptorSetLayout> descriptorSetLayouts)
-{
-	std::string hash = "layout_" + std::to_string(descriptorSetLayouts.size());
-
-	for (s32 i = 0; i < manager->pipelineLayoutCount; i++)
-	{
-		if (manager->pipelineLayouts[i].hash == hash)
-			return i;
-	}
-
-	manager->pipelineLayouts[manager->pipelineLayoutCount].hash = hash;
-	manager->pipelineLayouts[manager->pipelineLayoutCount].layout = mvCreatePipelineLayout(descriptorSetLayouts);
-	manager->pipelineLayoutCount++;
-	return manager->pipelineLayoutCount - 1;
-}
+//-----------------------------------------------------------------------------
+// nodes
+//-----------------------------------------------------------------------------
 
 mvAssetID
-mvGetPipelineLayoutAsset(mvAssetManager* manager, const std::string& tag)
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvNode asset)
 {
-
-	for (s32 i = 0; i < manager->pipelineLayoutCount; i++)
-	{
-		if (manager->pipelineLayouts[i].hash == tag)
-			return i;
-	}
-	return -1;
-}
-
-mvAssetID
-mvRegisterDescriptorSetLayoutAsset(mvAssetManager* manager, VkDescriptorSetLayout layout, const std::string& tag)
-{
-	manager->descriptorSetLayouts[manager->descriptorSetLayoutCount].hash = tag;
-	manager->descriptorSetLayouts[manager->descriptorSetLayoutCount].layout = layout;
-	manager->descriptorSetLayoutCount++;
-	return manager->descriptorSetLayoutCount - 1;
-}
-
-mvAssetID 
-mvGetDescriptorSetLayoutAsset(mvAssetManager* manager, const std::string& tag)
-{
-	for (s32 i = 0; i < manager->descriptorSetLayoutCount; i++)
-	{
-		if (manager->descriptorSetLayouts[i].hash == tag)
-			return i;
-	}
-
-	return -1;
-}
-
-mvAssetID
-mvRegistryNodeAsset(mvAssetManager* manager, mvNode node)
-{
-	manager->nodes[manager->nodeCount].node = node;
+	manager->nodes[manager->nodeCount].asset = asset;
+	manager->nodes[manager->nodeCount].hash = tag;
 	manager->nodeCount++;
 	return manager->nodeCount - 1;
 }
 
 mvAssetID
-mvRegistrySceneAsset(mvAssetManager* manager, mvScene scene)
+mvGetNodeAssetID(mvAssetManager* manager, const std::string& tag)
 {
-	manager->scenes[manager->sceneCount].scene = scene;
-	manager->sceneCount++;
-	return manager->sceneCount - 1;
+	for (s32 i = 0; i < manager->nodeCount; i++)
+	{
+		if (manager->nodes[i].hash == tag)
+			return i;
+	}
+
+	return MV_INVALID_ASSET_ID;
+}
+
+mvNode* 
+mvGetRawNodeAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->nodeCount; i++)
+	{
+		if (manager->nodes[i].hash == tag)
+			return &manager->nodes[i].asset;
+	}
+
+	return nullptr;
 }
 
 void 
@@ -330,31 +603,11 @@ mvShowAssetManager(mvAssetManager& assetManager)
 		{
 			for (u32 i = 0; i < assetManager.textureCount; i++)
 			{
-				ImGui::Text("Texture: %s", assetManager.textures[i].texture.file.c_str());
-				ImGui::Image(assetManager.textures[i].texture.imguiID, ImVec2(50, 50));
+				ImGui::Text("Texture: %s", assetManager.textures[i].asset.file.c_str());
+				ImGui::Image(assetManager.textures[i].asset.imguiID, ImVec2(50, 50));
 			}
 			ImGui::TreePop();
 		}
 	}
 	ImGui::End();
-}
-
-std::string
-mvCreateHash(mvMaterialData materialData)
-{
-	std::string hash =
-		std::string(materialData.useTextureMap ? "T" : "F")
-		+ std::string(materialData.useNormalMap ? "T" : "F")
-		+ std::string(materialData.useSpecularMap ? "T" : "F")
-		+ std::string(materialData.useGlossAlpha ? "T" : "F")
-		+ std::string(materialData.hasAlpha ? "T" : "F")
-		+ std::string(materialData.doLighting ? "T" : "F");
-
-	// temporary until we have a "bindless" solution
-	// to descriptor set updates
-	mv_local_persist int i = 0;
-	i++;
-	hash.append(std::to_string(i));
-
-	return hash;
 }

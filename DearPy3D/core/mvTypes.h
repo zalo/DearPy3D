@@ -34,3 +34,4 @@ typedef s32 mvAssetID;
 #define mv_internal static
 #define mv_local_persist static
 #define mv_global static
+#define MV_INVALID_ASSET_ID -1

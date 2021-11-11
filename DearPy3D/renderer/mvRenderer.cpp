@@ -54,35 +54,15 @@ namespace Renderer {
     {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
-        if (mesh.phongMaterialID == -1)
-        {
-            mesh.phongMaterialID = mvGetPhongMaterialAsset(&am, {}, "vs_shader.vert.spv", "ps_shader.frag.spv");
-
-            mvPipelineSpec spec{};
-            spec.backfaceCulling = true;
-            spec.depthTest = true;
-            spec.wireFrame = false;
-            spec.depthWrite = true;
-            spec.vertexShader = "vs_shader.vert.spv";
-            spec.pixelShader = "ps_shader.frag.spv";
-            spec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-
-            am.phongMaterials[mesh.phongMaterialID].material.pipeline = mvGetPipelineAsset(&am, spec);
-        }
-
-        mvAssetID materialID = mesh.phongMaterialID;
-        mvAssetID pipelineID = am.phongMaterials[materialID].material.pipeline;
-        mvAssetID layoutID = am.pipelines[pipelineID].pipeline.pipelineLayout;
-
         VkCommandBuffer commandBuffer = GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex];
-        VkPipeline pipeline = am.pipelines[pipelineID].pipeline.pipeline;
-        VkPipelineLayout pipelineLayout = am.pipelineLayouts[layoutID].layout.pipelineLayout;
-        VkDescriptorSet descriptorSet = am.phongMaterials[materialID].material.descriptorSets[GContext->graphics.currentImageIndex];
-        VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].buffer.buffer;
-        VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].buffer.buffer;
+        VkPipeline pipeline = mvGetRawPipelineAsset(&am, "main_pass")->pipeline;
+        VkPipelineLayout pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "main_pass");
+        VkDescriptorSet descriptorSet = am.phongMaterials[mesh.phongMaterialID].asset.descriptorSets[GContext->graphics.currentImageIndex];
+        VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
+        VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
 
-        if(mesh.diffuseTexture != -1) 
-            mvUpdateMaterialDescriptors(am, am.phongMaterials[mesh.phongMaterialID].material, mesh.diffuseTexture, mesh.normalTexture, mesh.specularTexture);
+        mvUpdateMaterialDescriptors(am, am.phongMaterials[mesh.phongMaterialID].asset, mesh.diffuseTexture, mesh.normalTexture, mesh.specularTexture);
+        
         vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &descriptorSet, 0, nullptr);
         vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &vertexBuffer, &offsets);
@@ -95,7 +75,7 @@ namespace Renderer {
 
         vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
-        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].buffer.count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.count, 1, 0, 0, 0);
     }
 
     void
@@ -147,11 +127,11 @@ namespace Renderer {
     {
 
         if (node.mesh > -1)
-            mvRenderMesh(am, am.meshes[node.mesh].mesh, accumulatedTransform * node.matrix, cam, proj);
+            mvRenderMesh(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
 
         for (u32 i = 0; i < node.childCount; i++)
         {
-            mvRenderNode(am, am.nodes[node.children[i]].node, accumulatedTransform * node.matrix, cam, proj);
+            mvRenderNode(am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj);
         }
     }
 
@@ -160,14 +140,14 @@ namespace Renderer {
     {
         for (u32 i = 0; i < scene.nodeCount; i++)
         {
-            mvNode& rootNode = am.nodes[scene.nodes[i]].node;
+            mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
 
             if (rootNode.mesh > -1)
-                mvRenderMesh(am, am.meshes[rootNode.mesh].mesh, rootNode.matrix, cam, proj);
+                mvRenderMesh(am, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj);
 
             for (u32 j = 0; j < rootNode.childCount; j++)
             {
-                mvRenderNode(am, am.nodes[rootNode.children[j]].node, rootNode.matrix, cam, proj);
+                mvRenderNode(am, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj);
             }
         }
     }

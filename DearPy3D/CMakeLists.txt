@@ -4,6 +4,14 @@ add_library(dearpy3d STATIC)
 
 set_property(TARGET dearpy3d PROPERTY CXX_STANDARD 17)
 
+target_compile_definitions(dearpy3d
+
+	PUBLIC
+
+		$<$<CONFIG:Debug>:MV_DEBUG>
+		$<$<CONFIG:Release>:MV_RELEASE>
+)
+
 target_sources(dearpy3d
 
 	PRIVATE

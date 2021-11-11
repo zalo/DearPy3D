@@ -1,5 +1,4 @@
 #include "mvCamera.h"
-#include <algorithm>
 #include <imgui.h>
 #include "mvContext.h"
 
@@ -7,13 +6,21 @@ template<typename T>
 mv_local_persist T
 wrap_angle(T theta) noexcept
 {
-    constexpr T twoPi = (T)2 * (T)PI_D;
+    constexpr T twoPi = (T)2 * (T)MV_PI;
     const T mod = (T)fmod(theta, twoPi);
-    if (mod > (T)PI_D)
+    if (mod > (T)MV_PI)
         return mod - twoPi;
-    else if (mod < -(T)PI_D)
+    else if (mod < -(T)MV_PI)
         return mod + twoPi;
     return mod;
+}
+
+mv_internal
+f32 mvClamp(f32 value, f32 minValue, f32 maxValue)
+{
+    if (value < minValue) return minValue;
+    if (value > maxValue) return maxValue;
+    return value;
 }
 
 mvMat4 
@@ -91,8 +98,8 @@ mvUpdateCameraFPSCamera(mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationS
 
     if (!GContext->viewport.cursorEnabled)
     {
-        camera.yaw = wrap_angle(camera.yaw - (float)GContext->viewport.deltaX * rotationSpeed);
-        camera.pitch = std::clamp(camera.pitch -  (float)GContext->viewport.deltaY * rotationSpeed, 0.995f * -PI / 2.0f, 0.995f * PI / 2.0f);
+        camera.yaw = wrap_angle(camera.yaw - (float)GContext->viewport.deltaX * rotationSpeed*dt);
+        camera.pitch = mvClamp(camera.pitch -  (float)GContext->viewport.deltaY * rotationSpeed*dt, 0.995f * -MV_PI_2, 0.995f * MV_PI_2);
     }
 }
 
@@ -130,6 +137,6 @@ mvUpdateCameraLookAtCamera(mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotati
     if (!GContext->viewport.cursorEnabled)
     {
         camera.yaw = wrap_angle(camera.yaw + (float)GContext->viewport.deltaX * rotationSpeed);
-        camera.pitch = std::clamp(camera.pitch + (float)GContext->viewport.deltaY * rotationSpeed, 0.995f * -PI / 2.0f, 0.995f * PI / 2.0f);
+        camera.pitch = mvClamp(camera.pitch + (float)GContext->viewport.deltaY * rotationSpeed, 0.995f * -MV_PI_2, 0.995f * MV_PI_2);
     }
 }

@@ -10,16 +10,17 @@ mvCreatePointLight(mvAssetManager& am, mvVec3 pos)
     light.info.viewLightPos = mvVec4{ pos.x, pos.y, pos.z, 1.0f };
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        light.buffer.buffers.push_back(mvGetDynamicBufferAsset(&am,
-            &light.info, 
-            1, 
-            sizeof(mvPointLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, "point_light"));
+        light.buffer.buffers.push_back(mvRegisterAsset(&am,
+            "point_light",
+            mvCreateDynamicBuffer(&light.info, 1, sizeof(mvPointLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)));
 
     mvMesh lightCube = mvCreateTexturedCube(am, 0.25f);
     auto mat1 = mvMaterialData{};
     mat1.materialColor = { 1.0f, 1.0f, 1.0f, 1.0f };
     mat1.doLighting = false;
-    lightCube.phongMaterialID = mvGetPhongMaterialAsset(&am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    
+    mvMaterial material = mvCreateMaterial(am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    lightCube.phongMaterialID = mvRegisterAsset(&am, "light material", material);
 
     mvPipelineSpec spec{};
     spec.backfaceCulling = true;
@@ -29,10 +30,10 @@ mvCreatePointLight(mvAssetManager& am, mvVec3 pos)
     spec.pixelShader = "ps_shader.frag.spv";
     spec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-    am.phongMaterials[lightCube.phongMaterialID].material.pipeline = mvGetPipelineAsset(&am, spec);
-    mvRegistryMeshAsset(&am, lightCube);
+    am.phongMaterials[lightCube.phongMaterialID].asset.pipeline = mvGetPipelineAssetID(&am, "main_pass");
+    mvRegisterAsset(&am, "light", lightCube);
 
-    light.mesh = &am.meshes[mvRegistryMeshAsset(&am, lightCube)].mesh;
+    light.mesh = mvGetRawMeshAsset(&am, "light");
     return light;
 }
 
@@ -43,10 +44,9 @@ mvCreateDirectionLight(mvAssetManager& am, mvVec3 dir)
     mvDirectionLight light{};
     light.info.viewLightDir = dir;
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        light.buffer.buffers.push_back(mvGetDynamicBufferAsset(&am,
-            &light.info,
-            1,
-            sizeof(mvDirectionLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, "direction_light"));
+        light.buffer.buffers.push_back(mvRegisterAsset(&am,
+            "direction_light",
+            mvCreateDynamicBuffer(&light.info, 1, sizeof(mvDirectionLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)));
     return light;
 }
 
@@ -62,10 +62,7 @@ mvBind(mvAssetManager& am, mvPointLight& light, mvMat4 viewMatrix)
     light.info.viewLightPos.y = out.y;
     light.info.viewLightPos.z = out.z;
 
-    mvUpdateBuffer(am.dynBuffers[light.buffer.buffers[GContext->graphics.currentImageIndex]].buffer, &light.info);
-
-    //vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
-    //    pipelineLayout, 0, 1, &light.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
+    mvUpdateBuffer(am.buffers[light.buffer.buffers[GContext->graphics.currentImageIndex]].asset, &light.info);
 
     light.info.viewLightPos = posCopy;
 }
@@ -85,10 +82,7 @@ mvBind(mvAssetManager& am, mvDirectionLight& light, mvMat4 viewMatrix)
     light.info.viewLightDir.y = out.y;
     light.info.viewLightDir.z = out.z;
 
-    mvUpdateBuffer(am.dynBuffers[light.buffer.buffers[GContext->graphics.currentImageIndex]].buffer, &light.info);
-
-    //vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
-    //    pipelineLayout, 0, 1, &light.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
+    mvUpdateBuffer(am.buffers[light.buffer.buffers[GContext->graphics.currentImageIndex]].asset, &light.info);
 
     light.info.viewLightDir = posCopy;
 }
