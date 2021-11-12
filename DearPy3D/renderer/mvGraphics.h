@@ -24,7 +24,7 @@ void mvSetupGraphicsContext();
 void mvRecreateSwapChain();
 void mvCleanupGraphicsContext();
 void mvCreateRenderPass(VkFormat format, VkRenderPass* renderPass);
-void mvCreateFrameBuffers(VkRenderPass renderPass, std::vector<VkFramebuffer>& frameBuffers, u32 width, u32 height, std::vector<VkImageView>& imageViews, VkImageView& depthView);
+void mvCreateFrameBuffer(VkRenderPass renderPass, VkFramebuffer& frameBuffer, u32 width, u32 height, std::vector<VkImageView> imageViews);
 
 // allocator
 VmaAllocation mvAllocateBuffer(VkBufferCreateInfo bufferCreateInfo, VmaMemoryUsage usage, VkBuffer& outBuffer);

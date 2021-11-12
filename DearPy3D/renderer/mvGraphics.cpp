@@ -296,31 +296,21 @@ mvCreateRenderPass(VkFormat format, VkRenderPass* renderPass)
         throw std::runtime_error("failed to create render pass!");
 }
 
-void
-mvCreateFrameBuffers(VkRenderPass renderPass, std::vector<VkFramebuffer>& frameBuffers, u32 width, u32 height, std::vector<VkImageView>& imageViews, VkImageView& depthView)
+void 
+mvCreateFrameBuffer(VkRenderPass renderPass, VkFramebuffer& frameBuffer, u32 width, u32 height, std::vector<VkImageView> imageViews)
 {
-    GContext->graphics.swapChainFramebuffers.resize(GContext->graphics.swapChainImageViews.size());
+    VkFramebufferCreateInfo framebufferInfo{};
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass = renderPass;
+    framebufferInfo.attachmentCount = imageViews.size();
 
-    for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
-    {
-        VkImageView attachments[] = {
-            imageViews[i],
-            depthView
-        };
+    framebufferInfo.pAttachments = imageViews.data();
+    framebufferInfo.width = width;
+    framebufferInfo.height = height;
+    framebufferInfo.layers = 1;
 
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = renderPass;
-        framebufferInfo.attachmentCount = 2;
-
-        framebufferInfo.pAttachments = attachments;
-        framebufferInfo.width = width;
-        framebufferInfo.height = height;
-        framebufferInfo.layers = 1;
-
-        if (vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &frameBuffers[i]) != VK_SUCCESS)
-            throw std::runtime_error("failed to create framebuffer!");
-    }
+    if (vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS)
+        throw std::runtime_error("failed to create framebuffer!");
 }
 
 mv_internal void
@@ -674,12 +664,16 @@ mvSetupGraphicsContext()
     //-----------------------------------------------------------------------------
     // create frame buffers
     //-----------------------------------------------------------------------------
-    mvCreateFrameBuffers(GContext->graphics.renderPass, 
-        GContext->graphics.swapChainFramebuffers, 
-        GContext->graphics.swapChainExtent.width, 
-        GContext->graphics.swapChainExtent.height,
-        GContext->graphics.swapChainImageViews,
-        GContext->graphics.depthImageView);
+    GContext->graphics.swapChainFramebuffers.resize(GContext->graphics.swapChainImageViews.size());
+    for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+    {
+        mvCreateFrameBuffer(GContext->graphics.renderPass,
+            GContext->graphics.swapChainFramebuffers[i],
+            GContext->graphics.swapChainExtent.width,
+            GContext->graphics.swapChainExtent.height,
+            std::vector<VkImageView>{ GContext->graphics.swapChainImageViews[i], GContext->graphics.depthImageView });
+    }
+
 
     //-----------------------------------------------------------------------------
     // create syncronization primitives
@@ -846,12 +840,15 @@ mvRecreateSwapChain()
         GContext->graphics.depthImageView = mvCreateImageView(GContext->graphics.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
     }
 
-    mvCreateFrameBuffers(GContext->graphics.renderPass,
-        GContext->graphics.swapChainFramebuffers,
-        GContext->graphics.swapChainExtent.width,
-        GContext->graphics.swapChainExtent.height,
-        GContext->graphics.swapChainImageViews,
-        GContext->graphics.depthImageView);
+    GContext->graphics.swapChainFramebuffers.resize(GContext->graphics.swapChainImageViews.size());
+    for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+    {
+        mvCreateFrameBuffer(GContext->graphics.renderPass,
+            GContext->graphics.swapChainFramebuffers[i],
+            GContext->graphics.swapChainExtent.width,
+            GContext->graphics.swapChainExtent.height,
+            std::vector<VkImageView>{ GContext->graphics.swapChainImageViews[i], GContext->graphics.depthImageView });
+    }
 
     ImGui_ImplVulkan_SetMinImageCount(GContext->graphics.minImageCount);
 }
