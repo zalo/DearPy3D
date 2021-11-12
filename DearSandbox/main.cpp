@@ -66,25 +66,20 @@ int main()
     // passes
     //---------------------------------------------------------------------
 
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = (float)GContext->graphics.swapChainExtent.height;
-    viewport.width = (float)GContext->graphics.swapChainExtent.width;
-    viewport.height = -(float)GContext->graphics.swapChainExtent.height;
-
     mvPass mainPass{
         GContext->graphics.renderPass,
         GContext->graphics.swapChainExtent,
-        GContext->graphics.swapChainFramebuffers,
-        viewport
+        GContext->graphics.swapChainFramebuffers
     };
 
-    mvPass overlayPass{
-        GContext->graphics.renderPass,
-        GContext->graphics.swapChainExtent,
-        GContext->graphics.swapChainFramebuffers,
-        viewport
-    };
+    mainPass.viewport.x = 0.0f;
+    mainPass.viewport.y = GContext->graphics.swapChainExtent.height;
+    mainPass.viewport.width = GContext->graphics.swapChainExtent.width;
+    mainPass.viewport.height = -(int)GContext->graphics.swapChainExtent.height;
+    mainPass.viewport.minDepth = 0.0f;
+    mainPass.viewport.maxDepth = 1.0f;
+    mainPass.extent.width = (u32)GContext->graphics.swapChainExtent.width;
+    mainPass.extent.height = (u32)mainPass.viewport.y;
 
     //---------------------------------------------------------------------
     // main loop
@@ -121,8 +116,16 @@ int main()
             mvPrepareResizeAssetManager(&am);
 
             mainPass.renderPass = GContext->graphics.renderPass;
-            mainPass.extent = GContext->graphics.swapChainExtent;
             mainPass.frameBuffers = GContext->graphics.swapChainFramebuffers;
+            mainPass.viewport.x = 0.0f;
+            mainPass.viewport.y = newheight;
+            mainPass.viewport.width = newwidth;
+            mainPass.viewport.height = -newheight;
+            mainPass.viewport.minDepth = 0.0f;
+            mainPass.viewport.maxDepth = 1.0f;
+
+            mainPass.extent.width = (u32)newwidth;
+            mainPass.extent.height = (u32)mainPass.viewport.y;
 
             GContext->viewport.resized = false;
         }

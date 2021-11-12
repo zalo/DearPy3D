@@ -54,7 +54,7 @@ struct mvVertexElement
     mvVertexElementType type;
 };
 
-mv_internal mvVertexLayout
+mvVertexLayout
 mvCreateVertexLayout(std::vector<mvVertexElementType> elements)
 {
     std::vector<mvVertexElement> velements;
@@ -148,16 +148,7 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
 
     pipeline.vertexShader = mvCreateShader(spec.vertexShader);
     pipeline.fragShader = mvCreateShader(spec.pixelShader);
-
-    pipeline.layout = mvCreateVertexLayout(
-        {
-            mvVertexElementType::Position3D,
-            mvVertexElementType::Normal,
-            mvVertexElementType::Tangent,
-            mvVertexElementType::Bitangent,
-            mvVertexElementType::Texture2D
-        }
-    );
+    pipeline.specification = spec;
 
     //---------------------------------------------------------------------
     // input assembler stage
@@ -167,8 +158,8 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     inputAssembly.topology = spec.topology;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    std::vector<VkVertexInputAttributeDescription> attributeDescriptions = pipeline.layout.attributeDescriptions;
-    std::vector<VkVertexInputBindingDescription> bindingDescriptions = pipeline.layout.bindingDescriptions;
+    std::vector<VkVertexInputAttributeDescription> attributeDescriptions = pipeline.specification.layout.attributeDescriptions;
+    std::vector<VkVertexInputBindingDescription> bindingDescriptions = pipeline.specification.layout.bindingDescriptions;
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -200,9 +191,9 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
 
     VkViewport viewport{};
     viewport.x = 0.0f;
-    viewport.y = spec.height == 0.0f ? (float)GContext->graphics.swapChainExtent.height : spec.height;
-    viewport.width = spec.width == 0.0f ? (float)GContext->graphics.swapChainExtent.width : spec.width;
-    viewport.height = spec.height == 0.0f ? -(float)GContext->graphics.swapChainExtent.height : -spec.height;
+    viewport.y = spec.height;
+    viewport.width = spec.width;
+    viewport.height = -spec.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
@@ -284,6 +275,12 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
 
     VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
+    VkDynamicState dynamicStateEnables[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    VkPipelineDynamicStateCreateInfo dynamicState{};
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.dynamicStateCount = 2;
+    dynamicState.pDynamicStates = dynamicStateEnables;
+    
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.stageCount = 2;
@@ -294,8 +291,9 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.layout = mvGetRawPipelineLayoutAsset(&assetManager, "main_pass");
-    pipelineInfo.renderPass = spec.renderPass == VK_NULL_HANDLE ? GContext->graphics.renderPass : spec.renderPass;
+    pipelineInfo.renderPass = spec.renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.pDepthStencilState = &depthStencil;

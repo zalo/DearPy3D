@@ -134,9 +134,17 @@ mvPreloadAssetManager(mvAssetManager& am)
 	pipelineSpec.wireFrame = false;
 	pipelineSpec.vertexShader = "vs_shader.vert.spv";
 	pipelineSpec.pixelShader = "ps_shader.frag.spv";
-	pipelineSpec.width = 0.0f;  // use viewport
-	pipelineSpec.height = 0.0f; // use viewport
-	pipelineSpec.renderPass = VK_NULL_HANDLE;
+	pipelineSpec.width = (float)GContext->graphics.swapChainExtent.width;  // use viewport
+	pipelineSpec.height = (float)GContext->graphics.swapChainExtent.height; // use viewport
+	pipelineSpec.renderPass = GContext->graphics.renderPass;
+	pipelineSpec.layout = mvCreateVertexLayout(
+		{
+			mvVertexElementType::Position3D,
+			mvVertexElementType::Normal,
+			mvVertexElementType::Tangent,
+			mvVertexElementType::Bitangent,
+			mvVertexElementType::Texture2D
+		});
 
 	mvPipeline pipeline = mvCreatePipeline(am, pipelineSpec);
 	mvRegisterAsset(&am, "main_pass", pipeline);

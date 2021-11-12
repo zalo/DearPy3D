@@ -44,16 +44,18 @@ struct mvPipelineSpec
 	f32                 width = 0.0f;  // viewport
 	f32                 height = 0.0f; // viewport
 	VkRenderPass        renderPass = VK_NULL_HANDLE;
+	mvVertexLayout      layout;
 };
 
 struct mvPipeline
 {
+	mvPipelineSpec   specification;
 	mvShader         vertexShader;
 	mvShader         fragShader;
-	mvVertexLayout   layout;
 	VkPipelineLayout pipelineLayout;
 	VkPipeline       pipeline = VK_NULL_HANDLE;
 };
 
 
-mvPipeline       mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec);
+mvPipeline     mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec);
+mvVertexLayout mvCreateVertexLayout(std::vector<mvVertexElementType> elements);
