@@ -436,6 +436,15 @@ mvGetRawSceneAsset(mvAssetManager* manager, const std::string& tag)
 // textures
 //-----------------------------------------------------------------------------
 
+mvAssetID 
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvTexture asset)
+{
+	manager->textures[manager->textureCount].asset = asset;
+	manager->textures[manager->textureCount].hash = tag;
+	manager->textureCount++;
+	return manager->textureCount - 1;
+}
+
 mvAssetID
 mvGetTextureAssetID(mvAssetManager* manager, const std::string& path)
 {

@@ -21,6 +21,154 @@ mv_internal b8 loadGLTF = false;
 mv_internal b8 loadSponza = true;
 mv_internal f32 shadowWidth = 100.0f;
 
+struct OffscreenSetup
+{
+    mvPass                 pass;
+    mvPipeline             pipeline;
+    std::vector<mvTexture> textures;
+};
+
+OffscreenSetup CreateSecondaryPass(mvAssetManager& am)
+{
+    std::vector<mvTexture> colorTexture;
+    colorTexture.resize(GContext->graphics.swapChainImageViews.size());
+    for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+        colorTexture[i] = mvCreateTexture(
+            512, 512,
+            VK_FORMAT_R8G8B8A8_UNORM,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            VK_IMAGE_ASPECT_COLOR_BIT);
+
+    std::vector<mvTexture> depthTexture;
+    depthTexture.resize(GContext->graphics.swapChainImageViews.size());
+    for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+        depthTexture[i] = mvCreateTexture(
+            512, 512,
+            VK_FORMAT_D32_SFLOAT,
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            VK_IMAGE_ASPECT_DEPTH_BIT);
+
+    mvAssetID colorTextureIDs[3];
+    colorTextureIDs[0] = mvRegisterAsset(&am, "offscreen1", colorTexture[0]);
+    colorTextureIDs[1] = mvRegisterAsset(&am, "offscreen2", colorTexture[1]);
+    colorTextureIDs[2] = mvRegisterAsset(&am, "offscreen3", colorTexture[2]);
+
+    VkRenderPass offscreenRenderPass = VK_NULL_HANDLE;
+
+    {
+        //mvCreateRenderPass(VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_D32_SFLOAT , &offscreenRenderPass);
+
+        std::array<VkAttachmentDescription, 2> attchmentDescriptions = {};
+        // Color attachment
+        attchmentDescriptions[0].format = VK_FORMAT_R8G8B8A8_UNORM;
+        attchmentDescriptions[0].samples = VK_SAMPLE_COUNT_1_BIT;
+        attchmentDescriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attchmentDescriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attchmentDescriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attchmentDescriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attchmentDescriptions[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attchmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        // Depth attachment
+        attchmentDescriptions[1].format = VK_FORMAT_D32_SFLOAT;
+        attchmentDescriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
+        attchmentDescriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attchmentDescriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attchmentDescriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attchmentDescriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attchmentDescriptions[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attchmentDescriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+        VkAttachmentReference depthReference = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+        VkSubpassDescription subpassDescription = {};
+        subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpassDescription.colorAttachmentCount = 1;
+        subpassDescription.pColorAttachments = &colorReference;
+        subpassDescription.pDepthStencilAttachment = &depthReference;
+
+        // Use subpass dependencies for layout transitions
+        std::array<VkSubpassDependency, 2> dependencies;
+
+        dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependencies[0].dstSubpass = 0;
+        dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+        dependencies[1].srcSubpass = 0;
+        dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+        dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+        // Create the actual renderpass
+        VkRenderPassCreateInfo renderPassInfo = {};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderPassInfo.attachmentCount = static_cast<uint32_t>(attchmentDescriptions.size());
+        renderPassInfo.pAttachments = attchmentDescriptions.data();
+        renderPassInfo.subpassCount = 1;
+        renderPassInfo.pSubpasses = &subpassDescription;
+        renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
+        renderPassInfo.pDependencies = dependencies.data();
+
+        vkCreateRenderPass(GContext->graphics.logicalDevice, &renderPassInfo, nullptr, &offscreenRenderPass);
+    }
+
+    std::vector<VkFramebuffer> offscreenFramebuffers;
+    offscreenFramebuffers.resize(GContext->graphics.swapChainImageViews.size());
+    for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+    {
+        mvCreateFrameBuffer(offscreenRenderPass,
+            offscreenFramebuffers[i],
+            512,
+            512,
+            std::vector<VkImageView>{ colorTexture[i].imageInfo.imageView, depthTexture[i].imageInfo.imageView });
+    }
+
+
+    mvPipelineSpec pipelineSpec{};
+    pipelineSpec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    pipelineSpec.backfaceCulling = true;
+    pipelineSpec.depthTest = true;
+    pipelineSpec.depthWrite = true;
+    pipelineSpec.wireFrame = false;
+    pipelineSpec.vertexShader = "vs_basic.vert.spv";
+    pipelineSpec.pixelShader = "ps_basic.frag.spv";
+    pipelineSpec.width = (float)512.0f;  // use viewport
+    pipelineSpec.height = (float)512.0f; // use viewport
+    pipelineSpec.renderPass = offscreenRenderPass;
+    pipelineSpec.layout = mvCreateVertexLayout({});
+    pipelineSpec.layout.bindingDescriptions.clear();
+
+    mvPipeline offscreenPipeline = mvCreatePipeline(am, pipelineSpec);
+
+    mvPass offscreenPass{
+        offscreenRenderPass,
+        GContext->graphics.swapChainExtent,
+        offscreenFramebuffers
+            };
+
+    offscreenPass.viewport.x = 0.0f;
+    offscreenPass.viewport.y = 512;
+    offscreenPass.viewport.width = 512;
+    offscreenPass.viewport.height = -512;
+    offscreenPass.viewport.minDepth = 0.0f;
+    offscreenPass.viewport.maxDepth = 1.0f;
+    offscreenPass.extent.width = (u32)512;
+    offscreenPass.extent.height = (u32)offscreenPass.viewport.y;
+
+    OffscreenSetup offscreen{};
+    offscreen.pass = offscreenPass;
+    offscreen.pipeline = offscreenPipeline;
+    offscreen.textures = colorTexture;
+    return offscreen;
+}
+
 int main() 
 {
 
@@ -80,6 +228,8 @@ int main()
     mainPass.viewport.maxDepth = 1.0f;
     mainPass.extent.width = (u32)GContext->graphics.swapChainExtent.width;
     mainPass.extent.height = (u32)mainPass.viewport.y;
+
+    OffscreenSetup offscreen = CreateSecondaryPass(am);
 
     //---------------------------------------------------------------------
     // main loop
@@ -141,18 +291,31 @@ int main()
         Renderer::mvBeginFrame();
 
         //---------------------------------------------------------------------
+        // offscreen pass
+        //---------------------------------------------------------------------
+
+        Renderer::mvBeginPass(mvGetCurrentCommandBuffer(), offscreen.pass);
+
+        vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, offscreen.pipeline.pipeline);
+        vkCmdDraw(mvGetCurrentCommandBuffer(), 3, 1, 0, 0);
+
+        Renderer::mvEndPass(mvGetCurrentCommandBuffer());
+
+        //---------------------------------------------------------------------
         // main pass
         //---------------------------------------------------------------------
 
-        auto currentCommandBuffer = mvGetCurrentCommandBuffer();
-
-        Renderer::mvBeginPass(currentCommandBuffer, mainPass);
+        Renderer::mvBeginPass(mvGetCurrentCommandBuffer(), mainPass);
 
         ImGuiIO& io = ImGui::GetIO();
         ImGui::GetForegroundDrawList()->AddText(ImVec2(45, 45),
             ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(io.Framerate) + " FPS").c_str());
 
         mvShowAssetManager(am);
+
+        if (ImGui::Begin("Debug Output", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+            ImGui::Image(offscreen.textures[GContext->graphics.currentImageIndex].imguiID, ImVec2(512, 512));
+        ImGui::End();
 
         ImGui::Begin("Light Controls");
         if (ImGui::SliderFloat3("Position", &light.info.viewLightPos.x, -25.0f, 25.0f))
@@ -183,16 +346,9 @@ int main()
             Renderer::mvRenderScene(am, am.scenes[i].asset, viewMatrix, projMatrix);
 
         ImGui::Render();
-        mvRecordImGui(currentCommandBuffer);
+        mvRecordImGui(mvGetCurrentCommandBuffer());
 
-        Renderer::mvEndPass(currentCommandBuffer);
-
-        //---------------------------------------------------------------------
-        // secondary pass
-        //---------------------------------------------------------------------
-        //Renderer::mvBeginPass(currentCommandBuffer, overlayPass);
-
-        //Renderer::mvEndPass(currentCommandBuffer);
+        Renderer::mvEndPass(mvGetCurrentCommandBuffer());
 
         //---------------------------------------------------------------------
         // submit command buffers & present

@@ -3,6 +3,7 @@
 #include <string>
 #include <vulkan/vulkan.h>
 #include <imgui.h>
+#include "mvTypes.h"
 
 struct mvTexture
 {
@@ -14,3 +15,5 @@ struct mvTexture
 };
 
 mvTexture mvCreateTexture(const std::string& file);
+
+mvTexture mvCreateTexture(u32 width, u32 height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect);

@@ -92,7 +92,8 @@ mvCreateSwapChain()
         VkBool32 presentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(GContext->graphics.physicalDevice, 0, GContext->graphics.surface, &presentSupport);
 
-        if (formatCount != 0) {
+        if (formatCount != 0) 
+        {
             swapChainSupport.formats.resize(formatCount);
             vkGetPhysicalDeviceSurfaceFormatsKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &formatCount, swapChainSupport.formats.data());
         }
@@ -100,7 +101,8 @@ mvCreateSwapChain()
         uint32_t presentModeCount;
         vkGetPhysicalDeviceSurfacePresentModesKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &presentModeCount, nullptr);
 
-        if (presentModeCount != 0) {
+        if (presentModeCount != 0) 
+        {
             swapChainSupport.presentModes.resize(presentModeCount);
             vkGetPhysicalDeviceSurfacePresentModesKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &presentModeCount, swapChainSupport.presentModes.data());
         }
@@ -237,7 +239,7 @@ mvSetupImGui(GLFWwindow* window)
 }
 
 void 
-mvCreateRenderPass(VkFormat format, VkRenderPass* renderPass)
+mvCreateRenderPass(VkFormat format, VkFormat depthformat, VkRenderPass* renderPass)
 {
     VkAttachmentDescription attachments[2];
 
@@ -254,7 +256,7 @@ mvCreateRenderPass(VkFormat format, VkRenderPass* renderPass)
 
     // depth attachment
     attachments[1].flags = VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT;
-    attachments[1].format = VK_FORMAT_D32_SFLOAT;
+    attachments[1].format = depthformat;
     attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
     attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -379,7 +381,7 @@ mvSetupGraphicsContext()
 
         VkApplicationInfo appInfo{};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        appInfo.apiVersion = VK_API_VERSION_1_1;
+        appInfo.apiVersion = VK_API_VERSION_1_2;
 
         VkInstanceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -646,7 +648,7 @@ mvSetupGraphicsContext()
     //-----------------------------------------------------------------------------
     // create render pass
     //-----------------------------------------------------------------------------
-    mvCreateRenderPass(GContext->graphics.swapChainImageFormat, &GContext->graphics.renderPass);
+    mvCreateRenderPass(GContext->graphics.swapChainImageFormat, VK_FORMAT_D32_SFLOAT, &GContext->graphics.renderPass);
    
     //-----------------------------------------------------------------------------
     // create depth resources
@@ -825,7 +827,7 @@ mvRecreateSwapChain()
     vkDeviceWaitIdle(mvGetLogicalDevice());
     mvFlushResources();
     mvCreateSwapChain();
-    mvCreateRenderPass(GContext->graphics.swapChainImageFormat, &GContext->graphics.renderPass);
+    mvCreateRenderPass(GContext->graphics.swapChainImageFormat, VK_FORMAT_D32_SFLOAT, &GContext->graphics.renderPass);
 
     //-----------------------------------------------------------------------------
     // create depth resources
@@ -866,7 +868,8 @@ mvGetRequiredUniformBufferSize(size_t size)
     return alignedSize;
 }
 
-void mvRecordImGui(VkCommandBuffer commandBuffer)
+void 
+mvRecordImGui(VkCommandBuffer commandBuffer)
 {
     // Record dear imgui primitives into command buffer
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);

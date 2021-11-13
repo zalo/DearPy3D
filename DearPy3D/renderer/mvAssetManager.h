@@ -83,6 +83,7 @@ mvAssetID mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvMes
 mvAssetID mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvBuffer asset);
 mvAssetID mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvMaterial asset);
 mvAssetID mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvNode asset);
+mvAssetID mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvTexture asset);
 
 // ID retrieval
 mvAssetID mvGetPipelineAssetID           (mvAssetManager* manager, const std::string& tag);

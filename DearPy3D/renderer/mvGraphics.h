@@ -23,7 +23,7 @@ VkCommandBuffer  mvGetCurrentCommandBuffer();
 void mvSetupGraphicsContext();
 void mvRecreateSwapChain();
 void mvCleanupGraphicsContext();
-void mvCreateRenderPass(VkFormat format, VkRenderPass* renderPass);
+void mvCreateRenderPass(VkFormat format, VkFormat depthformat, VkRenderPass* renderPass);
 void mvCreateFrameBuffer(VkRenderPass renderPass, VkFramebuffer& frameBuffer, u32 width, u32 height, std::vector<VkImageView> imageViews);
 
 // allocator

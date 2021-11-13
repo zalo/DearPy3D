@@ -22,12 +22,21 @@ namespace Renderer {
 
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
+        ImGui::NewFrame();;
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+        if (vkBeginCommandBuffer(mvGetCurrentCommandBuffer(), &beginInfo) != VK_SUCCESS)
+            throw std::runtime_error("failed to begin recording command buffer!");
     }
 
     void
     mvEndFrame()
     {
+
+        if (vkEndCommandBuffer(mvGetCurrentCommandBuffer()) != VK_SUCCESS)
+            throw std::runtime_error("failed to record command buffer!");
 
         VkSemaphore waitSemaphores[] = { GContext->graphics.imageAvailableSemaphores[GContext->graphics.currentFrame] };
         VkSemaphore signalSemaphores[] = { GContext->graphics.renderFinishedSemaphores[GContext->graphics.currentFrame] };
@@ -81,11 +90,11 @@ namespace Renderer {
     void
     mvBeginPass(VkCommandBuffer commandBuffer, mvPass& pass, b8 clear)
     {
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        //VkCommandBufferBeginInfo beginInfo{};
+        //beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
-            throw std::runtime_error("failed to begin recording command buffer!");
+        //if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
+        //    throw std::runtime_error("failed to begin recording command buffer!");
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -118,8 +127,8 @@ namespace Renderer {
 
         vkCmdEndRenderPass(commandBuffer);
 
-        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
-            throw std::runtime_error("failed to record command buffer!");
+        //if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
+        //    throw std::runtime_error("failed to record command buffer!");
     }
 
     mv_internal void
