@@ -5,6 +5,7 @@
 #include "mvMath.h"
 #include <vulkan/vulkan.h>
 #include "mvTypes.h"
+#include "mvDescriptorSet.h"
 
 struct mvAssetManager;
 struct mvPointLight;
@@ -42,7 +43,7 @@ struct mvSceneBuffer
 struct mvScene
 {
     mvSceneBuffer    sceneBuffer;
-    VkDescriptorSet* descriptorSets;
+    mvDescriptorSet  descriptorSets;
     mvAssetID        nodes[256];
     u32              nodeCount = 0u;
     u32              meshOffset = 0u;

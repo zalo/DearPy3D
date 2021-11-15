@@ -27,6 +27,7 @@ target_sources(dearpy3d
 		"renderer/mvObjLoader.cpp"
 		"renderer/mvRenderer.cpp"
 		"renderer/mvAssetManager.cpp"
+		"renderer/mvDescriptorSet.cpp"
 		"renderer/mvMaterials.cpp"
 		"renderer/mvLights.cpp"
 		"renderer/mvGraphics.cpp"

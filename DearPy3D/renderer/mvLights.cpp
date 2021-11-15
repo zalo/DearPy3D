@@ -3,7 +3,7 @@
 #include "mvAssetManager.h"
 
 mvPointLight 
-mvCreatePointLight(mvAssetManager& am, mvVec3 pos)
+mvCreatePointLight(mvAssetManager& am, const std::string& name, mvVec3 pos)
 {
 
     mvPointLight light;
@@ -11,7 +11,7 @@ mvCreatePointLight(mvAssetManager& am, mvVec3 pos)
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
         light.buffer.buffers.push_back(mvRegisterAsset(&am,
-            "point_light",
+            name,
             mvCreateDynamicBuffer(&light.info, 1, sizeof(mvPointLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)));
 
     mvMesh lightCube = mvCreateTexturedCube(am, 0.25f);
@@ -20,7 +20,7 @@ mvCreatePointLight(mvAssetManager& am, mvVec3 pos)
     mat1.doLighting = false;
     
     mvMaterial material = mvCreateMaterial(am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
-    lightCube.phongMaterialID = mvRegisterAsset(&am, "light material", material);
+    lightCube.phongMaterialID = mvRegisterAsset(&am, name, material);
 
     mvPipelineSpec spec{};
     spec.backfaceCulling = true;
@@ -31,25 +31,24 @@ mvCreatePointLight(mvAssetManager& am, mvVec3 pos)
     spec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     am.phongMaterials[lightCube.phongMaterialID].asset.pipeline = mvGetPipelineAssetID(&am, "main_pass");
-    mvRegisterAsset(&am, "light", lightCube);
+    mvRegisterAsset(&am, name, lightCube);
 
-    light.mesh = mvGetRawMeshAsset(&am, "light");
+    light.mesh = mvGetRawMeshAsset(&am, name);
     return light;
 }
 
 mvDirectionLight
-mvCreateDirectionLight(mvAssetManager& am, mvVec3 dir)
+mvCreateDirectionLight(mvAssetManager& am, const std::string& name, mvVec3 dir)
 {
 
     mvDirectionLight light{};
     light.info.viewLightDir = dir;
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
         light.buffer.buffers.push_back(mvRegisterAsset(&am,
-            "direction_light",
+            name,
             mvCreateDynamicBuffer(&light.info, 1, sizeof(mvDirectionLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)));
     return light;
 }
-
 
 void
 mvBind(mvAssetManager& am, mvPointLight& light, mvMat4 viewMatrix)

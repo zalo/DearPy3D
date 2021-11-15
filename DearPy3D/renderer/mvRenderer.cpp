@@ -73,23 +73,20 @@ namespace Renderer {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
         VkCommandBuffer commandBuffer = GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex];
-        VkPipeline pipeline = mvGetRawPipelineAsset(&am, "main_pass")->pipeline;
-        VkPipelineLayout pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "main_pass");
-        VkDescriptorSet descriptorSet = am.phongMaterials[mesh.phongMaterialID].asset.descriptorSets[GContext->graphics.currentImageIndex];
         VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
         VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
 
-        vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &descriptorSet, 0, nullptr);
+        mvBindDescriptorSet(am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSets, 1);
         vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &vertexBuffer, &offsets);
-        vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
         mvTransforms transforms;
         transforms.model = accumulatedTransform;
         transforms.modelView = camera * transforms.model;
         transforms.modelViewProjection = projection * transforms.modelView;
 
-        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
+        VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "main_pass");
+        vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
         vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.count, 1, 0, 0, 0);
     }
@@ -145,6 +142,7 @@ namespace Renderer {
     void
     mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
     {
+
         for (u32 i = 0; i < scene.nodeCount; i++)
         {
             mvNode& rootNode = am.nodes[scene.nodes[i]].asset;

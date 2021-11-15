@@ -206,14 +206,14 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	// cleanup materials
 	for (int i = 0; i < manager->phongMaterialCount; i++)
 	{
-		delete[] manager->phongMaterials[i].asset.descriptorSets;
+		delete[] manager->phongMaterials[i].asset.descriptorSets.descriptorSets;
 	}
 	manager->phongMaterialCount = 0u;
 
 	// cleanup scene
 	for (int i = 0; i < manager->sceneCount; i++)
 	{
-		delete[] manager->scenes[i].asset.descriptorSets;
+		delete[] manager->scenes[i].asset.descriptorSets.descriptorSets;
 	}
 	manager->sceneCount = 0u;
 

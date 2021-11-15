@@ -63,7 +63,7 @@ struct mvDirectionLight
     mvDirectionLightInfo   info;
 };
 
-mvPointLight     mvCreatePointLight (mvAssetManager& am, mvVec3 pos = { 0.0f,0.0f,0.5f });
-mvDirectionLight mvCreateDirectionLight(mvAssetManager& am, mvVec3 dir = { 0.0f,0.0f,0.5f });
+mvPointLight     mvCreatePointLight (mvAssetManager& am, const std::string& name, mvVec3 pos = { 0.0f,0.0f,0.5f });
+mvDirectionLight mvCreateDirectionLight(mvAssetManager& am, const std::string& name, mvVec3 dir = { 0.0f,0.0f,0.5f });
 void             mvBind             (mvAssetManager& am, mvPointLight& light, mvMat4 viewMatrix);
 void             mvBind             (mvAssetManager& am, mvDirectionLight& light, mvMat4 viewMatrix);

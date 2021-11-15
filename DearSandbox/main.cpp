@@ -20,6 +20,8 @@ mv_internal const char* gltfPath = "C://dev//glTF-Sample-Models//2.0//";
 mv_internal b8 loadGLTF = false;
 mv_internal b8 loadSponza = true;
 mv_internal f32 shadowWidth = 100.0f;
+mv_internal f32 offscreenSize = 800.0f;
+mv_internal f32 offscreenWidth = 100.0f;
 
 struct OffscreenSetup
 {
@@ -34,7 +36,7 @@ OffscreenSetup CreateSecondaryPass(mvAssetManager& am)
     colorTexture.resize(GContext->graphics.swapChainImageViews.size());
     for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
         colorTexture[i] = mvCreateTexture(
-            512, 512,
+            offscreenSize, offscreenSize,
             VK_FORMAT_R8G8B8A8_UNORM,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             VK_IMAGE_ASPECT_COLOR_BIT);
@@ -43,7 +45,7 @@ OffscreenSetup CreateSecondaryPass(mvAssetManager& am)
     depthTexture.resize(GContext->graphics.swapChainImageViews.size());
     for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
         depthTexture[i] = mvCreateTexture(
-            512, 512,
+            offscreenSize, offscreenSize,
             VK_FORMAT_D32_SFLOAT,
             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
             VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -130,8 +132,8 @@ OffscreenSetup CreateSecondaryPass(mvAssetManager& am)
     {
         mvCreateFrameBuffer(offscreenRenderPass,
             offscreenFramebuffers[i],
-            512,
-            512,
+            offscreenSize,
+            offscreenSize,
             std::vector<VkImageView>{ colorTexture[i].imageInfo.imageView, depthTexture[i].imageInfo.imageView });
     }
 
@@ -145,13 +147,19 @@ OffscreenSetup CreateSecondaryPass(mvAssetManager& am)
     pipelineSpec.depthTest = true;
     pipelineSpec.depthWrite = true;
     pipelineSpec.wireFrame = false;
-    pipelineSpec.vertexShader = "vs_basic.vert.spv";
-    pipelineSpec.pixelShader = "ps_basic.frag.spv";
-    pipelineSpec.width = (float)512.0f;  // use viewport
-    pipelineSpec.height = (float)512.0f; // use viewport
+    pipelineSpec.vertexShader = "vs_shader.vert.spv";
+    pipelineSpec.pixelShader = "ps_shader.frag.spv";
+    pipelineSpec.width = offscreenSize;  // use viewport
+    pipelineSpec.height = offscreenSize; // use viewport
     pipelineSpec.renderPass = offscreenRenderPass;
-    pipelineSpec.layout = mvCreateVertexLayout({});
-    pipelineSpec.layout.bindingDescriptions.clear();
+    pipelineSpec.layout = mvCreateVertexLayout(
+        {
+            mvVertexElementType::Position3D,
+            mvVertexElementType::Normal,
+            mvVertexElementType::Tangent,
+            mvVertexElementType::Bitangent,
+            mvVertexElementType::Texture2D
+        });
     pipelineSpec.mainPass = false;
 
     mvPipeline offscreenPipeline = mvCreatePipeline(am, pipelineSpec);
@@ -165,12 +173,12 @@ OffscreenSetup CreateSecondaryPass(mvAssetManager& am)
             };
 
     offscreenPass.viewport.x = 0.0f;
-    offscreenPass.viewport.y = 512;
-    offscreenPass.viewport.width = 512;
-    offscreenPass.viewport.height = -512;
+    offscreenPass.viewport.y = offscreenSize;
+    offscreenPass.viewport.width = offscreenSize;
+    offscreenPass.viewport.height = -offscreenSize;
     offscreenPass.viewport.minDepth = 0.0f;
     offscreenPass.viewport.maxDepth = 1.0f;
-    offscreenPass.extent.width = (u32)512;
+    offscreenPass.extent.width = (u32)offscreenSize;
     offscreenPass.extent.height = (u32)offscreenPass.viewport.y;
 
     OffscreenSetup offscreen{};
@@ -197,6 +205,7 @@ int main()
     mvInitializeAssetManager(&am);
 
     mvAssetID scene = mvRegisterAsset(&am, "test_scene", mvCreateScene(am, {}));
+    mvAssetID scene2 = mvRegisterAsset(&am, "test_scene2", mvCreateScene(am, {}));
 
     if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
 
@@ -207,6 +216,17 @@ int main()
     camera.pitch = 0.0f;
     camera.yaw = 0.0f;
     camera.aspect = GContext->viewport.width / GContext->viewport.height;
+
+    mvOrthoCamera secondaryCamera{};
+    secondaryCamera.pos = { 0.0f, 99.0f, 0.0f };
+    secondaryCamera.dir = { 0.0f, -1.0f, 0.0f };
+    secondaryCamera.up = { 1.0f, 0.0f, 0.0f };
+    secondaryCamera.left = -offscreenWidth;
+    secondaryCamera.right = offscreenWidth;
+    secondaryCamera.bottom = -offscreenWidth;
+    secondaryCamera.top = offscreenWidth;
+    secondaryCamera.nearZ = -201.0f;
+    secondaryCamera.farZ = 201.0f;
     
     mvMesh quad1 = mvCreateTexturedQuad(am);
     mvRegisterAsset(&am, "quad1", quad1);
@@ -216,12 +236,16 @@ int main()
     mvRegisterAsset(&am, "cube1", cube1);
     mvMat4 cubeTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 10.0f, 10.0f, 20.0f });
 
-    mvPointLight light = mvCreatePointLight(am, { 0.0f, 10.0f, 0.0f });
+    mvPointLight light1 = mvCreatePointLight(am, "light1", { 0.0f, 10.0f, 0.0f });
     mvMat4 lightTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 10.0f, 0.0f });
 
-    mvDirectionLight dlight = mvCreateDirectionLight(am, { 0.0, -1.0f, 0.0f });
+    mvPointLight light2 = mvCreatePointLight(am, "light2", { 0.0f, 10.0f, 0.0f });
+
+    mvDirectionLight dlight1 = mvCreateDirectionLight(am, "dlight1", mvVec3{ 0.0, -1.0f, 0.0f });
+    mvDirectionLight dlight2 = mvCreateDirectionLight(am, "dlight2", mvVec3{ 0.0, -1.0f, 0.0f });
     
-    mvUpdateSceneDescriptors(am, am.scenes[scene].asset, light, dlight);
+    mvUpdateSceneDescriptors(am, am.scenes[scene].asset, light1, dlight1);
+    mvUpdateSceneDescriptors(am, am.scenes[scene2].asset, light2, dlight2);
 
     //---------------------------------------------------------------------
     // passes
@@ -244,6 +268,8 @@ int main()
 
     OffscreenSetup offscreen = CreateSecondaryPass(am);
 
+    VkPipeline mainPipeline = mvGetRawPipelineAsset(&am, "main_pass")->pipeline;
+
     //---------------------------------------------------------------------
     // main loop
     //---------------------------------------------------------------------
@@ -252,7 +278,6 @@ int main()
     while (GContext->viewport.running)
     {
         const auto dt = timer.mark() * 1.0f;
-        //quad1.rot.z += dt;
 
         mvProcessViewportEvents();
 
@@ -291,37 +316,27 @@ int main()
             mainPass.extent.height = (u32)mainPass.viewport.y;
 
             GContext->viewport.resized = false;
+
+            mainPipeline = mvGetRawPipelineAsset(&am, "main_pass")->pipeline;
         }
 
         //---------------------------------------------------------------------
         // input handling
         //---------------------------------------------------------------------
         mvUpdateCameraFPSCamera(camera, dt, 12.0f, 1.0f);
+
+        mvMat4 viewMatrix = mvCreateFPSView(camera);
+        mvMat4 projMatrix = mvCreateLookAtProjection(camera);
+
+        mvMat4 secondaryViewMatrix = mvCreateOrthoView(secondaryCamera);
+        mvMat4 secondaryProjMatrix = mvCreateOrthoProjection(secondaryCamera);
  
         //---------------------------------------------------------------------
         // wait for fences and acquire next image
         //---------------------------------------------------------------------
         Renderer::mvBeginFrame();
 
-        mvBindScene(am, scene);
         Renderer::mvUpdateDescriptors(am);
-
-        //---------------------------------------------------------------------
-        // offscreen pass
-        //---------------------------------------------------------------------
-
-        Renderer::mvBeginPass(mvGetCurrentCommandBuffer(), offscreen.pass);
-
-        vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, offscreen.pipeline.pipeline);
-        vkCmdDraw(mvGetCurrentCommandBuffer(), 3, 1, 0, 0);
-
-        Renderer::mvEndPass(mvGetCurrentCommandBuffer());
-
-        //---------------------------------------------------------------------
-        // main pass
-        //---------------------------------------------------------------------
-
-        Renderer::mvBeginPass(mvGetCurrentCommandBuffer(), mainPass);
 
         ImGuiIO& io = ImGui::GetIO();
         ImGui::GetForegroundDrawList()->AddText(ImVec2(45, 45),
@@ -334,10 +349,12 @@ int main()
         ImGui::End();
 
         ImGui::Begin("Light Controls");
-        if (ImGui::SliderFloat3("Position", &light.info.viewLightPos.x, -25.0f, 25.0f))
+        if (ImGui::SliderFloat3("Position", &light1.info.viewLightPos.x, -50.0f, 50.0f))
         {
-            lightTransform = mvTranslate(mvIdentityMat4(), light.info.viewLightPos.xyz());
-            mvUpdateSceneDescriptors(am, am.scenes[scene].asset, light, dlight);
+            lightTransform = mvTranslate(mvIdentityMat4(), light1.info.viewLightPos.xyz());
+            light2.info.viewLightPos = light1.info.viewLightPos;
+            mvUpdateSceneDescriptors(am, am.scenes[scene].asset, light1, dlight1);
+            mvUpdateSceneDescriptors(am, am.scenes[scene2].asset, light2, dlight2);
         }
         ImGui::End();
 
@@ -347,13 +364,38 @@ int main()
         ImGui::Checkbox("Specular Mapping", (bool*)&am.scenes[scene].asset.data.doSpecular);
         ImGui::End();
 
-        mvMat4 viewMatrix = mvCreateFPSView(camera);
-        mvMat4 projMatrix = mvCreateLookAtProjection(camera);
+        //---------------------------------------------------------------------
+        // offscreen pass
+        //---------------------------------------------------------------------
+        mvBindScene(am, scene2);
+        Renderer::mvBeginPass(mvGetCurrentCommandBuffer(), offscreen.pass);
 
-        mvBind(am, light, viewMatrix);
-        mvBind(am, dlight, viewMatrix);
+        mvBind(am, light2, secondaryViewMatrix);
+        mvBind(am, dlight2, secondaryViewMatrix);
 
-        Renderer::mvRenderMesh(am, *light.mesh, lightTransform, viewMatrix, projMatrix);
+        vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, offscreen.pipeline.pipeline);
+
+        Renderer::mvRenderMesh(am, *light2.mesh, lightTransform, secondaryViewMatrix, secondaryProjMatrix);
+        Renderer::mvRenderMesh(am, cube1, cubeTransform, secondaryViewMatrix, secondaryProjMatrix);
+        Renderer::mvRenderMesh(am, quad1, quadTransform, secondaryViewMatrix, secondaryProjMatrix);
+
+        for (int i = 0; i < am.sceneCount; i++)
+            Renderer::mvRenderScene(am, am.scenes[i].asset, secondaryViewMatrix, secondaryProjMatrix);
+
+        Renderer::mvEndPass(mvGetCurrentCommandBuffer());
+
+        //---------------------------------------------------------------------
+        // main pass
+        //---------------------------------------------------------------------
+        mvBindScene(am, scene);
+        Renderer::mvBeginPass(mvGetCurrentCommandBuffer(), mainPass);
+
+        mvBind(am, light1, viewMatrix);
+        mvBind(am, dlight1, viewMatrix);
+
+        vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, mainPipeline);
+
+        Renderer::mvRenderMesh(am, *light1.mesh, lightTransform, viewMatrix, projMatrix);
         Renderer::mvRenderMesh(am, cube1, cubeTransform, viewMatrix, projMatrix);
         Renderer::mvRenderMesh(am, quad1, quadTransform, viewMatrix, projMatrix);
 

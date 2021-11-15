@@ -32,13 +32,19 @@ mvCreateFPSView(mvCamera& camera)
 mvMat4
 mvCreateOrthoView(mvOrthoCamera& camera)
 {
-    return mvLookAtRH(camera.pos, camera.pos + camera.dir, camera.up);
+    return mvLookAtRH(camera.pos, camera.pos - camera.dir, camera.up);
 }
 
 mvMat4
 mvCreateOrthoProjection(mvOrthoCamera& camera)
 {
-    return mvOrthoRH(camera.left, camera.right, camera.bottom, camera.top, camera.nearZ, camera.farZ);
+    return mvOrthoRH(
+        camera.left, 
+        camera.right, 
+        camera.bottom, 
+        camera.top, 
+        camera.nearZ, 
+        camera.farZ);
 }
 
 mvMat4

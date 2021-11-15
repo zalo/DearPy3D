@@ -9,7 +9,6 @@ mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, const char* ve
 {
     mvMaterial material{};
     material.data = materialData;
-    material.descriptorSets = new VkDescriptorSet[GContext->graphics.swapChainImages.size()];
     material.texture = mvGetTextureAssetID(&am, "../../Resources/brickwall.jpg");
     material.vertexShader = vertexShader;
     material.pixelShader = pixelShader;
@@ -35,19 +34,7 @@ mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, const char* ve
             mvCreateDynamicBuffer(&materialData, 1, sizeof(mvMaterialData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)));
     }
 
-    //-----------------------------------------------------------------------------
-    // allocate descriptor sets
-    //-----------------------------------------------------------------------------
-    std::vector<VkDescriptorSetLayout> layouts(GContext->graphics.swapChainImages.size(), mvGetRawDescriptorSetLayoutAsset(&am, "phong"));
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = GContext->graphics.descriptorPool;
-    allocInfo.descriptorSetCount = GContext->graphics.swapChainImages.size();
-    allocInfo.pSetLayouts = layouts.data();
-
-    if (vkAllocateDescriptorSets(mvGetLogicalDevice(), &allocInfo, material.descriptorSets) != VK_SUCCESS)
-        throw std::runtime_error("failed to allocate descriptor sets!");
-
+    material.descriptorSets = mvCreateDescriptorSet(am, mvGetRawDescriptorSetLayoutAsset(&am, "phong"), mvGetPipelineLayoutAssetID(&am, "main_pass"));
     return material;
 }
 
@@ -64,7 +51,7 @@ mvUpdateMaterialDescriptors(mvAssetManager& am, mvMaterial& material, mvAssetID 
     if (specularTexture == MV_INVALID_ASSET_ID) specularTexture = material.texture;
 
     descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[0].dstSet = material.descriptorSets[GContext->graphics.currentImageIndex];
+    descriptorWrites[0].dstSet = material.descriptorSets.descriptorSets[GContext->graphics.currentImageIndex];
     descriptorWrites[0].dstBinding = 0;
     descriptorWrites[0].dstArrayElement = 0;
     descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -72,7 +59,7 @@ mvUpdateMaterialDescriptors(mvAssetManager& am, mvMaterial& material, mvAssetID 
     descriptorWrites[0].pImageInfo = &am.textures[colorTexture].asset.imageInfo;
 
     descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[1].dstSet = material.descriptorSets[GContext->graphics.currentImageIndex];
+    descriptorWrites[1].dstSet = material.descriptorSets.descriptorSets[GContext->graphics.currentImageIndex];
     descriptorWrites[1].dstBinding = 1;
     descriptorWrites[1].dstArrayElement = 0;
     descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -80,7 +67,7 @@ mvUpdateMaterialDescriptors(mvAssetManager& am, mvMaterial& material, mvAssetID 
     descriptorWrites[1].pImageInfo = &am.textures[normalTexture].asset.imageInfo;
 
     descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[2].dstSet = material.descriptorSets[GContext->graphics.currentImageIndex];
+    descriptorWrites[2].dstSet = material.descriptorSets.descriptorSets[GContext->graphics.currentImageIndex];
     descriptorWrites[2].dstBinding = 2;
     descriptorWrites[2].dstArrayElement = 0;
     descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -93,7 +80,7 @@ mvUpdateMaterialDescriptors(mvAssetManager& am, mvMaterial& material, mvAssetID 
     materialInfo.range = mvGetRequiredUniformBufferSize(sizeof(mvMaterialData));
 
     descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[3].dstSet = material.descriptorSets[GContext->graphics.currentImageIndex];
+    descriptorWrites[3].dstSet = material.descriptorSets.descriptorSets[GContext->graphics.currentImageIndex];
     descriptorWrites[3].dstBinding = 3;
     descriptorWrites[3].dstArrayElement = 0;
     descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;

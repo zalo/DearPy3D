@@ -9,25 +9,12 @@ mvCreateScene(mvAssetManager& am, mvSceneData sceneData)
 
     mvScene scene{};
     scene.data = sceneData;
-    scene.descriptorSets = new VkDescriptorSet[GContext->graphics.swapChainImages.size()];
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
         scene.sceneBuffer.buffers.push_back(mvRegisterAsset(&am, hash,
             mvCreateDynamicBuffer(&sceneData, 1, sizeof(mvSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)));
 
-    //-----------------------------------------------------------------------------
-    // allocate descriptor sets
-    //-----------------------------------------------------------------------------
-    std::vector<VkDescriptorSetLayout> layouts(GContext->graphics.swapChainImages.size(), mvGetRawDescriptorSetLayoutAsset(&am, "scene"));
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = GContext->graphics.descriptorPool;
-    allocInfo.descriptorSetCount = GContext->graphics.swapChainImages.size();
-    allocInfo.pSetLayouts = layouts.data();
-
-    if (vkAllocateDescriptorSets(mvGetLogicalDevice(), &allocInfo, scene.descriptorSets) != VK_SUCCESS)
-        throw std::runtime_error("failed to allocate descriptor sets!");
-
+    scene.descriptorSets = mvCreateDescriptorSet(am, mvGetRawDescriptorSetLayoutAsset(&am, "scene"), mvGetPipelineLayoutAssetID(&am, "main_pass"));
     return scene;
 }
 
@@ -49,7 +36,7 @@ mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light
         sceneInfo.range = mvGetRequiredUniformBufferSize(sizeof(mvSceneData));
 
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = scene.descriptorSets[i];
+        descriptorWrites[0].dstSet = scene.descriptorSets.descriptorSets[i];
         descriptorWrites[0].dstBinding = 0;
         descriptorWrites[0].dstArrayElement = 0;
         descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -62,7 +49,7 @@ mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light
         lightInfo.range = mvGetRequiredUniformBufferSize(sizeof(mvPointLightInfo));
 
         descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstSet = scene.descriptorSets[i];
+        descriptorWrites[1].dstSet = scene.descriptorSets.descriptorSets[i];
         descriptorWrites[1].dstBinding = 1;
         descriptorWrites[1].dstArrayElement = 0;
         descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -75,7 +62,7 @@ mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light
         dlightInfo.range = mvGetRequiredUniformBufferSize(sizeof(mvDirectionLightInfo));
 
         descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[2].dstSet = scene.descriptorSets[i];
+        descriptorWrites[2].dstSet = scene.descriptorSets.descriptorSets[i];
         descriptorWrites[2].dstBinding = 2;
         descriptorWrites[2].dstArrayElement = 0;
         descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -95,8 +82,5 @@ mvBindScene(mvAssetManager& am, mvAssetID sceneId)
 {
     mvScene& scene = am.scenes[sceneId].asset;
     mvUpdateBuffer(am.buffers[scene.sceneBuffer.buffers[GContext->graphics.currentImageIndex]].asset, &scene.data);
-
-    vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
-        mvGetRawPipelineLayoutAsset(&am, "main_pass"),
-        0, 1, &scene.descriptorSets[GContext->graphics.currentImageIndex], 0, nullptr);
+    mvBindDescriptorSet(am, scene.descriptorSets, 0);
 }

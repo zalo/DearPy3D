@@ -5,6 +5,7 @@
 #include "mvBuffer.h"
 #include "mvMath.h"
 #include "mvObjLoader.h"
+#include "mvDescriptorSet.h"
 
 struct mvAssetManager;
 
@@ -45,7 +46,7 @@ struct mvMaterial
     mvAssetID             texture;
     u32                   offsetIndex = 0u;
     mvMaterialBuffer      materialBuffer;
-    VkDescriptorSet*      descriptorSets;
+    mvDescriptorSet       descriptorSets;
     std::string           vertexShader;
     std::string           pixelShader;
 };
