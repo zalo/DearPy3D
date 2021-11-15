@@ -25,7 +25,7 @@ mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, const char* ve
     // temporary until we have a "bindless" solution
     // to descriptor set updates
     mv_local_persist int i = 0;
-    i++;
+    //i++;
     hash.append(std::to_string(i));
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)

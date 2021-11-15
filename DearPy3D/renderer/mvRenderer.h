@@ -22,4 +22,6 @@ namespace Renderer
 
 	void mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
 	void mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj);
+
+	void mvUpdateDescriptors(mvAssetManager& am);
 }

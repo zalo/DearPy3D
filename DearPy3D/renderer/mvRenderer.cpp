@@ -58,6 +58,15 @@ namespace Renderer {
             throw std::runtime_error("failed to submit draw command buffer!");
     }
 
+    void mvUpdateDescriptors(mvAssetManager& am)
+    {
+        for (int i = 0; i < am.meshCount; i++)
+        {
+            mvMesh& mesh = am.meshes[i].asset;
+            mvUpdateMaterialDescriptors(am, am.phongMaterials[mesh.phongMaterialID].asset, mesh.diffuseTexture, mesh.normalTexture, mesh.specularTexture);
+        }
+    }
+
     void
     mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
     {
@@ -70,8 +79,6 @@ namespace Renderer {
         VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
         VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
 
-        mvUpdateMaterialDescriptors(am, am.phongMaterials[mesh.phongMaterialID].asset, mesh.diffuseTexture, mesh.normalTexture, mesh.specularTexture);
-        
         vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &descriptorSet, 0, nullptr);
         vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &vertexBuffer, &offsets);
@@ -90,11 +97,6 @@ namespace Renderer {
     void
     mvBeginPass(VkCommandBuffer commandBuffer, mvPass& pass, b8 clear)
     {
-        //VkCommandBufferBeginInfo beginInfo{};
-        //beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-        //if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
-        //    throw std::runtime_error("failed to begin recording command buffer!");
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -124,11 +126,7 @@ namespace Renderer {
     void
     mvEndPass(VkCommandBuffer commandBuffer)
     {
-
         vkCmdEndRenderPass(commandBuffer);
-
-        //if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
-        //    throw std::runtime_error("failed to record command buffer!");
     }
 
     mv_internal void

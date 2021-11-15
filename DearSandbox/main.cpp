@@ -209,9 +209,11 @@ int main()
     camera.aspect = GContext->viewport.width / GContext->viewport.height;
     
     mvMesh quad1 = mvCreateTexturedQuad(am);
+    mvRegisterAsset(&am, "quad1", quad1);
     mvMat4 quadTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 5.0f, 5.0f, 5.0f });
 
     mvMesh cube1 = mvCreateTexturedCube(am, 3.0f);
+    mvRegisterAsset(&am, "cube1", cube1);
     mvMat4 cubeTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 10.0f, 10.0f, 20.0f });
 
     mvPointLight light = mvCreatePointLight(am, { 0.0f, 10.0f, 0.0f });
@@ -301,6 +303,9 @@ int main()
         //---------------------------------------------------------------------
         Renderer::mvBeginFrame();
 
+        mvBindScene(am, scene);
+        Renderer::mvUpdateDescriptors(am);
+
         //---------------------------------------------------------------------
         // offscreen pass
         //---------------------------------------------------------------------
@@ -345,7 +350,6 @@ int main()
         mvMat4 viewMatrix = mvCreateFPSView(camera);
         mvMat4 projMatrix = mvCreateLookAtProjection(camera);
 
-        mvBindScene(am, scene);
         mvBind(am, light, viewMatrix);
         mvBind(am, dlight, viewMatrix);
 
