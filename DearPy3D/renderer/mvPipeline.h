@@ -45,6 +45,7 @@ struct mvPipelineSpec
 	f32                 height = 0.0f; // viewport
 	VkRenderPass        renderPass = VK_NULL_HANDLE;
 	mvVertexLayout      layout;
+	b8                  mainPass = true;
 };
 
 struct mvPipeline

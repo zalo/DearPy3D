@@ -158,10 +158,13 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->meshes = new mvMeshAsset[manager->maxMeshCount];
 	manager->phongMaterials = new mvPhongMaterialAsset[manager->maxPhongMaterialCount];
 	manager->pipelines = new mvPipelineAsset[manager->maxPipelineCount];
+	manager->secondaryPipelines = new mvPipelineAsset[manager->maxPipelineCount];
 	manager->pipelineLayouts = new mvPipelineLayoutAsset[manager->maxPipelineLayoutCount];
 	manager->scenes = new mvSceneAsset[manager->maxSceneCount];
 	manager->descriptorSetLayouts = new mvDescriptorSetLayoutAsset[manager->maxDescriptorSetLayoutCount];
 	manager->nodes = new mvNodeAsset[manager->maxNodeCount];
+	manager->renderPasses = new mvRenderPassAsset[manager->maxRenderPassCount];
+	manager->frameBuffers = new mvFrameBufferAsset[manager->maxFrameBufferCount];
 
 	mvPreloadAssetManager(*manager);
 }
@@ -253,34 +256,59 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	}
 	manager->pipelineCount = 0u;
 
+	// cleanup secondary pipelines
+	for (int i = 0; i < manager->secondaryPipelineCount; i++)
+	{
+		vkDestroyPipeline(mvGetLogicalDevice(), manager->secondaryPipelines[i].asset.pipeline, nullptr);
+	}
+	manager->pipelineCount = 0u;
+
+	// frame buffers
+	for (int i = 0; i < manager->frameBufferCount; i++)
+	{
+		vkDestroyFramebuffer(mvGetLogicalDevice(), manager->frameBuffers[i].asset, nullptr);
+	}
+
+	// frame buffers
+	for (int i = 0; i < manager->renderPassCount; i++)
+	{
+		vkDestroyRenderPass(mvGetLogicalDevice(), manager->renderPasses[i].asset, nullptr);
+	}
+
 	delete[] manager->textures;
 	delete[] manager->buffers;
 	delete[] manager->meshes;
 	delete[] manager->pipelines;
+	delete[] manager->secondaryPipelines;
 	delete[] manager->pipelineLayouts;
 	delete[] manager->scenes;
 	delete[] manager->descriptorSetLayouts;
 	delete[] manager->nodes;
+	delete[] manager->renderPasses;
 
 	manager->textures = nullptr;
 	manager->buffers = nullptr;
 	manager->meshes = nullptr;
 	manager->phongMaterials = nullptr;
 	manager->pipelines = nullptr;
+	manager->secondaryPipelines = nullptr;
 	manager->pipelineLayouts = nullptr;
 	manager->scenes = nullptr;
 	manager->descriptorSetLayouts = nullptr;
 	manager->nodes = nullptr;
+	manager->renderPasses = nullptr;
 
 	manager->textureCount = 0u;
 	manager->bufferCount = 0u;
 	manager->meshCount = 0u;
 	manager->phongMaterialCount = 0u;
 	manager->pipelineCount = 0u;
+	manager->secondaryPipelines = 0u;
 	manager->pipelineLayoutCount = 0u;
 	manager->sceneCount = 0u;
 	manager->nodeCount = 0u;
 	manager->descriptorSetLayoutCount = 0u;
+	manager->renderPassCount = 0u;
 }
 
 //-----------------------------------------------------------------------------
@@ -290,10 +318,18 @@ mvCleanupAssetManager(mvAssetManager* manager)
 mvAssetID
 mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvPipeline asset)
 {
-	manager->pipelines[manager->pipelineCount].asset = asset;
-	manager->pipelines[manager->pipelineCount].hash = tag;
-	manager->pipelineCount++;
-	return manager->pipelineCount - 1;
+	if (asset.specification.mainPass)
+	{
+		manager->pipelines[manager->pipelineCount].asset = asset;
+		manager->pipelines[manager->pipelineCount].hash = tag;
+		manager->pipelineCount++;
+		return manager->pipelineCount - 1;
+	}
+
+	manager->secondaryPipelines[manager->secondaryPipelineCount].asset = asset;
+	manager->secondaryPipelines[manager->secondaryPipelineCount].hash = tag;
+	manager->secondaryPipelineCount++;
+	return manager->secondaryPipelineCount - 1;
 }
 
 mvAssetID
@@ -315,6 +351,80 @@ mvGetRawPipelineAsset(mvAssetManager* manager, const std::string& tag)
 	{
 		if (manager->pipelines[i].hash == tag)
 			return &manager->pipelines[i].asset;
+	}
+
+	return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+// render passes
+//-----------------------------------------------------------------------------
+
+mvAssetID
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, VkRenderPass asset)
+{
+	manager->renderPasses[manager->renderPassCount].asset = asset;
+	manager->renderPasses[manager->renderPassCount].hash = tag;
+	manager->renderPassCount++;
+	return manager->renderPassCount - 1;
+}
+
+mvAssetID
+mvGetRenderPassAssetID(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->renderPassCount; i++)
+	{
+		if (manager->renderPasses[i].hash == tag)
+			return i;
+	}
+
+	return MV_INVALID_ASSET_ID;
+}
+
+VkRenderPass
+mvGetRawRenderPassAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->renderPassCount; i++)
+	{
+		if (manager->renderPasses[i].hash == tag)
+			return manager->renderPasses[i].asset;
+	}
+
+	return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+// frame buffers
+//-----------------------------------------------------------------------------
+
+mvAssetID
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, VkFramebuffer asset)
+{
+	manager->frameBuffers[manager->frameBufferCount].asset = asset;
+	manager->frameBuffers[manager->frameBufferCount].hash = tag;
+	manager->frameBufferCount++;
+	return manager->frameBufferCount - 1;
+}
+
+mvAssetID
+mvGetFrameBufferAssetID(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->frameBufferCount; i++)
+	{
+		if (manager->frameBuffers[i].hash == tag)
+			return i;
+	}
+
+	return MV_INVALID_ASSET_ID;
+}
+
+VkFramebuffer
+mvGetRawFrameBufferAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->frameBufferCount; i++)
+	{
+		if (manager->frameBuffers[i].hash == tag)
+			return manager->frameBuffers[i].asset;
 	}
 
 	return nullptr;

@@ -53,10 +53,14 @@ OffscreenSetup CreateSecondaryPass(mvAssetManager& am)
     colorTextureIDs[1] = mvRegisterAsset(&am, "offscreen2", colorTexture[1]);
     colorTextureIDs[2] = mvRegisterAsset(&am, "offscreen3", colorTexture[2]);
 
+    mvAssetID depthTextureIDs[3];
+    depthTextureIDs[0] = mvRegisterAsset(&am, "doffscreen1", depthTexture[0]);
+    depthTextureIDs[1] = mvRegisterAsset(&am, "doffscreen2", depthTexture[1]);
+    depthTextureIDs[2] = mvRegisterAsset(&am, "doffscreen3", depthTexture[2]);
+
     VkRenderPass offscreenRenderPass = VK_NULL_HANDLE;
 
     {
-        //mvCreateRenderPass(VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_D32_SFLOAT , &offscreenRenderPass);
 
         std::array<VkAttachmentDescription, 2> attchmentDescriptions = {};
         // Color attachment
@@ -100,9 +104,9 @@ OffscreenSetup CreateSecondaryPass(mvAssetManager& am)
 
         dependencies[1].srcSubpass = 0;
         dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-        dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependencies[1].srcStageMask = dependencies[0].dstStageMask;
         dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependencies[1].srcAccessMask = dependencies[0].dstAccessMask;
         dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
         dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
@@ -117,6 +121,7 @@ OffscreenSetup CreateSecondaryPass(mvAssetManager& am)
         renderPassInfo.pDependencies = dependencies.data();
 
         vkCreateRenderPass(GContext->graphics.logicalDevice, &renderPassInfo, nullptr, &offscreenRenderPass);
+        mvRegisterAsset(&am, "secondary_pass", offscreenRenderPass);
     }
 
     std::vector<VkFramebuffer> offscreenFramebuffers;
@@ -130,6 +135,9 @@ OffscreenSetup CreateSecondaryPass(mvAssetManager& am)
             std::vector<VkImageView>{ colorTexture[i].imageInfo.imageView, depthTexture[i].imageInfo.imageView });
     }
 
+    mvRegisterAsset(&am, "secondary_fb0", offscreenFramebuffers[0]);
+    mvRegisterAsset(&am, "secondary_fb1", offscreenFramebuffers[1]);
+    mvRegisterAsset(&am, "secondary_fb2", offscreenFramebuffers[2]);
 
     mvPipelineSpec pipelineSpec{};
     pipelineSpec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -144,8 +152,11 @@ OffscreenSetup CreateSecondaryPass(mvAssetManager& am)
     pipelineSpec.renderPass = offscreenRenderPass;
     pipelineSpec.layout = mvCreateVertexLayout({});
     pipelineSpec.layout.bindingDescriptions.clear();
+    pipelineSpec.mainPass = false;
 
     mvPipeline offscreenPipeline = mvCreatePipeline(am, pipelineSpec);
+
+    mvRegisterAsset(&am, "secondary_pass", offscreenPipeline);
 
     mvPass offscreenPass{
         offscreenRenderPass,
