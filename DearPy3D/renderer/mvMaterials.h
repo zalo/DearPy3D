@@ -5,7 +5,7 @@
 #include "mvBuffer.h"
 #include "mvMath.h"
 #include "mvObjLoader.h"
-#include "mvDescriptorSet.h"
+#include "mvDescriptors.h"
 
 struct mvAssetManager;
 

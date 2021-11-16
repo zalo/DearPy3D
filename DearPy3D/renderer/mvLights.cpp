@@ -10,7 +10,7 @@ mvCreatePointLight(mvAssetManager& am, const std::string& name, mvVec3 pos)
     light.info.viewLightPos = mvVec4{ pos.x, pos.y, pos.z, 1.0f };
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        light.buffer.buffers.push_back(mvRegisterAsset(&am,
+        light.buffers.push_back(mvRegisterAsset(&am,
             name,
             mvCreateDynamicBuffer(&light.info, 1, sizeof(mvPointLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)));
 
@@ -44,7 +44,7 @@ mvCreateDirectionLight(mvAssetManager& am, const std::string& name, mvVec3 dir)
     mvDirectionLight light{};
     light.info.viewLightDir = dir;
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        light.buffer.buffers.push_back(mvRegisterAsset(&am,
+        light.buffers.push_back(mvRegisterAsset(&am,
             name,
             mvCreateDynamicBuffer(&light.info, 1, sizeof(mvDirectionLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)));
     return light;
@@ -61,7 +61,7 @@ mvBind(mvAssetManager& am, mvPointLight& light, mvMat4 viewMatrix)
     light.info.viewLightPos.y = out.y;
     light.info.viewLightPos.z = out.z;
 
-    mvUpdateBuffer(am.buffers[light.buffer.buffers[GContext->graphics.currentImageIndex]].asset, &light.info);
+    mvUpdateBuffer(am.buffers[light.buffers[GContext->graphics.currentImageIndex]].asset, &light.info);
 
     light.info.viewLightPos = posCopy;
 }
@@ -81,7 +81,7 @@ mvBind(mvAssetManager& am, mvDirectionLight& light, mvMat4 viewMatrix)
     light.info.viewLightDir.y = out.y;
     light.info.viewLightDir.z = out.z;
 
-    mvUpdateBuffer(am.buffers[light.buffer.buffers[GContext->graphics.currentImageIndex]].asset, &light.info);
+    mvUpdateBuffer(am.buffers[light.buffers[GContext->graphics.currentImageIndex]].asset, &light.info);
 
     light.info.viewLightDir = posCopy;
 }

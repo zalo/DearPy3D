@@ -40,26 +40,16 @@ struct mvDirectionLightInfo
     //-------------------------- ( 2*16 = 32 bytes )
 };
 
-struct mvPointLightBuffer
-{
-    std::vector<mvAssetID> buffers;
-};
-
 struct mvPointLight
 {
-    mvPointLightBuffer    buffer;
-    mvPointLightInfo      info;
-    mvMesh*               mesh = nullptr;
-};
-
-struct mvDirectionLightBuffer
-{
     std::vector<mvAssetID> buffers;
+    mvPointLightInfo       info;
+    mvMesh*                mesh = nullptr;
 };
 
 struct mvDirectionLight
 {
-    mvDirectionLightBuffer buffer;
+    std::vector<mvAssetID> buffers;
     mvDirectionLightInfo   info;
 };
 

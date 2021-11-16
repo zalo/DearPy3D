@@ -5,7 +5,7 @@
 #include "mvMath.h"
 #include <vulkan/vulkan.h>
 #include "mvTypes.h"
-#include "mvDescriptorSet.h"
+#include "mvDescriptors.h"
 
 struct mvAssetManager;
 struct mvPointLight;
@@ -35,19 +35,14 @@ struct mvSceneData
     //-------------------------- ( 1 * 16 = 16 bytes )
 };
 
-struct mvSceneBuffer
-{
-    std::vector<mvAssetID> buffers;
-};
-
 struct mvScene
 {
-    mvSceneBuffer    sceneBuffer;
-    mvDescriptorSet  descriptorSets;
-    mvAssetID        nodes[256];
-    u32              nodeCount = 0u;
-    u32              meshOffset = 0u;
-    mvSceneData      data;
+    std::vector<mvAssetID> buffers;
+    mvDescriptorSet        descriptorSets;
+    mvAssetID              nodes[256];
+    u32                    nodeCount = 0u;
+    u32                    meshOffset = 0u;
+    mvSceneData            data;
 };
 
 mvScene mvCreateScene(mvAssetManager& am, mvSceneData sceneData);

@@ -11,7 +11,7 @@ mvCreateScene(mvAssetManager& am, mvSceneData sceneData)
     scene.data = sceneData;
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        scene.sceneBuffer.buffers.push_back(mvRegisterAsset(&am, hash,
+        scene.buffers.push_back(mvRegisterAsset(&am, hash,
             mvCreateDynamicBuffer(&sceneData, 1, sizeof(mvSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)));
 
     scene.descriptorSets = mvCreateDescriptorSet(am, mvGetRawDescriptorSetLayoutAsset(&am, "scene"), mvGetPipelineLayoutAssetID(&am, "main_pass"));
@@ -31,7 +31,7 @@ mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light
         descriptorWrites.resize(3);
 
         VkDescriptorBufferInfo sceneInfo;
-        sceneInfo.buffer = am.buffers[scene.sceneBuffer.buffers[i]].asset.buffer;
+        sceneInfo.buffer = am.buffers[scene.buffers[i]].asset.buffer;
         sceneInfo.offset = 0;
         sceneInfo.range = mvGetRequiredUniformBufferSize(sizeof(mvSceneData));
 
@@ -44,7 +44,7 @@ mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light
         descriptorWrites[0].pBufferInfo = &sceneInfo;
 
         VkDescriptorBufferInfo lightInfo;
-        lightInfo.buffer = am.buffers[light.buffer.buffers[i]].asset.buffer;
+        lightInfo.buffer = am.buffers[light.buffers[i]].asset.buffer;
         lightInfo.offset = 0;
         lightInfo.range = mvGetRequiredUniformBufferSize(sizeof(mvPointLightInfo));
 
@@ -57,7 +57,7 @@ mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light
         descriptorWrites[1].pBufferInfo = &lightInfo;
 
         VkDescriptorBufferInfo dlightInfo;
-        dlightInfo.buffer = am.buffers[dlight.buffer.buffers[i]].asset.buffer;
+        dlightInfo.buffer = am.buffers[dlight.buffers[i]].asset.buffer;
         dlightInfo.offset = 0;
         dlightInfo.range = mvGetRequiredUniformBufferSize(sizeof(mvDirectionLightInfo));
 
@@ -81,6 +81,6 @@ void
 mvBindScene(mvAssetManager& am, mvAssetID sceneId)
 {
     mvScene& scene = am.scenes[sceneId].asset;
-    mvUpdateBuffer(am.buffers[scene.sceneBuffer.buffers[GContext->graphics.currentImageIndex]].asset, &scene.data);
+    mvUpdateBuffer(am.buffers[scene.buffers[GContext->graphics.currentImageIndex]].asset, &scene.data);
     mvBindDescriptorSet(am, scene.descriptorSets, 0);
 }
