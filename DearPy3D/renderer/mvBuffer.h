@@ -7,12 +7,14 @@
 
 struct mvBuffer
 {
-    VkBuffer      buffer = VK_NULL_HANDLE;
-    VmaAllocation memoryAllocation = VK_NULL_HANDLE;
-    u32           count = 0u;
-    u32           size = 0u;
+    VkBuffer               buffer = VK_NULL_HANDLE;
+    VmaAllocation          memoryAllocation = VK_NULL_HANDLE;
+    u32                    count = 0u;
+    u32                    size = 0u;
+    VkDescriptorBufferInfo bufferInfo;
 };
 
 mvBuffer mvCreateBuffer        (void* data, u64 count, u64 size, VkBufferUsageFlags flags);
 mvBuffer mvCreateDynamicBuffer (void* data, u64 count, u64 size, VkBufferUsageFlags flags);
 void     mvUpdateBuffer        (mvBuffer& buffer, void* data);
+void     mvPartialUpdateBuffer (mvBuffer& buffer, void* data, u64 index);

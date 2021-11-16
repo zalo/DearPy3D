@@ -42,18 +42,16 @@ struct mvDirectionLightInfo
 
 struct mvPointLight
 {
-    std::vector<mvAssetID> buffers;
     mvPointLightInfo       info;
     mvMesh*                mesh = nullptr;
 };
 
 struct mvDirectionLight
 {
-    std::vector<mvAssetID> buffers;
     mvDirectionLightInfo   info;
 };
 
-mvPointLight     mvCreatePointLight (mvAssetManager& am, const std::string& name, mvVec3 pos = { 0.0f,0.0f,0.5f });
-mvDirectionLight mvCreateDirectionLight(mvAssetManager& am, const std::string& name, mvVec3 dir = { 0.0f,0.0f,0.5f });
-void             mvBind             (mvAssetManager& am, mvPointLight& light, mvMat4 viewMatrix);
-void             mvBind             (mvAssetManager& am, mvDirectionLight& light, mvMat4 viewMatrix);
+mvPointLight     mvCreatePointLight      (mvAssetManager& am, const std::string& name, mvVec3 pos = { 0.0f,0.0f,0.5f });
+mvDirectionLight mvCreateDirectionLight  (mvAssetManager& am, const std::string& name, mvVec3 dir = { 0.0f,0.0f,0.5f });
+void             mvUpdateLightBuffers(mvAssetManager& am, mvPointLight& light, mvAssetID bufferID, mvMat4 viewMatrix, u64 index);
+void             mvUpdateLightBuffers(mvAssetManager& am, mvDirectionLight& light, mvAssetID bufferID, mvMat4 viewMatrix, u64 index);

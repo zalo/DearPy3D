@@ -9,11 +9,6 @@ mvCreatePointLight(mvAssetManager& am, const std::string& name, mvVec3 pos)
     mvPointLight light;
     light.info.viewLightPos = mvVec4{ pos.x, pos.y, pos.z, 1.0f };
 
-    for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        light.buffers.push_back(mvRegisterAsset(&am,
-            name,
-            mvCreateDynamicBuffer(&light.info, 1, sizeof(mvPointLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)));
-
     mvMesh lightCube = mvCreateTexturedCube(am, 0.25f);
     auto mat1 = mvMaterialData{};
     mat1.materialColor = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -43,15 +38,11 @@ mvCreateDirectionLight(mvAssetManager& am, const std::string& name, mvVec3 dir)
 
     mvDirectionLight light{};
     light.info.viewLightDir = dir;
-    for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        light.buffers.push_back(mvRegisterAsset(&am,
-            name,
-            mvCreateDynamicBuffer(&light.info, 1, sizeof(mvDirectionLightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)));
     return light;
 }
 
 void
-mvBind(mvAssetManager& am, mvPointLight& light, mvMat4 viewMatrix)
+mvUpdateLightBuffers(mvAssetManager& am, mvPointLight& light, mvAssetID bufferID, mvMat4 viewMatrix, u64 index)
 {
 
     mvVec4 posCopy = light.info.viewLightPos;
@@ -61,13 +52,13 @@ mvBind(mvAssetManager& am, mvPointLight& light, mvMat4 viewMatrix)
     light.info.viewLightPos.y = out.y;
     light.info.viewLightPos.z = out.z;
 
-    mvUpdateBuffer(am.buffers[light.buffers[GContext->graphics.currentImageIndex]].asset, &light.info);
+    mvPartialUpdateBuffer(am.buffers[bufferID].asset, &light.info, index);
 
     light.info.viewLightPos = posCopy;
 }
 
 void
-mvBind(mvAssetManager& am, mvDirectionLight& light, mvMat4 viewMatrix)
+mvUpdateLightBuffers(mvAssetManager& am, mvDirectionLight& light, mvAssetID bufferID, mvMat4 viewMatrix, u64 index)
 {
 
     mvVec3 posCopy = light.info.viewLightDir;
@@ -81,7 +72,7 @@ mvBind(mvAssetManager& am, mvDirectionLight& light, mvMat4 viewMatrix)
     light.info.viewLightDir.y = out.y;
     light.info.viewLightDir.z = out.z;
 
-    mvUpdateBuffer(am.buffers[light.buffers[GContext->graphics.currentImageIndex]].asset, &light.info);
+    mvPartialUpdateBuffer(am.buffers[bufferID].asset, &light.info, index);
 
     light.info.viewLightDir = posCopy;
 }

@@ -34,19 +34,11 @@ struct mvMaterialData
     //-------------------------- ( 4 * 16 = 64 bytes )
 };
 
-struct mvMaterialBuffer
-{
-    std::vector<mvAssetID> buffers;
-};
-
 struct mvMaterial
 {
-    mvMaterialData        data;
     mvAssetID             pipeline;
-    mvAssetID             texture;
     u32                   offsetIndex = 0u;
-    mvMaterialBuffer      materialBuffer;
-    mvDescriptorSet       descriptorSets;
+    mvDescriptorSet       descriptorSet;
     std::string           vertexShader;
     std::string           pixelShader;
 };

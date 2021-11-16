@@ -76,7 +76,7 @@ namespace Renderer {
         VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
         VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
 
-        mvBindDescriptorSet(am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSets, 1);
+        mvBindDescriptorSet(am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSet, 1);
         vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &vertexBuffer, &offsets);
 

@@ -50,6 +50,8 @@ mvCreateDynamicBuffer(void* data, u64 count, u64 size, VkBufferUsageFlags flags)
 
     mvBuffer buffer{};
     buffer.count = count;
+    buffer.bufferInfo.offset = 0u;
+    buffer.bufferInfo.range = bufferAlignment;
 
     VkDeviceSize bufferSize = bufferAlignment * count;
     buffer.size = (size_t)bufferSize;
@@ -91,6 +93,8 @@ mvCreateDynamicBuffer(void* data, u64 count, u64 size, VkBufferUsageFlags flags)
     // cleanup staging buffer
     mvDestroyBuffer(stagingBuffer, stagingBufferAllocation);
 
+    buffer.bufferInfo.buffer = buffer.buffer;
+
     return buffer;
 }
 
@@ -99,5 +103,15 @@ mvUpdateBuffer(mvBuffer& buffer, void* data)
 {
     void* mdata = mvMapMemory(buffer.memoryAllocation);
     memcpy(mdata, data, buffer.size);
+    mvUnmapMemory(buffer.memoryAllocation);
+}
+
+void
+mvPartialUpdateBuffer(mvBuffer& buffer, void* data, u64 index)
+{
+    u64 individualBlock = buffer.size / buffer.count;
+    u64 offset = index * individualBlock;
+    char* mdata = (char*)mvMapMemory(buffer.memoryAllocation);
+    memcpy((void*)&mdata[offset], data, individualBlock);
     mvUnmapMemory(buffer.memoryAllocation);
 }

@@ -9,38 +9,37 @@ mvPreloadAssetManager(mvAssetManager& am)
 	if (mvGetDescriptorSetLayoutAssetID(&am, "scene") == MV_INVALID_ASSET_ID)
 	{
 
-		//-----------------------------------------------------------------------------
-		// create descriptor set layout
-		//-----------------------------------------------------------------------------
-		std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
-		descriptorSetLayouts.resize(2);
+		// create descriptor set layouts
+		VkDescriptorSetLayout descriptorSetLayouts[3];
 
-		{
-			//-----------------------------------------------------------------------------
-			// create descriptor set layout
-			//-----------------------------------------------------------------------------
-			std::vector<mvDescriptorSpec> descriptors;
-			descriptors.resize(3);
-			descriptors[0] = mvCreateUniformBufferDescriptorSpec(0u);
-			descriptors[1] = mvCreateUniformBufferDescriptorSpec(1u);
-			descriptors[2] = mvCreateUniformBufferDescriptorSpec(2u);
-			descriptorSetLayouts[0] = mvCreateDescriptorSetLayout(descriptors.data(), descriptors.size());
-			mvRegisterAsset(&am, "scene", descriptorSetLayouts[0]);
-		}
+		mvDescriptorSetLayout globalLayout = mvCreateDescriptorSetLayout(
+			{
+				mvCreateDynamicUniformBufferDescriptorSpec(0u),
+				mvCreateDynamicUniformBufferDescriptorSpec(1u),
+				mvCreateDynamicUniformBufferDescriptorSpec(2u)
+			});
+		
+		mvDescriptorSetLayout materialLayout = mvCreateDescriptorSetLayout(
+			{
+				mvCreateTextureDescriptorSpec(0u),
+				mvCreateTextureDescriptorSpec(1u),
+				mvCreateTextureDescriptorSpec(2u),
+				mvCreateUniformBufferDescriptorSpec(3u)
+			});
 
-		{
-			//-----------------------------------------------------------------------------
-			// create descriptor set layout
-			//-----------------------------------------------------------------------------
-			std::vector<mvDescriptorSpec> descriptors;
-			descriptors.resize(4);
-			descriptors[0] = mvCreateTextureDescriptorSpec(0u);
-			descriptors[1] = mvCreateTextureDescriptorSpec(1u);
-			descriptors[2] = mvCreateTextureDescriptorSpec(2u);
-			descriptors[3] = mvCreateUniformBufferDescriptorSpec(3u);
-			descriptorSetLayouts[1] = mvCreateDescriptorSetLayout(descriptors.data(), descriptors.size());
-			mvRegisterAsset(&am, "phong", descriptorSetLayouts[1]);
-		}
+
+		mvDescriptorSetLayout perDrawLayout = mvCreateDescriptorSetLayout(
+			{
+				mvCreateDynamicUniformBufferDescriptorSpec(0u)
+			});
+
+		descriptorSetLayouts[0] = globalLayout.layout;
+		descriptorSetLayouts[1] = materialLayout.layout;
+		descriptorSetLayouts[2] = perDrawLayout.layout;
+
+		mvRegisterAsset(&am, "scene", descriptorSetLayouts[0]);
+		mvRegisterAsset(&am, "phong", descriptorSetLayouts[1]);
+		mvRegisterAsset(&am, "perdraw", descriptorSetLayouts[2]);
 
 		//-----------------------------------------------------------------------------
 		// create pipeline layouts
@@ -60,15 +59,22 @@ mvPreloadAssetManager(mvAssetManager& am)
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
+		pipelineLayoutInfo.setLayoutCount = 3;
 		pipelineLayoutInfo.pPushConstantRanges = &push_constant;
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
-		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
+		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
 
 		if (vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
 			throw std::runtime_error("failed to create pipeline layout!");
 
-		mvRegisterAsset(&am, "main_pass", pipelineLayout);
+		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "main_pass", pipelineLayout);
+
+		mvTransforms* transforms = new mvTransforms[am.maxMeshCount * 3];
+		mvDescriptorSet descriptorSet = mvCreateDescriptorSet(am, perDrawLayout.layout, pipelineLayoutID);
+		descriptorSet.descriptors.push_back(mvCreateDynamicUniformBufferDescriptor(am, mvCreateDynamicUniformBufferDescriptorSpec(0u), "transforms", am.maxMeshCount*3, sizeof(mvTransforms), transforms));
+		mvRegisterAsset(&am, "perdraw", descriptorSet);
+		delete[] transforms;
+
 	}
 
 	//-----------------------------------------------------------------------------
@@ -110,6 +116,7 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->pipelineLayouts = new mvPipelineLayoutAsset[manager->maxPipelineLayoutCount];
 	manager->scenes = new mvSceneAsset[manager->maxSceneCount];
 	manager->descriptorSetLayouts = new mvDescriptorSetLayoutAsset[manager->maxDescriptorSetLayoutCount];
+	manager->descriptorSets = new mvDescriptorSetAsset[manager->maxDescriptorSetCount];
 	manager->nodes = new mvNodeAsset[manager->maxNodeCount];
 	manager->renderPasses = new mvRenderPassAsset[manager->maxRenderPassCount];
 	manager->frameBuffers = new mvFrameBufferAsset[manager->maxFrameBufferCount];
@@ -151,19 +158,20 @@ mvCleanupAssetManager(mvAssetManager* manager)
 {
 	vkDeviceWaitIdle(mvGetLogicalDevice());
 
-	// cleanup materials
-	for (int i = 0; i < manager->phongMaterialCount; i++)
-	{
-		delete[] manager->phongMaterials[i].asset.descriptorSets.descriptorSets;
-	}
-	manager->phongMaterialCount = 0u;
-
 	// cleanup scene
 	for (int i = 0; i < manager->sceneCount; i++)
 	{
-		delete[] manager->scenes[i].asset.descriptorSets.descriptorSets;
+		//delete[] manager->scenes[i].asset.descriptorSets.descriptorSets;
 	}
 	manager->sceneCount = 0u;
+
+	// cleanup descriptor sets
+	for (int i = 0; i < manager->descriptorSetCount; i++)
+	{
+		mvDescriptorSet set = manager->descriptorSets[i].asset;
+		delete[] manager->descriptorSets[i].asset.descriptorSets;
+	}
+	manager->descriptorSetCount = 0u;
 
 	// buffers
 	for (int i = 0; i < manager->bufferCount; i++)
@@ -231,6 +239,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->pipelineLayouts;
 	delete[] manager->scenes;
 	delete[] manager->descriptorSetLayouts;
+	delete[] manager->descriptorSets;
 	delete[] manager->nodes;
 	delete[] manager->renderPasses;
 
@@ -243,6 +252,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	manager->pipelineLayouts = nullptr;
 	manager->scenes = nullptr;
 	manager->descriptorSetLayouts = nullptr;
+	manager->descriptorSets = nullptr;
 	manager->nodes = nullptr;
 	manager->renderPasses = nullptr;
 
@@ -256,6 +266,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	manager->sceneCount = 0u;
 	manager->nodeCount = 0u;
 	manager->descriptorSetLayoutCount = 0u;
+	manager->descriptorSetCount = 0u;
 	manager->renderPassCount = 0u;
 }
 
@@ -447,6 +458,44 @@ mvGetRawDescriptorSetLayoutAsset(mvAssetManager* manager, const std::string& tag
 	{
 		if (manager->descriptorSetLayouts[i].hash == tag)
 			return manager->descriptorSetLayouts[i].asset;
+	}
+
+	return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+// descriptor sets
+//-----------------------------------------------------------------------------
+
+mvAssetID
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvDescriptorSet asset)
+{
+	manager->descriptorSets[manager->descriptorSetCount].asset = asset;
+	manager->descriptorSets[manager->descriptorSetCount].hash = tag;
+	manager->descriptorSetCount++;
+	return manager->descriptorSetCount - 1;
+}
+
+mvAssetID
+mvGetDescriptorSetAssetID(mvAssetManager* manager, const std::string& tag)
+{
+
+	for (s32 i = 0; i < manager->descriptorSetCount; i++)
+	{
+		if (manager->descriptorSets[i].hash == tag)
+			return i;
+	}
+
+	return MV_INVALID_ASSET_ID;
+}
+
+mvDescriptorSet*
+mvGetRawDescriptorSetAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->descriptorSetCount; i++)
+	{
+		if (manager->descriptorSets[i].hash == tag)
+			return &manager->descriptorSets[i].asset;
 	}
 
 	return nullptr;

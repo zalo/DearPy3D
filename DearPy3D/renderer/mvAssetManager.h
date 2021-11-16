@@ -17,6 +17,7 @@ struct mvPipelineAsset;
 struct mvPipelineLayoutAsset;
 struct mvSceneAsset;
 struct mvDescriptorSetLayoutAsset;
+struct mvDescriptorSetAsset;
 struct mvNodeAsset;
 struct mvSceneAsset;
 struct mvRenderPassAsset;
@@ -68,6 +69,11 @@ struct mvAssetManager
 	u32                         descriptorSetLayoutCount = 0u;
 	mvDescriptorSetLayoutAsset* descriptorSetLayouts = nullptr;
 
+	// descriptor sets  	  
+	u32                   maxDescriptorSetCount = 50u;
+	u32                   descriptorSetCount = 0u;
+	mvDescriptorSetAsset* descriptorSets = nullptr;
+
 	// nodes	       	  
 	u32                   maxNodeCount = 500u;
 	u32                   nodeCount = 0u;
@@ -102,12 +108,14 @@ mvAssetID mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvNod
 mvAssetID mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvTexture asset);
 mvAssetID mvRegisterAsset(mvAssetManager* manager, const std::string& tag, VkRenderPass asset);
 mvAssetID mvRegisterAsset(mvAssetManager* manager, const std::string& tag, VkFramebuffer asset);
+mvAssetID mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvDescriptorSet asset);
 
 // ID retrieval
 mvAssetID mvGetSecondaryPipelineAssetID  (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetPipelineAssetID           (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetPipelineLayoutAssetID     (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetDescriptorSetLayoutAssetID(mvAssetManager* manager, const std::string& tag);
+mvAssetID mvGetDescriptorSetAssetID      (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetSceneAssetID              (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetTextureAssetID            (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetBufferAssetID             (mvAssetManager* manager, const std::string& tag);
@@ -121,6 +129,7 @@ mvPipeline*           mvGetRawSecondaryPipelineAsset  (mvAssetManager* manager, 
 mvPipeline*           mvGetRawPipelineAsset           (mvAssetManager* manager, const std::string& tag);
 VkPipelineLayout      mvGetRawPipelineLayoutAsset     (mvAssetManager* manager, const std::string& tag);
 VkDescriptorSetLayout mvGetRawDescriptorSetLayoutAsset(mvAssetManager* manager, const std::string& tag);
+mvDescriptorSet*      mvGetRawDescriptorSetAsset      (mvAssetManager* manager, const std::string& tag);
 mvScene*              mvGetRawSceneAsset              (mvAssetManager* manager, const std::string& tag);
 mvTexture*            mvGetRawTextureAsset            (mvAssetManager* manager, const std::string& tag);
 mvMesh*               mvGetRawMeshAsset               (mvAssetManager* manager, const std::string& tag);
@@ -170,6 +179,12 @@ struct mvDescriptorSetLayoutAsset
 {
 	std::string           hash;
 	VkDescriptorSetLayout asset;
+};
+
+struct mvDescriptorSetAsset
+{
+	std::string     hash;
+	mvDescriptorSet asset;
 };
 
 struct mvSceneAsset

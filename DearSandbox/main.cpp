@@ -205,9 +205,10 @@ int main()
     mvInitializeAssetManager(&am);
 
     mvAssetID scene = mvRegisterAsset(&am, "test_scene", mvCreateScene(am, {}));
-    mvAssetID scene2 = mvRegisterAsset(&am, "test_scene2", mvCreateScene(am, {}));
 
     if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
+
+    mvSceneData sceneData{};
 
     mvCamera camera{};
     camera.pos = { -13.5f, 6.0f, 3.5f };
@@ -238,15 +239,8 @@ int main()
 
     mvPointLight light1 = mvCreatePointLight(am, "light1", { 0.0f, 10.0f, 0.0f });
     mvMat4 lightTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 10.0f, 0.0f });
-
-    mvPointLight light2 = mvCreatePointLight(am, "light2", { 0.0f, 10.0f, 0.0f });
-
     mvDirectionLight dlight1 = mvCreateDirectionLight(am, "dlight1", mvVec3{ 0.0, -1.0f, 0.0f });
-    mvDirectionLight dlight2 = mvCreateDirectionLight(am, "dlight2", mvVec3{ 0.0, -1.0f, 0.0f });
-    
-    mvUpdateSceneDescriptors(am, am.scenes[scene].asset, light1, dlight1);
-    mvUpdateSceneDescriptors(am, am.scenes[scene2].asset, light2, dlight2);
-
+   
     //---------------------------------------------------------------------
     // passes
     //---------------------------------------------------------------------
@@ -335,14 +329,13 @@ int main()
         // wait for fences and acquire next image
         //---------------------------------------------------------------------
         Renderer::mvBeginFrame();
-
         Renderer::mvUpdateDescriptors(am);
+        mvUpdateSceneDescriptors(am, am.scenes[scene].asset);
+        mvShowAssetManager(am);
 
         ImGuiIO& io = ImGui::GetIO();
         ImGui::GetForegroundDrawList()->AddText(ImVec2(45, 45),
             ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(io.Framerate) + " FPS").c_str());
-
-        mvShowAssetManager(am);
 
         if (ImGui::Begin("Debug Output", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
             ImGui::Image(offscreen.textures[GContext->graphics.currentImageIndex].imguiID, ImVec2(512, 512));
@@ -352,30 +345,26 @@ int main()
         if (ImGui::SliderFloat3("Position", &light1.info.viewLightPos.x, -50.0f, 50.0f))
         {
             lightTransform = mvTranslate(mvIdentityMat4(), light1.info.viewLightPos.xyz());
-            light2.info.viewLightPos = light1.info.viewLightPos;
-            mvUpdateSceneDescriptors(am, am.scenes[scene].asset, light1, dlight1);
-            mvUpdateSceneDescriptors(am, am.scenes[scene2].asset, light2, dlight2);
         }
         ImGui::End();
 
         ImGui::Begin("Scene");
-        ImGui::Checkbox("Diffuse Mapping", (bool*)&am.scenes[scene].asset.data.doDiffuse);
-        ImGui::Checkbox("Normal Mapping", (bool*)&am.scenes[scene].asset.data.doNormal);
-        ImGui::Checkbox("Specular Mapping", (bool*)&am.scenes[scene].asset.data.doSpecular);
+        ImGui::Checkbox("Diffuse Mapping", (bool*)&sceneData.doDiffuse);
+        ImGui::Checkbox("Normal Mapping", (bool*)&sceneData.doNormal);
+        ImGui::Checkbox("Specular Mapping", (bool*)&sceneData.doSpecular);
         ImGui::End();
 
         //---------------------------------------------------------------------
         // offscreen pass
         //---------------------------------------------------------------------
-        mvBindScene(am, scene2);
+        mvUpdateLightBuffers(am, light1, am.scenes[scene].asset.descriptorSet.descriptors[1].bufferID[GContext->graphics.currentImageIndex], secondaryViewMatrix, 0);
+        mvUpdateLightBuffers(am, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].bufferID[GContext->graphics.currentImageIndex], secondaryViewMatrix, 0);
+        mvBindScene(am, scene, sceneData, 0);
         Renderer::mvBeginPass(mvGetCurrentCommandBuffer(), offscreen.pass);
-
-        mvBind(am, light2, secondaryViewMatrix);
-        mvBind(am, dlight2, secondaryViewMatrix);
 
         vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, offscreen.pipeline.pipeline);
 
-        Renderer::mvRenderMesh(am, *light2.mesh, lightTransform, secondaryViewMatrix, secondaryProjMatrix);
+        Renderer::mvRenderMesh(am, *light1.mesh, lightTransform, secondaryViewMatrix, secondaryProjMatrix);
         Renderer::mvRenderMesh(am, cube1, cubeTransform, secondaryViewMatrix, secondaryProjMatrix);
         Renderer::mvRenderMesh(am, quad1, quadTransform, secondaryViewMatrix, secondaryProjMatrix);
 
@@ -387,11 +376,10 @@ int main()
         //---------------------------------------------------------------------
         // main pass
         //---------------------------------------------------------------------
-        mvBindScene(am, scene);
+        mvUpdateLightBuffers(am, light1, am.scenes[scene].asset.descriptorSet.descriptors[1].bufferID[GContext->graphics.currentImageIndex], viewMatrix, 1);
+        mvUpdateLightBuffers(am, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].bufferID[GContext->graphics.currentImageIndex], viewMatrix, 1);
+        mvBindScene(am, scene, sceneData, 1);
         Renderer::mvBeginPass(mvGetCurrentCommandBuffer(), mainPass);
-
-        mvBind(am, light1, viewMatrix);
-        mvBind(am, dlight1, viewMatrix);
 
         vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, mainPipeline);
 

@@ -37,14 +37,12 @@ struct mvSceneData
 
 struct mvScene
 {
-    std::vector<mvAssetID> buffers;
-    mvDescriptorSet        descriptorSets;
-    mvAssetID              nodes[256];
-    u32                    nodeCount = 0u;
-    u32                    meshOffset = 0u;
-    mvSceneData            data;
+    mvDescriptorSet descriptorSet;
+    mvAssetID       nodes[256];
+    u32             nodeCount = 0u;
+    u32             meshOffset = 0u;
 };
 
 mvScene mvCreateScene(mvAssetManager& am, mvSceneData sceneData);
-void    mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvPointLight& light, mvDirectionLight& dlight);
-void    mvBindScene(mvAssetManager& am, mvAssetID scene);
+void    mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene);
+void    mvBindScene(mvAssetManager& am, mvAssetID scene, mvSceneData data, u32 index);
