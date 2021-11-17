@@ -22,15 +22,14 @@ jobs:
     - name: Install Dependencies
       shell: powershell
       run: |
-          Invoke-WebRequest -Uri "https://github.com/ocornut/imgui/files/3789205/vulkan-sdk-1.1.121.2.zip" -OutFile vulkan-sdk-1.1.121.2.zip
-          Expand-Archive -Path vulkan-sdk-1.1.121.2.zip
-          echo "VK_SDK_PATH=$(pwd)\vulkan-sdk-1.1.121.2\" >>${env:GITHUB_ENV}
+          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/1.2.189.2/windows/VulkanSDK-1.2.189.2-Installer.exe" -OutFile VulkanSDK-1.2.189.2-Installer.exe
+          ./VulkanSDK-1.2.189.2-Installer.exe /S
           
     - name: Build Apps
       shell: cmd
       run: |
         mkdir cmake-build-debug
         cd cmake-build-debug
-        cmake .. -DMV_NO_SHADERS=True
+        cmake ..
         cd ..
         cmake --build cmake-build-debug --config Debug
