@@ -13,12 +13,13 @@
 #include "mvObjLoader.h"
 #include "mvAssetManager.h"
 #include "mvScene.h"
+#include <stdlib.h>
 
 mv_internal const char* gltfModel = "FlightHelmet";
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
 mv_internal const char* gltfPath = "C://dev//glTF-Sample-Models//2.0//";
 mv_internal b8 loadGLTF = false;
-mv_internal b8 loadSponza = true;
+mv_internal b8 loadSponza = false;
 mv_internal f32 shadowWidth = 2048.0f;
 mv_internal f32 offscreenSize = 2048.0f;
 mv_internal f32 offscreenWidth = 50.0f;
@@ -327,7 +328,7 @@ int main()
 {
 
     CreateContext();
-    
+    putenv("VK_LAYER_PATH=..\\..\\Dependencies\\vk_sdk_lite\\Bin");
     mvInitializeViewport(500, 500);
     GContext->IO.shaderDirectory = "../../DearPy3D/shaders/";
     GContext->graphics.enableValidationLayers = true;

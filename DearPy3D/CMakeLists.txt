@@ -63,7 +63,7 @@ target_include_directories(dearpy3d
 		"vendor/imgui/"
 		"vendor/imgui/backends/"
 
-		"../Dependencies/Vulkan-Headers/include/"
+		"../Dependencies/vk_sdk_lite/Include/"
 		"../Dependencies/glfw/include/"
 		"../Dependencies/stb/"
 		"../Dependencies/VulkanMemoryAllocator/"
@@ -73,7 +73,7 @@ target_link_directories(dearpy3d
 
 	PRIVATE
 		
-		"$ENV{VK_SDK_PATH}/Lib"
+		"../Dependencies/vk_sdk_lite/Lib"
 
 )
 

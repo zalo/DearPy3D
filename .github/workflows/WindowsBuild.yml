@@ -18,12 +18,6 @@ jobs:
     - name: Retrieve submodules
       shell: cmd
       run: git submodule update --init --recursive
-
-    - name: Install Dependencies
-      shell: powershell
-      run: |
-          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/1.2.189.2/windows/VulkanSDK-1.2.189.2-Installer.exe" -OutFile VulkanSDK-1.2.189.2-Installer.exe
-          ./VulkanSDK-1.2.189.2-Installer.exe /S
           
     - name: Build Apps
       shell: cmd

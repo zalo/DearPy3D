@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.13)
 
 function(add_shader SHADER)
-    find_program(GLSLC glslc)
+    find_program(GLSLC glslc "../Dependencies/vk_sdk_lite/bin/")
 
     set(current-shader-path "${CMAKE_CURRENT_SOURCE_DIR}/../DearPy3D/shaders/${SHADER}")
     set(current-output-path "${CMAKE_CURRENT_SOURCE_DIR}/../DearPy3D/shaders/${SHADER}.spv")
@@ -50,7 +50,7 @@ target_include_directories(dearpy3dsandbox
 		"../DearPy3D/renderer/"
 		"../DearPy3D/vendor/imgui/"
 
-		"../Dependencies/Vulkan-Headers/include/"
+		"../Dependencies/vk_sdk_lite/Include/"
 		"../Dependencies/glfw/include/"
 		"../Dependencies/stb/"
 		"../Dependencies/VulkanMemoryAllocator/"
@@ -60,7 +60,7 @@ target_link_directories(dearpy3dsandbox
 
 	PRIVATE
 		
-		"$ENV{VK_SDK_PATH}/Lib"
+		"../Dependencies/vk_sdk_lite/Lib"
 
 )
 
