@@ -50,7 +50,7 @@ target_include_directories(dearpy3dsandbox
 		"../DearPy3D/renderer/"
 		"../DearPy3D/vendor/imgui/"
 
-	    "$ENV{VK_SDK_PATH}/Include/"
+		"../Dependencies/Vulkan-Headers/include/"
 		"../Dependencies/glfw/include/"
 		"../Dependencies/stb/"
 		"../Dependencies/VulkanMemoryAllocator/"
