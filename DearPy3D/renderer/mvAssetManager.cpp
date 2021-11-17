@@ -16,7 +16,8 @@ mvPreloadAssetManager(mvAssetManager& am)
 			{
 				mvCreateDynamicUniformBufferDescriptorSpec(0u),
 				mvCreateDynamicUniformBufferDescriptorSpec(1u),
-				mvCreateDynamicUniformBufferDescriptorSpec(2u)
+				mvCreateDynamicUniformBufferDescriptorSpec(2u),
+				mvCreateTextureDescriptorSpec(3u)
 			});
 		
 		mvDescriptorSetLayout materialLayout = mvCreateDescriptorSetLayout(
@@ -45,35 +46,61 @@ mvPreloadAssetManager(mvAssetManager& am)
 		// create pipeline layouts
 		//-----------------------------------------------------------------------------
 
-		//setup push constants
-		VkPipelineLayout pipelineLayout;
-		VkPushConstantRange push_constant;
-		push_constant.offset = 0;
-		push_constant.size = 192;
-		push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		{
+			VkPipelineLayout pipelineLayout;
+			VkPushConstantRange push_constant;
+			push_constant.offset = 0;
+			push_constant.size = 192;
+			push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-		VkPipelineMultisampleStateCreateInfo multisampling{};
-		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampling.sampleShadingEnable = VK_FALSE;
-		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+			VkPipelineMultisampleStateCreateInfo multisampling{};
+			multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+			multisampling.sampleShadingEnable = VK_FALSE;
+			multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 3;
-		pipelineLayoutInfo.pPushConstantRanges = &push_constant;
-		pipelineLayoutInfo.pushConstantRangeCount = 1;
-		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
+			VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+			pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+			pipelineLayoutInfo.setLayoutCount = 3;
+			pipelineLayoutInfo.pPushConstantRanges = &push_constant;
+			pipelineLayoutInfo.pushConstantRangeCount = 1;
+			pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
 
-		if (vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
-			throw std::runtime_error("failed to create pipeline layout!");
+			if (vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
+				throw std::runtime_error("failed to create pipeline layout!");
 
-		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "main_pass", pipelineLayout);
+			mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "main_pass", pipelineLayout);
 
-		mvTransforms* transforms = new mvTransforms[am.maxMeshCount * 3];
-		mvDescriptorSet descriptorSet = mvCreateDescriptorSet(am, perDrawLayout.layout, pipelineLayoutID);
-		descriptorSet.descriptors.push_back(mvCreateDynamicUniformBufferDescriptor(am, mvCreateDynamicUniformBufferDescriptorSpec(0u), "transforms", am.maxMeshCount*3, sizeof(mvTransforms), transforms));
-		mvRegisterAsset(&am, "perdraw", descriptorSet);
-		delete[] transforms;
+			mvTransforms* transforms = new mvTransforms[am.maxMeshCount * 3];
+			mvDescriptorSet descriptorSet = mvCreateDescriptorSet(am, perDrawLayout.layout, pipelineLayoutID);
+			descriptorSet.descriptors.push_back(mvCreateDynamicUniformBufferDescriptor(am, mvCreateDynamicUniformBufferDescriptorSpec(0u), "transforms", am.maxMeshCount * 3, sizeof(mvTransforms), transforms));
+			mvRegisterAsset(&am, "perdraw", descriptorSet);
+			delete[] transforms;
+		}
+
+		{
+			VkPipelineLayout pipelineLayout;
+			VkPushConstantRange push_constant;
+			push_constant.offset = 0;
+			push_constant.size = 192;
+			push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+			VkPipelineMultisampleStateCreateInfo multisampling{};
+			multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+			multisampling.sampleShadingEnable = VK_FALSE;
+			multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+			VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+			pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+			pipelineLayoutInfo.setLayoutCount = 0;
+			pipelineLayoutInfo.pPushConstantRanges = &push_constant;
+			pipelineLayoutInfo.pushConstantRangeCount = 1;
+			pipelineLayoutInfo.pSetLayouts = nullptr;
+
+			if (vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
+				throw std::runtime_error("failed to create pipeline layout!");
+
+			mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "shadow_pass", pipelineLayout);
+		}
 
 	}
 

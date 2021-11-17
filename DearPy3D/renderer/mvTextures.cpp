@@ -84,11 +84,12 @@ mvCreateTexture(u32 width, u32 height, VkFormat format, VkImageUsageFlags usage,
         texture.textureImage, texture.textureImageMemory);
 
     texture.imageInfo = VkDescriptorImageInfo{};
-    texture.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+   
     texture.imageInfo.imageView = mvCreateImageView(texture.textureImage, format, aspect);
 
     if (format == VK_FORMAT_R8G8B8A8_UNORM)
     {
+        texture.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         VkSamplerCreateInfo samplerInfo{};
         samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         samplerInfo.magFilter = VK_FILTER_LINEAR;
@@ -105,31 +106,24 @@ mvCreateTexture(u32 width, u32 height, VkFormat format, VkImageUsageFlags usage,
         vkCreateSampler(mvGetLogicalDevice(), &samplerInfo, nullptr, &texture.imageInfo.sampler);
         texture.imguiID = ImGui_ImplVulkan_AddTexture(texture.imageInfo.sampler, texture.imageInfo.imageView, texture.imageInfo.imageLayout);
     }
-
-    //VkPhysicalDeviceProperties properties{};
-    //vkGetPhysicalDeviceProperties(GContext->graphics.physicalDevice, &properties);
-
-    //VkSamplerCreateInfo samplerInfo{};
-    //samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    //samplerInfo.magFilter = VK_FILTER_NEAREST;
-    //samplerInfo.minFilter = VK_FILTER_NEAREST;
-    //samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    //samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    //samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    //samplerInfo.anisotropyEnable = VK_TRUE;
-    //samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-    //samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    //samplerInfo.unnormalizedCoordinates = VK_FALSE;
-    //samplerInfo.compareEnable = VK_FALSE;
-    //samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-    //samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    //samplerInfo.mipLodBias = 0.0f;
-    //samplerInfo.minLod = 0.0f;
-    //samplerInfo.maxLod = 0.0f;
-
-    //if (vkCreateSampler(mvGetLogicalDevice(), &samplerInfo, nullptr, &texture.imageInfo.sampler) != VK_SUCCESS)
-    //    throw std::runtime_error("failed to create texture sampler!");
+    else
+    {
+        texture.imageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+        VkSamplerCreateInfo samplerInfo{};
+        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerInfo.magFilter = VK_FILTER_LINEAR;
+        samplerInfo.minFilter = VK_FILTER_LINEAR;
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        samplerInfo.addressModeV = samplerInfo.addressModeU;
+        samplerInfo.addressModeW = samplerInfo.addressModeU;
+        samplerInfo.mipLodBias = 0.0f;
+        samplerInfo.maxAnisotropy = 1.0f;
+        samplerInfo.minLod = 0.0f;
+        samplerInfo.maxLod = 1.0f;
+        samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+        vkCreateSampler(mvGetLogicalDevice(), &samplerInfo, nullptr, &texture.imageInfo.sampler);
+    }
     
-
     return texture;
 }

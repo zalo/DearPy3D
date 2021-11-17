@@ -5,7 +5,9 @@ layout(location = 0) in vec3 inViewPos;
 layout(location = 1) in vec3 inViewNormal;
 layout(location = 2) in vec3 inWorldNormal;
 layout(location = 3) in vec2 inTexCoord;
-layout(location = 4) in mat3 inTangentBasis;
+layout(location = 4) in vec4 indshadowWorldPos;
+layout(location = 5) in mat3 inTangentBasis;
+
 
 layout(location = 0) out vec4 outColor;
 
@@ -17,7 +19,23 @@ layout(set = 0, binding = 0) uniform mvScene
     bool doSpecular;
     bool doDiffuse;
     //-------------------------- ( 16 bytes )
-    //-------------------------- ( 1* 16 = 16 bytes )
+
+    bool doOmniShadows;
+    bool doDirectionalShadows;
+    bool doSkybox;
+    bool doPCF;
+    //-------------------------- ( 16 bytes )
+    
+    int pcfRange;
+    //-------------------------- ( 16 bytes )
+
+    mat4 directionalShadowView;
+    //-------------------------- ( 64 bytes )
+
+    mat4 directionalShadowProjection;
+    //-------------------------- ( 64 bytes )
+
+    //-------------------------- ( 1*16 + 2*64= 144 bytes )
 } scene;
 
 layout(set = 0, binding = 1) uniform mvPointLight 
@@ -50,9 +68,12 @@ layout(set = 0, binding = 2) uniform mvDirectionalLight
     //-------------------------- ( 2*16 = 32 bytes )
 } directionLight;
 
+layout(set = 0, binding = 3) uniform sampler2D shadowMap;
+
 layout(set = 1, binding = 0) uniform sampler2D colorSampler;
 layout(set = 1, binding = 1) uniform sampler2D normalSampler;
 layout(set = 1, binding = 2) uniform sampler2D specularSampler;
+
 
 layout(set = 1, binding = 3) uniform mvPhongMaterial
 {
@@ -83,8 +104,46 @@ float Attenuate(float attConst, float attLin, float attQuad, in float distFragTo
     return 1.0 / (attConst + attLin * distFragToL + attQuad * (distFragToL * distFragToL));
 }
 
+float textureProj(vec4 shadowCoord, vec2 off)
+{
+
+	float shadow = 1.0;
+	if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) 
+	{
+		float dist = texture( shadowMap, shadowCoord.st + off ).r;
+		if ( shadowCoord.w > 0.0 && dist < shadowCoord.z ) 
+		{
+			shadow = 0.1;
+		}
+	}
+	return shadow;
+}
+
+float filterPCF(vec4 sc, int range)
+{
+	ivec2 texDim = textureSize(shadowMap, 0);
+	float scale = 1.5;
+	float dx = scale * 1.0 / float(texDim.x);
+	float dy = scale * 1.0 / float(texDim.y);
+
+	float shadowFactor = 0.0;
+	int count = 0;
+	
+	for (int x = -range; x <= range; x++)
+	{
+		for (int y = -range; y <= range; y++)
+		{
+			shadowFactor += textureProj(sc, vec2(dx*x, dy*y));
+			count++;
+		}
+	
+	}
+	return shadowFactor / count;
+}
+
 void main() 
 {
+
     if(!doLighting)
     {
         outColor = vec4(materialColor, 1.0);
@@ -180,22 +239,28 @@ void main()
     {
 
         vec3 lightDir = -directionLight.viewLightDir;
+        float shadow = 1.0;
+
+        // Determine if the projected coordinates are in the 0 to 1 range.  If so then this pixel is in the view of the light.
+        //if ((clamp(projectTexCoord.x, 0.0, 1.0) == projectTexCoord.x) && (clamp(projectTexCoord.y, 0.0, 1.0) == projectTexCoord.y) && scene.doDirectionalShadows)
+        if (scene.doDirectionalShadows)
         {
-             // diffuse
-            diffuse += directionLight.diffuseColor * directionLight.diffuseIntensity * max(0.0, dot(normalize(lightDir), viewNormal));
-    
-            // specular
-        
-            // calculate reflected light vector
-            const vec3 w = viewNormal * dot(normalize(lightDir), viewNormal);
-            const vec3 r = normalize(w * 2.0 - normalize(lightDir));
-        
-            // vector from camera to fragment
-            const vec3 viewCamToFrag = normalize(inViewPos);
-        
-            specularReflected += directionLight.diffuseColor * directionLight.diffuseIntensity * specularReflectedColor * 1.0 * pow(max(0.0, dot(-r, viewCamToFrag)), specularPowerLoaded);
-            
+            shadow = (scene.doPCF) ? filterPCF(indshadowWorldPos / indshadowWorldPos.w, scene.pcfRange) : textureProj(indshadowWorldPos / indshadowWorldPos.w, vec2(0.0));
         }
+
+        // diffuse
+        diffuse += shadow * directionLight.diffuseColor * directionLight.diffuseIntensity * max(0.0, dot(normalize(lightDir), viewNormal));
+    
+        // specular
+        
+        // calculate reflected light vector
+        const vec3 w = viewNormal * dot(normalize(lightDir), viewNormal);
+        const vec3 r = normalize(w * 2.0 - normalize(lightDir));
+        
+        // vector from camera to fragment
+        const vec3 viewCamToFrag = normalize(inViewPos);
+        
+        specularReflected += shadow * directionLight.diffuseColor * directionLight.diffuseIntensity * specularReflectedColor * 1.0 * pow(max(0.0, dot(-r, viewCamToFrag)), specularPowerLoaded);
         
     }
 

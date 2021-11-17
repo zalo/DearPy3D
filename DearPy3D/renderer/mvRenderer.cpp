@@ -92,6 +92,29 @@ namespace Renderer {
     }
 
     void
+    mvRenderMeshShadow(mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
+    {
+        mv_local_persist VkDeviceSize offsets = { 0 };
+
+        VkCommandBuffer commandBuffer = GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex];
+        VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
+        VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
+
+        vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &vertexBuffer, &offsets);
+
+        mvTransforms transforms;
+        transforms.model = accumulatedTransform;
+        transforms.modelView = camera * transforms.model;
+        transforms.modelViewProjection = projection * transforms.modelView;
+
+        VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "shadow_pass");
+        vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
+
+        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.count, 1, 0, 0, 0);
+    }
+
+    void
     mvBeginPass(VkCommandBuffer commandBuffer, mvPass& pass, b8 clear)
     {
 
@@ -118,6 +141,46 @@ namespace Renderer {
         VkRect2D scissor{};
         scissor.extent = pass.extent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+        vkCmdSetDepthBias(
+            mvGetCurrentCommandBuffer(),
+            0.0f,
+            0.0f,
+            0.0f);
+    }
+
+    void
+    mvBeginDepthOnlyPass(VkCommandBuffer commandBuffer, mvPass& pass, b8 clear)
+    {
+
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = pass.renderPass;
+        renderPassInfo.framebuffer = pass.frameBuffers[GContext->graphics.currentImageIndex];
+        renderPassInfo.renderArea.offset = { 0, 0 };
+        renderPassInfo.renderArea.extent = pass.extent;
+
+        VkClearValue clearValues[1];
+        clearValues[0].depthStencil = { 1.0f, 0 };
+        if (clear)
+        {
+            renderPassInfo.clearValueCount = 1;
+            renderPassInfo.pClearValues = clearValues;
+        }
+
+        vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdSetViewport(commandBuffer, 0, 1, &pass.viewport);
+
+        VkRect2D scissor{};
+        scissor.extent = pass.extent;
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+        vkCmdSetDepthBias(
+            mvGetCurrentCommandBuffer(),
+            50.0f,
+            0.0f,
+            2.0f);
     }
 
     void
@@ -139,6 +202,19 @@ namespace Renderer {
         }
     }
 
+    mv_internal void
+    mvRenderNodeShadow(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
+    {
+
+        if (node.mesh > -1)
+            mvRenderMeshShadow(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
+
+        for (u32 i = 0; i < node.childCount; i++)
+        {
+            mvRenderNodeShadow(am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj);
+        }
+    }
+
     void
     mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
     {
@@ -153,6 +229,24 @@ namespace Renderer {
             for (u32 j = 0; j < rootNode.childCount; j++)
             {
                 mvRenderNode(am, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj);
+            }
+        }
+    }
+
+    void
+    mvRenderSceneShadow(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
+    {
+
+        for (u32 i = 0; i < scene.nodeCount; i++)
+        {
+            mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
+
+            if (rootNode.mesh > -1)
+                mvRenderMeshShadow(am, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj);
+
+            for (u32 j = 0; j < rootNode.childCount; j++)
+            {
+                mvRenderNodeShadow(am, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj);
             }
         }
     }

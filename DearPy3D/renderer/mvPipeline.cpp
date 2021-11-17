@@ -147,7 +147,8 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     mvPipeline pipeline{};
 
     pipeline.vertexShader = mvCreateShader(spec.vertexShader);
-    pipeline.fragShader = mvCreateShader(spec.pixelShader);
+    if(!spec.pixelShader.empty())
+        pipeline.fragShader = mvCreateShader(spec.pixelShader);
     pipeline.specification = spec;
 
     //---------------------------------------------------------------------
@@ -217,7 +218,10 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = spec.backfaceCulling ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rasterizer.depthBiasEnable = VK_FALSE;
+    if (!spec.pixelShader.empty())
+        rasterizer.depthBiasEnable = VK_FALSE;
+    else
+        rasterizer.depthBiasEnable = VK_TRUE;
 
     //---------------------------------------------------------------------
     // fragment shader stage
@@ -225,14 +229,17 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
     fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    fragShaderStageInfo.module = pipeline.fragShader.shaderModule;
+    if (!spec.pixelShader.empty())
+    { 
+        fragShaderStageInfo.module = pipeline.fragShader.shaderModule;
+    }
     fragShaderStageInfo.pName = "main";
 
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable = spec.depthTest ? VK_TRUE : VK_FALSE;
     depthStencil.depthWriteEnable = spec.depthWrite ? VK_TRUE : VK_FALSE;
-    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
     depthStencil.minDepthBounds = 0.0f; // Optional
     depthStencil.maxDepthBounds = 1.0f; // Optional
@@ -257,7 +264,10 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlending.logicOpEnable = VK_FALSE;
     colorBlending.logicOp = VK_LOGIC_OP_COPY;
-    colorBlending.attachmentCount = 1;
+    if (!spec.pixelShader.empty())
+        colorBlending.attachmentCount = 1;
+    else
+        colorBlending.attachmentCount = 0;
     colorBlending.pAttachments = &colorBlendAttachment;
     colorBlending.blendConstants[0] = 0.0f;
     colorBlending.blendConstants[1] = 0.5f;
@@ -272,19 +282,21 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     //---------------------------------------------------------------------
     // Create Pipeline
     //---------------------------------------------------------------------
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+    shaderStages.push_back(vertShaderStageInfo);
+    if (!spec.pixelShader.empty())
+        shaderStages.push_back(fragShaderStageInfo);
 
-    VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
-
-    VkDynamicState dynamicStateEnables[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    VkDynamicState dynamicStateEnables[3] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_DEPTH_BIAS };
     VkPipelineDynamicStateCreateInfo dynamicState{};
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamicState.dynamicStateCount = 2;
+    dynamicState.dynamicStateCount = 3;
     dynamicState.pDynamicStates = dynamicStateEnables;
     
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.stageCount = shaderStages.size();
+    pipelineInfo.pStages = shaderStages.data();
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState = &viewportState;
@@ -292,7 +304,10 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = mvGetRawPipelineLayoutAsset(&assetManager, "main_pass");
+    if (!spec.pixelShader.empty())
+        pipelineInfo.layout = mvGetRawPipelineLayoutAsset(&assetManager, "main_pass");
+    else
+        pipelineInfo.layout = mvGetRawPipelineLayoutAsset(&assetManager, "shadow_pass");
     pipelineInfo.renderPass = spec.renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -303,7 +318,8 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
 
     // no longer need this
     vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.vertexShader.shaderModule, nullptr);
-    vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.fragShader.shaderModule, nullptr);
+    if (!spec.pixelShader.empty())
+        vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.fragShader.shaderModule, nullptr);
     pipeline.vertexShader.shaderModule = VK_NULL_HANDLE;
     pipeline.fragShader.shaderModule = VK_NULL_HANDLE;
 

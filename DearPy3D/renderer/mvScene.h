@@ -31,8 +31,23 @@ struct mvSceneData
     b32 doDiffuse = true;
     //-------------------------- ( 16 bytes )
 
-    // 
-    //-------------------------- ( 1 * 16 = 16 bytes )
+    b32 doOmniShadows = true;
+    b32 doDirectionalShadows = true;
+    b32 doSkybox = true;
+    b32 doPCF= false;
+    //-------------------------- ( 16 bytes )
+     
+    i32 pcfRange = 1;
+    char _pad[12];
+    //-------------------------- ( 16 bytes )
+
+    mvMat4 directionalShadowView = mvIdentityMat4();
+    //-------------------------- ( 64 bytes )
+
+    mvMat4 directionalShadowProjection = mvIdentityMat4();
+    //-------------------------- ( 64 bytes )
+
+    //-------------------------- ( 2 * 16 + 2*64= 160 bytes )
 };
 
 struct mvScene
@@ -44,5 +59,5 @@ struct mvScene
 };
 
 mvScene mvCreateScene(mvAssetManager& am, mvSceneData sceneData);
-void    mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene);
+void    mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvAssetID shadowMap);
 void    mvBindScene(mvAssetManager& am, mvAssetID scene, mvSceneData data, u32 index);

@@ -17,24 +17,29 @@ mvCreateScene(mvAssetManager& am, mvSceneData sceneData)
     scene.descriptorSet.descriptors.push_back(mvCreateDynamicUniformBufferDescriptor(am, mvCreateDynamicUniformBufferDescriptorSpec(0u), hash, 3, sizeof(mvSceneData), &sceneData));
     scene.descriptorSet.descriptors.push_back(mvCreateDynamicUniformBufferDescriptor(am, mvCreateDynamicUniformBufferDescriptorSpec(1u), hash + "light", 3, sizeof(mvPointLightInfo), &pointLightInfo));
     scene.descriptorSet.descriptors.push_back(mvCreateDynamicUniformBufferDescriptor(am, mvCreateDynamicUniformBufferDescriptorSpec(2u), hash + "dlight", 3, sizeof(mvDirectionLightInfo), &dpointLightInfo));
+    scene.descriptorSet.descriptors.push_back(mvCreateTextureDescriptor(am, mvCreateTextureDescriptorSpec(3u)));
     mvRegisterAsset(&am, hash, scene.descriptorSet);
 
     return scene;
 }
 
 void
-mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene)
+mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvAssetID shadowMap)
 {
-    VkWriteDescriptorSet descriptorWrites[3];
+    VkWriteDescriptorSet descriptorWrites[4];
 
-    // set descriptor sets
+    scene.descriptorSet.descriptors[0].write.pBufferInfo = &am.buffers[scene.descriptorSet.descriptors[0].bufferID[GContext->graphics.currentImageIndex]].asset.bufferInfo;
+    scene.descriptorSet.descriptors[1].write.pBufferInfo = &am.buffers[scene.descriptorSet.descriptors[1].bufferID[GContext->graphics.currentImageIndex]].asset.bufferInfo;
+    scene.descriptorSet.descriptors[2].write.pBufferInfo = &am.buffers[scene.descriptorSet.descriptors[2].bufferID[GContext->graphics.currentImageIndex]].asset.bufferInfo;
+    scene.descriptorSet.descriptors[3].write.pImageInfo = &am.textures[shadowMap].asset.imageInfo;
+
     for (u32 i = 0; i < scene.descriptorSet.descriptors.size(); i++)
     {
-        scene.descriptorSet.descriptors[i].write.pBufferInfo = &am.buffers[scene.descriptorSet.descriptors[i].bufferID[GContext->graphics.currentImageIndex]].asset.bufferInfo;
         scene.descriptorSet.descriptors[i].write.dstSet = scene.descriptorSet.descriptorSets[GContext->graphics.currentImageIndex];
         descriptorWrites[i] = scene.descriptorSet.descriptors[i].write;
     }
-    vkUpdateDescriptorSets(mvGetLogicalDevice(), 3, descriptorWrites, 0, nullptr);
+
+    vkUpdateDescriptorSets(mvGetLogicalDevice(), 4, descriptorWrites, 0, nullptr);
 }
 
 void
