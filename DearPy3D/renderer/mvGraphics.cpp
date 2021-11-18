@@ -238,7 +238,7 @@ mvSetupImGui(GLFWwindow* window)
 
 }
 
-void 
+mv_internal void 
 mvCreateRenderPass(VkFormat format, VkFormat depthformat, VkRenderPass* renderPass)
 {
     VkAttachmentDescription attachments[2];
@@ -277,22 +277,14 @@ mvCreateRenderPass(VkFormat format, VkFormat depthformat, VkRenderPass* renderPa
     subpass.pColorAttachments = references;
     subpass.pDepthStencilAttachment = &references[1];
 
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcAccessMask = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassInfo.attachmentCount = 2u;
     renderPassInfo.pAttachments = attachments;
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = &dependency;
+    renderPassInfo.dependencyCount = 0;
+    renderPassInfo.pDependencies = VK_NULL_HANDLE;
 
     if (vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, renderPass) != VK_SUCCESS)
         throw std::runtime_error("failed to create render pass!");
