@@ -7,6 +7,26 @@ mvRadians(f32 degrees)
 	return degrees * 0.01745329251994329576923690768489f;
 }
 
+f32
+mvFloor(f32 value)
+{
+	return floorf(value);
+}
+
+f32
+mvMax(f32 v1, f32 v2)
+{
+	if (v1 > v2)
+		return v1;
+	return v2;
+}
+
+f32
+mvLog2(f32 value)
+{
+	return log2f(value);
+}
+
 f32&
 mvVec2::operator[](i32 index)
 {

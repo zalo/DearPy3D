@@ -89,6 +89,9 @@ mvVec3 mvNormalize(mvVec3 v);
 mvVec3 mvCross(mvVec3 v1, mvVec3 v2);
 f32    mvDot(mvVec3 v1, mvVec3 v2);
 f32    mvRadians(f32 degrees);
+f32    mvFloor(f32 value);
+f32    mvMax(f32 v1, f32 v2);
+f32    mvLog2(f32 value);
 
 mvMat4 mvYawPitchRoll(f32 yaw, f32 pitch, f32 roll);
 mvMat4 mvLookAtLH(mvVec3 eye, mvVec3 center, mvVec3 up); // world space eye, center, up

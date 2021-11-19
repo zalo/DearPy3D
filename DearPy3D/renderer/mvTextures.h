@@ -12,6 +12,7 @@ struct mvTexture
 	std::string           file;
 	VkDescriptorImageInfo imageInfo;
 	ImTextureID           imguiID;
+	u32                   mipLevels;
 };
 
 mvTexture mvCreateTexture(const std::string& file);
