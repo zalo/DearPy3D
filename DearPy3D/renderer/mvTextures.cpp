@@ -3,6 +3,7 @@
 #include "mvContext.h"
 #include "imgui_impl_vulkan.h"
 #include "mvMath.h"
+#include "mvBuffer.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -25,16 +26,21 @@ mvCreateTexture(const std::string& file)
     if (!pixels)
         throw std::runtime_error("failed to load texture image!");
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
+    //VkBuffer stagingBuffer;
+    //VkDeviceMemory stagingBufferMemory;
 
-    mvCreateBuffer(imageSize,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+    mvBufferSpecification bufferSpec{};
+    bufferSpec.size = imageSize;
+    bufferSpec.usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    bufferSpec.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-    void* data;
-    vkMapMemory(mvGetLogicalDevice(), stagingBufferMemory, 0, imageSize, 0, &data);
-    memcpy(data, pixels, static_cast<size_t>(imageSize));
-    vkUnmapMemory(mvGetLogicalDevice(), stagingBufferMemory);
+    mvBuffer stagingBuffer = mvCreateBuffer(bufferSpec);
+
+    void* mapping;
+    MV_VULKAN(vkMapMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory, 0, stagingBuffer.actualSize, 0, &mapping));
+    memcpy(mapping, pixels, (size_t)imageSize);
+    vkUnmapMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory);
+    mapping = nullptr;
 
     stbi_image_free(pixels);
 
@@ -71,11 +77,11 @@ mvCreateTexture(const std::string& file)
     vkBindImageMemory(mvGetLogicalDevice(), texture.textureImage, texture.textureImageMemory, 0);
 
     mvTransitionImageLayout(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, imageInfo.mipLevels);
-    mvCopyBufferToImage(stagingBuffer, texture.textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+    mvCopyBufferToImage(stagingBuffer.buffer, texture.textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
     mvTransitionImageLayout(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, imageInfo.mipLevels);
 
-    vkDestroyBuffer(mvGetLogicalDevice(), stagingBuffer, nullptr);
-    vkFreeMemory(mvGetLogicalDevice(), stagingBufferMemory, nullptr);
+    vkDestroyBuffer(mvGetLogicalDevice(), stagingBuffer.buffer, nullptr);
+    vkFreeMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory, nullptr);
 
     VkPhysicalDeviceProperties properties{};
     vkGetPhysicalDeviceProperties(GContext->graphics.physicalDevice, &properties);

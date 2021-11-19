@@ -16,7 +16,7 @@
 #include <stdlib.h>
 
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
-mv_internal b8 loadSponza = false;
+mv_internal b8 loadSponza = true;
 
 int main() 
 {

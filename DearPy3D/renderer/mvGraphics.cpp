@@ -623,20 +623,6 @@ mvSetupGraphicsContext()
     }
 
     //-----------------------------------------------------------------------------
-    // initialize VulkanMemoryAllocator
-    //-----------------------------------------------------------------------------
-    {
-        // Initialize VulkanMemoryAllocator
-        VmaAllocatorCreateInfo allocatorInfo = {};
-        allocatorInfo.vulkanApiVersion = 0;
-        allocatorInfo.physicalDevice = GContext->graphics.physicalDevice;
-        allocatorInfo.device = mvGetLogicalDevice();
-        allocatorInfo.instance = GContext->graphics.instance;
-
-        vmaCreateAllocator(&allocatorInfo, &GContext->graphics.allocator);
-    }
-
-    //-----------------------------------------------------------------------------
     // create swapchain
     //-----------------------------------------------------------------------------
     mvCreateSwapChain();
@@ -765,7 +751,8 @@ mvFindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryP
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) 
+    {
         if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) 
         {
             return i;
@@ -791,7 +778,7 @@ mvCleanupGraphicsContext()
     GContext->graphics.commandBuffers.data());
     vkDestroyCommandPool(mvGetLogicalDevice(), GContext->graphics.commandPool, nullptr);
 
-    vmaDestroyAllocator(GContext->graphics.allocator);
+    //vmaDestroyAllocator(GContext->graphics.allocator);
     vkDestroyDescriptorPool(GContext->graphics.logicalDevice, GContext->graphics.descriptorPool, nullptr);
 
     for (size_t i = 0; i < MV_MAX_FRAMES_IN_FLIGHT; i++)
@@ -926,34 +913,6 @@ mvEndSingleTimeCommands(VkCommandBuffer commandBuffer)
 }
 
 void 
-mvCreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
-{
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = usage;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vkCreateBuffer(mvGetLogicalDevice(), &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create buffer!");
-    }
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(mvGetLogicalDevice(), buffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = mvFindMemoryType(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, properties);
-
-    if (vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate buffer memory!");
-    }
-
-    vkBindBufferMemory(mvGetLogicalDevice(), buffer, bufferMemory, 0);
-}
-
-void 
 mvCopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
     VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
@@ -1068,70 +1027,4 @@ mvCopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t hei
     );
 
     mvEndSingleTimeCommands(commandBuffer);
-}
-
-//-----------------------------------------------------------------------------
-// Vulkan Memory Allocator
-//-----------------------------------------------------------------------------
-
-VmaAllocation
-mvAllocateBuffer(VkBufferCreateInfo bufferCreateInfo, VmaMemoryUsage usage, VkBuffer& outBuffer)
-{
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = usage;
-
-    VmaAllocation allocation;
-    vmaCreateBuffer(GContext->graphics.allocator, &bufferCreateInfo, &allocCreateInfo, &outBuffer, &allocation, nullptr);
-
-    //VmaAllocationInfo allocInfo{};
-    //vmaGetAllocationInfo(GetVmaAllocator(), allocation, &allocInfo);
-
-    return allocation;
-}
-
-VmaAllocation
-mvAllocateImage(VkImageCreateInfo imageCreateInfo, VmaMemoryUsage usage, VkImage& outImage)
-{
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = usage;
-
-    VmaAllocation allocation;
-    vmaCreateImage(GContext->graphics.allocator, &imageCreateInfo, &allocCreateInfo, &outImage, &allocation, nullptr);
-
-    //VmaAllocationInfo allocInfo;
-    //vmaGetAllocationInfo(GetVmaAllocator(), allocation, &allocInfo);
-
-    return allocation;
-}
-
-void
-mvFree(VmaAllocation allocation)
-{
-    vmaFreeMemory(GContext->graphics.allocator, allocation);
-}
-
-void
-mvDestroyImage(VkImage image, VmaAllocation allocation)
-{
-    vmaDestroyImage(GContext->graphics.allocator, image, allocation);
-}
-
-void
-mvDestroyBuffer(VkBuffer buffer, VmaAllocation allocation)
-{
-    vmaDestroyBuffer(GContext->graphics.allocator, buffer, allocation);
-}
-
-void*
-mvMapMemory(VmaAllocation allocation)
-{
-    void* mappedMemory;
-    vmaMapMemory(GContext->graphics.allocator, allocation, (void**)&mappedMemory);
-    return mappedMemory;
-}
-
-void
-mvUnmapMemory(VmaAllocation allocation)
-{
-    vmaUnmapMemory(GContext->graphics.allocator, allocation);
 }

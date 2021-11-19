@@ -2,116 +2,127 @@
 #include <stdexcept>
 #include "mvContext.h"
 
-mvBuffer 
-mvCreateBuffer(void* data, u64 count, u64 size, VkBufferUsageFlags flags)
+mv_internal mvBuffer 
+create_buffer(mvBufferSpecification specification)
 {
     mvBuffer buffer{};
-    buffer.count = count;
+    buffer.specification = specification;
+    
+    if (specification.aligned)
+    {
+        buffer.actualSize = mvGetRequiredUniformBufferSize(specification.size * specification.components) * specification.count;
+        buffer.bufferInfo.range = mvGetRequiredUniformBufferSize(specification.size * specification.components);
+    }
+    else
+        buffer.actualSize = specification.size * specification.count * specification.components;
 
-    VkDeviceSize bufferSize = size * count;
-    buffer.size = (size_t)bufferSize;
-
-    // create staging buffer to copy data to
-    VkBufferCreateInfo stagingBufferInfo{};
-    stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    stagingBufferInfo.size = bufferSize;
-    stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    stagingBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    VkBuffer stagingBuffer;
-    VmaAllocation stagingBufferAllocation = mvAllocateBuffer(stagingBufferInfo, VMA_MEMORY_USAGE_CPU_TO_GPU, stagingBuffer);
-    void* mdata = mvMapMemory(stagingBufferAllocation);
-    memcpy(mdata, data, buffer.size);
-    mvUnmapMemory(stagingBufferAllocation);
-
-    // create final buffer
+    // create buffer
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = bufferSize;
-    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | flags;
-    buffer.memoryAllocation = mvAllocateBuffer(bufferInfo, VMA_MEMORY_USAGE_GPU_ONLY, buffer.buffer);
+    bufferInfo.size = buffer.actualSize;
+    bufferInfo.usage = specification.usageFlags;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    // copy from staging to final buffer
-    VkBufferCopy copyRegion = {};
-    copyRegion.size = bufferSize;
-    VkCommandBuffer copyCmd = mvBeginSingleTimeCommands();
-    vkCmdCopyBuffer(copyCmd, stagingBuffer, buffer.buffer, 1, &copyRegion);
-    mvEndSingleTimeCommands(copyCmd);
+    MV_VULKAN(vkCreateBuffer(mvGetLogicalDevice(), &bufferInfo, nullptr, &buffer.buffer));
 
-    // cleanup staging buffer
-    mvDestroyBuffer(stagingBuffer, stagingBufferAllocation);
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(mvGetLogicalDevice(), buffer.buffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = mvFindMemoryType(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, specification.propertyFlags);
+
+    MV_VULKAN(vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &buffer.deviceMemory));
+
+    MV_VULKAN(vkBindBufferMemory(mvGetLogicalDevice(), buffer.buffer, buffer.deviceMemory, 0));
 
     return buffer;
 }
 
-mvBuffer 
-mvCreateDynamicBuffer(void* data, u64 count, u64 size, VkBufferUsageFlags flags)
+mvBuffer mvCreateBuffer(mvBufferSpecification specification, void* data)
 {
-    size_t bufferAlignment = mvGetRequiredUniformBufferSize(size);
-
-    mvBuffer buffer{};
-    buffer.count = count;
-    buffer.bufferInfo.offset = 0u;
-    buffer.bufferInfo.range = bufferAlignment;
-
-    VkDeviceSize bufferSize = bufferAlignment * count;
-    buffer.size = (size_t)bufferSize;
-
-    // create staging buffer to copy data to
-    VkBufferCreateInfo stagingBufferInfo{};
-    stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    stagingBufferInfo.size = bufferSize;
-    stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    stagingBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    VkBuffer stagingBuffer;
-    VmaAllocation stagingBufferAllocation = mvAllocateBuffer(stagingBufferInfo, VMA_MEMORY_USAGE_CPU_TO_GPU, stagingBuffer);
-    char* mdata = (char*)mvMapMemory(stagingBufferAllocation);
-    char* sdata = (char*)data;
-        
-    u64 currentOffset = 0u;
-    for (size_t i = 0; i < count; i++)
+    if (data)
     {
-        char* dst = &mdata[i * bufferAlignment];
-        char* src = &sdata[i * size];
-        memcpy(dst, src, size);
+        // create staging buffer
+        mvBufferSpecification stagingSpec = specification;
+        stagingSpec.usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        stagingSpec.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+        mvBuffer stagingBuffer = create_buffer(stagingSpec);
+
+        if (specification.aligned) // add spacing
+        {
+            void* mapping;
+            MV_VULKAN(vkMapMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory, 0, stagingBuffer.actualSize, 0, &mapping));
+            char* mdata = (char*)mapping;
+            char* sdata = (char*)data;
+
+            for (size_t i = 0; i < specification.count; i++)
+            {
+                char* dst = &mdata[i * stagingBuffer.actualSize/specification.count];
+                char* src = &sdata[i * specification.size * specification.components];
+                memcpy(dst, src, specification.size * specification.components);
+            }
+
+            //memcpy(mapping, data, (size_t)specification.stride);
+            vkUnmapMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory);
+        }
+        else
+        {
+            void* mapping;
+            MV_VULKAN(vkMapMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory, 0, stagingBuffer.actualSize, 0, &mapping));
+            memcpy(mapping, data, (size_t)specification.size * specification.count * specification.components);
+            vkUnmapMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory);
+        }
+
+        // create final buffer
+        specification.usageFlags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        mvBuffer finalBuffer = create_buffer(specification);
+
+        mvCopyBuffer(stagingBuffer, finalBuffer);
+
+        // cleanup staging buffer
+        vkDestroyBuffer(mvGetLogicalDevice(), stagingBuffer.buffer, nullptr);
+        vkFreeMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory, nullptr);
+
+        finalBuffer.bufferInfo.buffer = finalBuffer.buffer; // descriptor info
+
+        return finalBuffer;
+
     }
-    mvUnmapMemory(stagingBufferAllocation);
+    return create_buffer(specification);
+}
 
-    // create final buffer
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = bufferSize;
-    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | flags;
-    buffer.memoryAllocation = mvAllocateBuffer(bufferInfo, VMA_MEMORY_USAGE_CPU_TO_GPU, buffer.buffer);
+void
+mvCopyBuffer(mvBuffer srcBuffer, mvBuffer dstBuffer)
+{
+    VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
 
-    // copy from staging to final buffer
-    VkBufferCopy copyRegion = {};
-    copyRegion.size = bufferSize;
-    VkCommandBuffer copyCmd = mvBeginSingleTimeCommands();
-    vkCmdCopyBuffer(copyCmd, stagingBuffer, buffer.buffer, 1, &copyRegion);
-    mvEndSingleTimeCommands(copyCmd);
+    VkBufferCopy copyRegion{};
+    copyRegion.size = srcBuffer.actualSize;
+    vkCmdCopyBuffer(commandBuffer, srcBuffer.buffer, dstBuffer.buffer, 1, &copyRegion);
 
-    // cleanup staging buffer
-    mvDestroyBuffer(stagingBuffer, stagingBufferAllocation);
-
-    buffer.bufferInfo.buffer = buffer.buffer;
-
-    return buffer;
+    mvEndSingleTimeCommands(commandBuffer);
 }
 
 void 
 mvUpdateBuffer(mvBuffer& buffer, void* data)
 {
-    void* mdata = mvMapMemory(buffer.memoryAllocation);
-    memcpy(mdata, data, buffer.size);
-    mvUnmapMemory(buffer.memoryAllocation);
+    void* mapping;
+    MV_VULKAN(vkMapMemory(mvGetLogicalDevice(), buffer.deviceMemory, 0, buffer.actualSize, 0, &mapping));
+    memcpy(mapping, data, (size_t)buffer.actualSize);
+    vkUnmapMemory(mvGetLogicalDevice(), buffer.deviceMemory);
 }
 
 void
 mvPartialUpdateBuffer(mvBuffer& buffer, void* data, u64 index)
 {
-    u64 individualBlock = buffer.size / buffer.count;
+    u64 individualBlock = buffer.bufferInfo.range;
     u64 offset = index * individualBlock;
-    char* mdata = (char*)mvMapMemory(buffer.memoryAllocation);
+    void* mapping;
+    MV_VULKAN(vkMapMemory(mvGetLogicalDevice(), buffer.deviceMemory, 0, buffer.actualSize, 0, &mapping));
+    char* mdata = (char*)mapping;
     memcpy((void*)&mdata[offset], data, individualBlock);
-    mvUnmapMemory(buffer.memoryAllocation);
+    vkUnmapMemory(mvGetLogicalDevice(), buffer.deviceMemory);
 }
