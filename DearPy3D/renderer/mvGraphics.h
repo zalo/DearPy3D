@@ -39,10 +39,8 @@ void          mvCreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemo
 void          mvCopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 void          mvTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 void          mvCopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
-VkImageView   mvCreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 std::uint32_t mvFindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 size_t        mvGetRequiredUniformBufferSize(size_t size);
-void          mvCreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 
 void            mvRecordImGui(VkCommandBuffer commandBuffer);
 void            mvPresent();
