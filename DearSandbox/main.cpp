@@ -1,4 +1,5 @@
 #include <imgui.h>
+#include <imgui_impl_vulkan.h>
 #include <array>
 #include "mvContext.h"
 #include "mvMesh.h"
@@ -303,7 +304,7 @@ int main()
             Renderer::mvRenderScene(am, am.scenes[i].asset, viewMatrix, projMatrix);
 
         ImGui::Render();
-        mvRecordImGui(mvGetCurrentCommandBuffer());
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), mvGetCurrentCommandBuffer());
 
         Renderer::mvEndPass(mvGetCurrentCommandBuffer());
 

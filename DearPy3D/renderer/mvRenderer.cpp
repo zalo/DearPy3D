@@ -323,11 +323,17 @@ namespace Renderer {
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                 VK_IMAGE_ASPECT_DEPTH_BIT);
 
-            mvCreateFrameBuffer(pass.renderPass,
-                pass.frameBuffers[i],
-                specification.width,
-                specification.height,
-                std::vector<VkImageView>{ pass.colorTextures[i].imageInfo.imageView, pass.depthTextures[i].imageInfo.imageView });
+            VkImageView imageViews[] = { pass.colorTextures[i].imageInfo.imageView, pass.depthTextures[i].imageInfo.imageView };
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = pass.renderPass;
+            framebufferInfo.attachmentCount = 2;
+            framebufferInfo.pAttachments = imageViews;
+            framebufferInfo.width = specification.width;
+            framebufferInfo.height = specification.height;
+            framebufferInfo.layers = 1;
+            MV_VULKAN(vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &pass.frameBuffers[i]));
+
 
             mvRegisterAsset(&am, specification.name + std::to_string(i), pass.colorTextures[i]);
             mvRegisterAsset(&am, specification.name + "d" + std::to_string(i), pass.depthTextures[i]);
@@ -421,11 +427,15 @@ namespace Renderer {
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_IMAGE_ASPECT_DEPTH_BIT);
 
-            mvCreateFrameBuffer(pass.renderPass,
-                pass.frameBuffers[i],
-                specification.width,
-                specification.height,
-                std::vector<VkImageView>{ pass.depthTextures[i].imageInfo.imageView });
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = pass.renderPass;
+            framebufferInfo.attachmentCount = 1;
+            framebufferInfo.pAttachments = &pass.depthTextures[i].imageInfo.imageView;
+            framebufferInfo.width = specification.width;
+            framebufferInfo.height = specification.height;
+            framebufferInfo.layers = 1;
+            MV_VULKAN(vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &pass.frameBuffers[i]));
 
             mvRegisterAsset(&am, specification.name + std::to_string(i), pass.depthTextures[i]);
             mvRegisterAsset(&am, specification.name + std::to_string(i), pass.frameBuffers[i]);

@@ -36,4 +36,4 @@ typedef s32 mvAssetID;
 #define mv_global static
 #define MV_INVALID_ASSET_ID -1
 
-#define MV_VULKAN(x) if(x != VK_SUCCESS) throw std::runtime_error("runtime vulcan error")
+#define MV_VULKAN(x) {if(x != VK_SUCCESS) {throw std::runtime_error("runtime vulcan error");}}
