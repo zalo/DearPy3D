@@ -9,13 +9,13 @@ namespace Renderer {
     void
     mvBeginFrame()
     {
-        vkWaitForFences(mvGetLogicalDevice(), 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame], VK_TRUE, UINT64_MAX);
+        MV_VULKAN(vkWaitForFences(mvGetLogicalDevice(), 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame], VK_TRUE, UINT64_MAX));
 
-        VkResult result = vkAcquireNextImageKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, UINT64_MAX, GContext->graphics.imageAvailableSemaphores[GContext->graphics.currentFrame],
-            VK_NULL_HANDLE, &GContext->graphics.currentImageIndex);
+        MV_VULKAN(vkAcquireNextImageKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, UINT64_MAX, GContext->graphics.imageAvailableSemaphores[GContext->graphics.currentFrame],
+            VK_NULL_HANDLE, &GContext->graphics.currentImageIndex));
 
         if (GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex] != VK_NULL_HANDLE)
-            vkWaitForFences(mvGetLogicalDevice(), 1, &GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex], VK_TRUE, UINT64_MAX);
+            MV_VULKAN(vkWaitForFences(mvGetLogicalDevice(), 1, &GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex], VK_TRUE, UINT64_MAX));
 
         // just in case the acquired image is out of order
         GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex] = GContext->graphics.inFlightFences[GContext->graphics.currentFrame];
@@ -27,16 +27,14 @@ namespace Renderer {
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-        if (vkBeginCommandBuffer(mvGetCurrentCommandBuffer(), &beginInfo) != VK_SUCCESS)
-            throw std::runtime_error("failed to begin recording command buffer!");
+        MV_VULKAN(vkBeginCommandBuffer(mvGetCurrentCommandBuffer(), &beginInfo));
     }
 
     void
     mvEndFrame()
     {
 
-        if (vkEndCommandBuffer(mvGetCurrentCommandBuffer()) != VK_SUCCESS)
-            throw std::runtime_error("failed to record command buffer!");
+        MV_VULKAN(vkEndCommandBuffer(mvGetCurrentCommandBuffer()));
 
         VkSemaphore waitSemaphores[] = { GContext->graphics.imageAvailableSemaphores[GContext->graphics.currentFrame] };
         VkSemaphore signalSemaphores[] = { GContext->graphics.renderFinishedSemaphores[GContext->graphics.currentFrame] };
@@ -52,10 +50,8 @@ namespace Renderer {
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        vkResetFences(mvGetLogicalDevice(), 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame]);
-
-        if (vkQueueSubmit(GContext->graphics.graphicsQueue, 1, &submitInfo, GContext->graphics.inFlightFences[GContext->graphics.currentFrame]) != VK_SUCCESS)
-            throw std::runtime_error("failed to submit draw command buffer!");
+        MV_VULKAN(vkResetFences(mvGetLogicalDevice(), 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame]));
+        MV_VULKAN(vkQueueSubmit(GContext->graphics.graphicsQueue, 1, &submitInfo, GContext->graphics.inFlightFences[GContext->graphics.currentFrame]));
     }
 
     void mvUpdateDescriptors(mvAssetManager& am)
@@ -88,7 +84,7 @@ namespace Renderer {
         VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "main_pass");
         vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
-        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
     }
 
     void
@@ -111,7 +107,7 @@ namespace Renderer {
         VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "shadow_pass");
         vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
-        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
     }
 
     void
@@ -308,8 +304,7 @@ namespace Renderer {
         renderPassInfo.dependencyCount = 2;
         renderPassInfo.pDependencies = dependencies;
 
-        if (vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, &pass.renderPass) != VK_SUCCESS)
-            throw std::runtime_error("failed to create render pass!");
+        MV_VULKAN(vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, &pass.renderPass));
 
         mvRegisterAsset(&am, specification.name, pass.renderPass);
 
@@ -328,11 +323,17 @@ namespace Renderer {
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                 VK_IMAGE_ASPECT_DEPTH_BIT);
 
-            mvCreateFrameBuffer(pass.renderPass,
-                pass.frameBuffers[i],
-                specification.width,
-                specification.height,
-                std::vector<VkImageView>{ pass.colorTextures[i].imageInfo.imageView, pass.depthTextures[i].imageInfo.imageView });
+            VkImageView imageViews[] = { pass.colorTextures[i].imageInfo.imageView, pass.depthTextures[i].imageInfo.imageView };
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = pass.renderPass;
+            framebufferInfo.attachmentCount = 2;
+            framebufferInfo.pAttachments = imageViews;
+            framebufferInfo.width = specification.width;
+            framebufferInfo.height = specification.height;
+            framebufferInfo.layers = 1;
+            MV_VULKAN(vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &pass.frameBuffers[i]));
+
 
             mvRegisterAsset(&am, specification.name + std::to_string(i), pass.colorTextures[i]);
             mvRegisterAsset(&am, specification.name + "d" + std::to_string(i), pass.depthTextures[i]);
@@ -412,8 +413,7 @@ namespace Renderer {
         renderPassInfo.dependencyCount = 2;
         renderPassInfo.pDependencies = dependencies;
 
-        if (vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, &pass.renderPass) != VK_SUCCESS)
-            throw std::runtime_error("failed to create render pass!");
+        MV_VULKAN(vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, &pass.renderPass));
         
         mvRegisterAsset(&am, specification.name, pass.renderPass);
 
@@ -427,11 +427,15 @@ namespace Renderer {
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_IMAGE_ASPECT_DEPTH_BIT);
 
-            mvCreateFrameBuffer(pass.renderPass,
-                pass.frameBuffers[i],
-                specification.width,
-                specification.height,
-                std::vector<VkImageView>{ pass.depthTextures[i].imageInfo.imageView });
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = pass.renderPass;
+            framebufferInfo.attachmentCount = 1;
+            framebufferInfo.pAttachments = &pass.depthTextures[i].imageInfo.imageView;
+            framebufferInfo.width = specification.width;
+            framebufferInfo.height = specification.height;
+            framebufferInfo.layers = 1;
+            MV_VULKAN(vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &pass.frameBuffers[i]));
 
             mvRegisterAsset(&am, specification.name + std::to_string(i), pass.depthTextures[i]);
             mvRegisterAsset(&am, specification.name + std::to_string(i), pass.frameBuffers[i]);

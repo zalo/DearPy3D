@@ -1,4 +1,5 @@
 #include <imgui.h>
+#include <imgui_impl_vulkan.h>
 #include <array>
 #include "mvContext.h"
 #include "mvMesh.h"
@@ -16,7 +17,7 @@
 #include <stdlib.h>
 
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
-mv_internal b8 loadSponza = false;
+mv_internal b8 loadSponza = true;
 
 int main() 
 {
@@ -303,7 +304,7 @@ int main()
             Renderer::mvRenderScene(am, am.scenes[i].asset, viewMatrix, projMatrix);
 
         ImGui::Render();
-        mvRecordImGui(mvGetCurrentCommandBuffer());
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), mvGetCurrentCommandBuffer());
 
         Renderer::mvEndPass(mvGetCurrentCommandBuffer());
 

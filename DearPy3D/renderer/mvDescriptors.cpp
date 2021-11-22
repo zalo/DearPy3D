@@ -18,12 +18,8 @@ mvCreateDescriptorSetLayout(std::vector<mvDescriptorSpec> specs)
     layoutInfo.bindingCount = specs.size();
     layoutInfo.pBindings = bindings;
 
-    if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &layout.layout) != VK_SUCCESS)
-        throw std::runtime_error("failed to create descriptor set layout!");
-
+    MV_VULKAN(vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &layout.layout));
     delete[] bindings;
-
-
     return layout;
 }
 
@@ -45,10 +41,16 @@ mvCreateUniformBufferDescriptor(mvAssetManager& am, mvDescriptorSpec spec, const
     //descriptor.write.dstSet = scene.descriptorSets.descriptorSets[i];
     //descriptor.write.pBufferInfo = &am.buffers[scene.buffers[i]].asset.bufferInfo;
     
+    mvBufferSpecification bufferSpec{};
+    bufferSpec.aligned = true;
+    bufferSpec.count = 1;
+    bufferSpec.size = size;
+    bufferSpec.components = 1;
+    bufferSpec.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    bufferSpec.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        descriptor.bufferID.push_back(mvRegisterAsset(&am, name+std::to_string(i),
-            mvCreateDynamicBuffer(data, 1, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)));
+        descriptor.bufferID.push_back(mvRegisterAsset(&am, name+std::to_string(i), mvCreateBuffer(bufferSpec, data)));
 
     return descriptor;
 }
@@ -71,10 +73,16 @@ mvCreateDynamicUniformBufferDescriptor(mvAssetManager& am, mvDescriptorSpec spec
     //descriptor.write.dstSet = scene.descriptorSets.descriptorSets[i];
     //descriptor.write.pBufferInfo = &am.buffers[scene.buffers[i]].asset.bufferInfo;
 
+    mvBufferSpecification bufferSpec{};
+    bufferSpec.aligned = true;
+    bufferSpec.count = count;
+    bufferSpec.size = size;
+    bufferSpec.components = 1;
+    bufferSpec.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    bufferSpec.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        descriptor.bufferID.push_back(mvRegisterAsset(&am, name + std::to_string(i),
-            mvCreateDynamicBuffer(data, count, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)));
+        descriptor.bufferID.push_back(mvRegisterAsset(&am, name + std::to_string(i), mvCreateBuffer(bufferSpec, data)));
 
     return descriptor;
 }
@@ -116,11 +124,8 @@ mvCreateDescriptorSetLayout(mvDescriptorSetLayout descriptorSetLayout)
     layoutInfo.bindingCount = descriptorSetLayout.specs.size();
     layoutInfo.pBindings = bindings;
 
-    if (vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &layout) != VK_SUCCESS)
-        throw std::runtime_error("failed to create descriptor set layout!");
-
+    MV_VULKAN(vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &layout));
     delete[] bindings;
-
     return layout;
 }
 
@@ -175,8 +180,7 @@ mvCreateDescriptorSet(mvAssetManager& am, VkDescriptorSetLayout layout, mvAssetI
     allocInfo.descriptorSetCount = GContext->graphics.swapChainImages.size();
     allocInfo.pSetLayouts = layouts.data();
 
-    if (vkAllocateDescriptorSets(mvGetLogicalDevice(), &allocInfo, descriptorSet.descriptorSets) != VK_SUCCESS)
-        throw std::runtime_error("failed to allocate descriptor sets!");
+    MV_VULKAN(vkAllocateDescriptorSets(mvGetLogicalDevice(), &allocInfo, descriptorSet.descriptorSets));
 
     return descriptorSet;
 }

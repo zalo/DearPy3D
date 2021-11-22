@@ -25,8 +25,8 @@ debugCallback(
 
 struct QueueFamilyIndices
 {
-    std::optional<uint32_t> graphicsFamily;
-    std::optional<uint32_t> presentFamily;
+    std::optional<u32> graphicsFamily;
+    std::optional<u32> presentFamily;
 
     bool isComplete() 
     {
@@ -35,7 +35,7 @@ struct QueueFamilyIndices
 };
 
 mv_internal void
-mvCreateImage(uint32_t width, uint32_t height, VkFormat format,
+mvCreateImage(u32 width, u32 height, VkFormat format,
     VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
     VkImage& image, VkDeviceMemory& imageMemory)
 {
@@ -55,8 +55,7 @@ mvCreateImage(uint32_t width, uint32_t height, VkFormat format,
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.flags = 0; // Optional
 
-    if (vkCreateImage(mvGetLogicalDevice(), &imageInfo, nullptr, &image) != VK_SUCCESS)
-        throw std::runtime_error("failed to create image!");
+    MV_VULKAN(vkCreateImage(mvGetLogicalDevice(), &imageInfo, nullptr, &image));
 
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(mvGetLogicalDevice(), image, &memRequirements);
@@ -66,10 +65,8 @@ mvCreateImage(uint32_t width, uint32_t height, VkFormat format,
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = mvFindMemoryType(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    if (vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
-        throw std::runtime_error("failed to allocate image memory!");
-
-    vkBindImageMemory(mvGetLogicalDevice(), image, imageMemory, 0);
+    MV_VULKAN(vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &imageMemory));
+    MV_VULKAN(vkBindImageMemory(mvGetLogicalDevice(), image, imageMemory, 0));
 }
 
 mv_internal VkImageView
@@ -87,9 +84,7 @@ mvCreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags
     viewInfo.subresourceRange.aspectMask = aspectFlags;
 
     VkImageView imageView;
-    if (vkCreateImageView(mvGetLogicalDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS)
-        throw std::runtime_error("failed to create texture image view!");
-
+    MV_VULKAN(vkCreateImageView(mvGetLogicalDevice(), &viewInfo, nullptr, &imageView));
     return imageView;
 }
 
@@ -99,7 +94,7 @@ mvFindQueueFamilies(VkPhysicalDevice device)
 
     QueueFamilyIndices indices;
 
-    uint32_t queueFamilyCount = 0;
+    u32 queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
@@ -112,7 +107,7 @@ mvFindQueueFamilies(VkPhysicalDevice device)
             indices.graphicsFamily = i;
 
         VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, GContext->graphics.surface, &presentSupport);
+        MV_VULKAN(vkGetPhysicalDeviceSurfaceSupportKHR(device, i, GContext->graphics.surface, &presentSupport));
 
         if (presentSupport)
             indices.presentFamily = i;
@@ -142,28 +137,28 @@ mvCreateSwapChain()
     //-----------------------------------------------------------------------------
     SwapChainSupportDetails swapChainSupport;
     {
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &swapChainSupport.capabilities);
+        MV_VULKAN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &swapChainSupport.capabilities));
 
-        uint32_t formatCount;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &formatCount, nullptr);
+        u32 formatCount;
+        MV_VULKAN(vkGetPhysicalDeviceSurfaceFormatsKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &formatCount, nullptr));
 
         // todo: put in appropriate spot
         VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(GContext->graphics.physicalDevice, 0, GContext->graphics.surface, &presentSupport);
+        MV_VULKAN(vkGetPhysicalDeviceSurfaceSupportKHR(GContext->graphics.physicalDevice, 0, GContext->graphics.surface, &presentSupport));
 
         if (formatCount != 0) 
         {
             swapChainSupport.formats.resize(formatCount);
-            vkGetPhysicalDeviceSurfaceFormatsKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &formatCount, swapChainSupport.formats.data());
+            MV_VULKAN(vkGetPhysicalDeviceSurfaceFormatsKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &formatCount, swapChainSupport.formats.data()));
         }
 
-        uint32_t presentModeCount;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &presentModeCount, nullptr);
+        u32 presentModeCount;
+        MV_VULKAN(vkGetPhysicalDeviceSurfacePresentModesKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &presentModeCount, nullptr));
 
         if (presentModeCount != 0) 
         {
             swapChainSupport.presentModes.resize(presentModeCount);
-            vkGetPhysicalDeviceSurfacePresentModesKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &presentModeCount, swapChainSupport.presentModes.data());
+            MV_VULKAN(vkGetPhysicalDeviceSurfacePresentModesKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &presentModeCount, swapChainSupport.presentModes.data()));
         }
     }
 
@@ -196,8 +191,8 @@ mvCreateSwapChain()
     else
     {
         VkExtent2D actualExtent = {
-            static_cast<uint32_t>(GContext->viewport.width),
-            static_cast<uint32_t>(GContext->viewport.height)
+            (u32)GContext->viewport.width,
+            (u32)GContext->viewport.height
         };
 
         actualExtent.width = std::max(swapChainSupport.capabilities.minImageExtent.width, std::min(swapChainSupport.capabilities.maxImageExtent.width, actualExtent.width));
@@ -222,7 +217,7 @@ mvCreateSwapChain()
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
         QueueFamilyIndices indices = mvFindQueueFamilies(GContext->graphics.physicalDevice);
-        uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+        u32 queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
         if (indices.graphicsFamily != indices.presentFamily)
         {
@@ -240,8 +235,7 @@ mvCreateSwapChain()
 
         createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-        if (vkCreateSwapchainKHR(mvGetLogicalDevice(), &createInfo, nullptr, &GContext->graphics.swapChain) != VK_SUCCESS)
-            throw std::runtime_error("failed to create swap chain!");
+        MV_VULKAN(vkCreateSwapchainKHR(mvGetLogicalDevice(), &createInfo, nullptr, &GContext->graphics.swapChain));
     }
 
     vkGetSwapchainImagesKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, &GContext->graphics.minImageCount, nullptr);
@@ -253,7 +247,7 @@ mvCreateSwapChain()
 
     // creating image views
     GContext->graphics.swapChainImageViews.resize(GContext->graphics.swapChainImages.size());
-    for (uint32_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
+    for (u32 i = 0; i < GContext->graphics.swapChainImages.size(); i++)
         GContext->graphics.swapChainImageViews[i] = mvCreateImageView(GContext->graphics.swapChainImages[i], GContext->graphics.swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
@@ -265,7 +259,7 @@ mvSetupImGui(GLFWwindow* window)
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -345,31 +339,13 @@ mvCreateRenderPass(VkFormat format, VkFormat depthformat, VkRenderPass* renderPa
     renderPassInfo.dependencyCount = 0;
     renderPassInfo.pDependencies = VK_NULL_HANDLE;
 
-    if (vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, renderPass) != VK_SUCCESS)
-        throw std::runtime_error("failed to create render pass!");
-}
-
-void 
-mvCreateFrameBuffer(VkRenderPass renderPass, VkFramebuffer& frameBuffer, u32 width, u32 height, std::vector<VkImageView> imageViews)
-{
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass = renderPass;
-    framebufferInfo.attachmentCount = imageViews.size();
-
-    framebufferInfo.pAttachments = imageViews.data();
-    framebufferInfo.width = width;
-    framebufferInfo.height = height;
-    framebufferInfo.layers = 1;
-
-    if (vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS)
-        throw std::runtime_error("failed to create framebuffer!");
+    MV_VULKAN(vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, renderPass));
 }
 
 mv_internal void
 mvFlushResources()
 {
-    for (int i = 0; i < GContext->graphics.swapChainFramebuffers.size(); i++)
+    for (u32 i = 0; i < GContext->graphics.swapChainFramebuffers.size(); i++)
     {
         vkDestroyImageView(mvGetLogicalDevice(), GContext->graphics.swapChainImageViews[i], nullptr);
         vkDestroyFramebuffer(mvGetLogicalDevice(), GContext->graphics.swapChainFramebuffers[i], nullptr);
@@ -406,7 +382,7 @@ mvSetupGraphicsContext()
     {
         if (GContext->graphics.enableValidationLayers)
         {
-            uint32_t layerCount;
+            u32 layerCount;
             vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
             std::vector<VkLayerProperties> availableLayers(layerCount);
@@ -439,21 +415,21 @@ mvSetupGraphicsContext()
         createInfo.pApplicationInfo = &appInfo;
 
         // get extensions required to load glfw
-        uint32_t glfwExtensionCount = 0;
+        u32 glfwExtensionCount = 0;
         const char** glfwExtensions;
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
         std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
         if (GContext->graphics.enableValidationLayers)
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+        createInfo.enabledExtensionCount = (u32)extensions.size();
         createInfo.ppEnabledExtensionNames = extensions.data();
 
         // Setup debug messenger for vulkan instance
         VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
         if (GContext->graphics.enableValidationLayers)
         {
-            createInfo.enabledLayerCount = static_cast<uint32_t>(GContext->graphics.validationLayers.size());
+            createInfo.enabledLayerCount = (u32)GContext->graphics.validationLayers.size();
             createInfo.ppEnabledLayerNames = GContext->graphics.validationLayers.data();
             createInfo.pNext = VK_NULL_HANDLE;
 
@@ -469,9 +445,7 @@ mvSetupGraphicsContext()
             createInfo.pNext = VK_NULL_HANDLE;
         }
 
-        // create the instance
-        if (vkCreateInstance(&createInfo, nullptr, &GContext->graphics.instance) != VK_SUCCESS)
-            throw std::runtime_error("failed to create instance!");
+        MV_VULKAN(vkCreateInstance(&createInfo, nullptr, &GContext->graphics.instance));
     }
 
     //-----------------------------------------------------------------------------
@@ -490,9 +464,7 @@ mvSetupGraphicsContext()
         auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(GContext->graphics.instance, "vkCreateDebugUtilsMessengerEXT");
         if (func != nullptr)
         {
-            VkResult result = func(GContext->graphics.instance, &createInfo, nullptr, &GContext->graphics.debugMessenger);
-            if (result != VK_SUCCESS)
-                throw std::runtime_error("failed to set up debug messenger!");
+            MV_VULKAN(func(GContext->graphics.instance, &createInfo, nullptr, &GContext->graphics.debugMessenger));
         }
         else
             throw std::runtime_error("failed to set up debug messenger!");
@@ -501,17 +473,14 @@ mvSetupGraphicsContext()
     //-----------------------------------------------------------------------------
     // create surface
     //-----------------------------------------------------------------------------
-    {
-        if (glfwCreateWindowSurface(GContext->graphics.instance, GContext->viewport.handle, nullptr, &GContext->graphics.surface) != VK_SUCCESS)
-            throw std::runtime_error("failed to create window surface!");
-    }
+    MV_VULKAN(glfwCreateWindowSurface(GContext->graphics.instance, GContext->viewport.handle, nullptr, &GContext->graphics.surface));
 
     //-----------------------------------------------------------------------------
     // create physical device
     //-----------------------------------------------------------------------------
     {
-        uint32_t deviceCount = 0;
-        vkEnumeratePhysicalDevices(GContext->graphics.instance, &deviceCount, nullptr);
+        u32 deviceCount = 0;
+        MV_VULKAN(vkEnumeratePhysicalDevices(GContext->graphics.instance, &deviceCount, nullptr));
 
         if (deviceCount == 0)
             throw std::runtime_error("failed to find GPUs with Vulkan support!");
@@ -520,7 +489,7 @@ mvSetupGraphicsContext()
         // check if device is suitable
         //-----------------------------------------------------------------------------
         std::vector<VkPhysicalDevice> devices(deviceCount);
-        vkEnumeratePhysicalDevices(GContext->graphics.instance, &deviceCount, devices.data());
+        MV_VULKAN(vkEnumeratePhysicalDevices(GContext->graphics.instance, &deviceCount, devices.data()));
         for (const auto& device : devices)
         {
             QueueFamilyIndices indices = mvFindQueueFamilies(device);
@@ -528,13 +497,13 @@ mvSetupGraphicsContext()
             //-----------------------------------------------------------------------------
             // check if device supports extensions
             //-----------------------------------------------------------------------------
-            bool extensionsSupported = false;
+            b8 extensionsSupported = false;
             {
-                uint32_t extensionCount;
-                vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+                u32 extensionCount;
+                MV_VULKAN(vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr));
 
                 std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-                vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+                MV_VULKAN(vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data()));
 
                 std::set<std::string> requiredExtensions(GContext->graphics.deviceExtensions.begin(), GContext->graphics.deviceExtensions.end());
 
@@ -575,10 +544,10 @@ mvSetupGraphicsContext()
         GContext->graphics.graphicsQueueFamily = indices.graphicsFamily.value();
 
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-        std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+        std::set<u32> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
-        float queuePriority = 1.0f;
-        for (uint32_t queueFamily : uniqueQueueFamilies)
+        f32 queuePriority = 1.0f;
+        for (u32 queueFamily : uniqueQueueFamilies)
         {
             VkDeviceQueueCreateInfo queueCreateInfo{};
             queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -594,46 +563,27 @@ mvSetupGraphicsContext()
             VkDeviceCreateInfo createInfo{};
             createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
-            createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+            createInfo.queueCreateInfoCount = (u32)queueCreateInfos.size();
             createInfo.pQueueCreateInfos = queueCreateInfos.data();
 
             createInfo.pEnabledFeatures = &deviceFeatures;
 
-            createInfo.enabledExtensionCount = GContext->graphics.deviceExtensions.size();
+            createInfo.enabledExtensionCount = (u32)GContext->graphics.deviceExtensions.size();
             createInfo.ppEnabledExtensionNames = GContext->graphics.deviceExtensions.data();
 
             if (GContext->graphics.enableValidationLayers)
             {
-                createInfo.enabledLayerCount = static_cast<uint32_t>(GContext->graphics.validationLayers.size());
+                createInfo.enabledLayerCount = (u32)GContext->graphics.validationLayers.size();
                 createInfo.ppEnabledLayerNames = GContext->graphics.validationLayers.data();
             }
             else
                 createInfo.enabledLayerCount = 0;
 
-            auto code = vkCreateDevice(GContext->graphics.physicalDevice, &createInfo, nullptr, &GContext->graphics.logicalDevice);
-            if (code != VK_SUCCESS)
-            {
-                std::cout << code << std::endl;
-                throw std::runtime_error("failed to create logical device!");
-            }
+            MV_VULKAN(vkCreateDevice(GContext->graphics.physicalDevice, &createInfo, nullptr, &GContext->graphics.logicalDevice));
         }
 
         vkGetDeviceQueue(mvGetLogicalDevice(), indices.graphicsFamily.value(), 0, &GContext->graphics.graphicsQueue);
         vkGetDeviceQueue(mvGetLogicalDevice(), indices.presentFamily.value(), 0, &GContext->graphics.presentQueue);
-    }
-
-    //-----------------------------------------------------------------------------
-    // initialize VulkanMemoryAllocator
-    //-----------------------------------------------------------------------------
-    {
-        // Initialize VulkanMemoryAllocator
-        VmaAllocatorCreateInfo allocatorInfo = {};
-        allocatorInfo.vulkanApiVersion = 0;
-        allocatorInfo.physicalDevice = GContext->graphics.physicalDevice;
-        allocatorInfo.device = mvGetLogicalDevice();
-        allocatorInfo.instance = GContext->graphics.instance;
-
-        vmaCreateAllocator(&allocatorInfo, &GContext->graphics.allocator);
     }
 
     //-----------------------------------------------------------------------------
@@ -644,57 +594,50 @@ mvSetupGraphicsContext()
     //-----------------------------------------------------------------------------
     // create command pool and command buffers
     //-----------------------------------------------------------------------------
-    {
-        QueueFamilyIndices queueFamilyIndices = mvFindQueueFamilies(GContext->graphics.physicalDevice);
+    QueueFamilyIndices queueFamilyIndices = mvFindQueueFamilies(GContext->graphics.physicalDevice);
 
-        VkCommandPoolCreateInfo poolInfo{};
-        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    VkCommandPoolCreateInfo commandPoolInfo{};
+    commandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    commandPoolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+    commandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-        if (vkCreateCommandPool(mvGetLogicalDevice(), &poolInfo, nullptr, &GContext->graphics.commandPool) != VK_SUCCESS)
-            throw std::runtime_error("failed to create command pool!");
+    MV_VULKAN(vkCreateCommandPool(mvGetLogicalDevice(), &commandPoolInfo, nullptr, &GContext->graphics.commandPool));
 
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool = GContext->graphics.commandPool;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = (uint32_t)(GContext->graphics.swapChainImages.size());
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = GContext->graphics.commandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = (u32)(GContext->graphics.swapChainImages.size());
 
-        GContext->graphics.commandBuffers.resize(GContext->graphics.swapChainImages.size());
+    GContext->graphics.commandBuffers.resize(GContext->graphics.swapChainImages.size());
 
-        if (vkAllocateCommandBuffers(mvGetLogicalDevice(), &allocInfo, GContext->graphics.commandBuffers.data()) != VK_SUCCESS)
-            throw std::runtime_error("failed to allocate command buffers!");
-    }
+    MV_VULKAN(vkAllocateCommandBuffers(mvGetLogicalDevice(), &allocInfo, GContext->graphics.commandBuffers.data()));
 
     //-----------------------------------------------------------------------------
     // create descriptor pool
     //-----------------------------------------------------------------------------
+    VkDescriptorPoolSize poolSizes[] =
     {
-        VkDescriptorPoolSize poolSizes[] =
-        {
-            { VK_DESCRIPTOR_TYPE_SAMPLER,                1000 },
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          1000 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          1000 },
-            { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   1000 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   1000 },
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1000 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         1000 },
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-            { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       1000 }
-        };
-        VkDescriptorPoolCreateInfo poolInfo = {};
-        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-        poolInfo.maxSets = 1000 * 11;
-        poolInfo.poolSizeCount = 11u;
-        poolInfo.pPoolSizes = poolSizes;
+        { VK_DESCRIPTOR_TYPE_SAMPLER,                1000 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       1000 }
+    };
+    VkDescriptorPoolCreateInfo descPoolInfo = {};
+    descPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descPoolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    descPoolInfo.maxSets = 1000 * 11;
+    descPoolInfo.poolSizeCount = 11u;
+    descPoolInfo.pPoolSizes = poolSizes;
 
-        if (vkCreateDescriptorPool(mvGetLogicalDevice(), &poolInfo, nullptr, &GContext->graphics.descriptorPool) != VK_SUCCESS)
-            throw std::runtime_error("failed to create descriptor pool!");
-    }
+    MV_VULKAN(vkCreateDescriptorPool(mvGetLogicalDevice(), &descPoolInfo, nullptr, &GContext->graphics.descriptorPool));
     
     //-----------------------------------------------------------------------------
     // create render pass
@@ -704,53 +647,53 @@ mvSetupGraphicsContext()
     //-----------------------------------------------------------------------------
     // create depth resources
     //-----------------------------------------------------------------------------
-    {
-        VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
+    VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
 
-        mvCreateImage(GContext->graphics.swapChainExtent.width, GContext->graphics.swapChainExtent.height, depthFormat,
-            VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            GContext->graphics.depthImage, GContext->graphics.depthImageMemory);
+    mvCreateImage(GContext->graphics.swapChainExtent.width, GContext->graphics.swapChainExtent.height, depthFormat,
+        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        GContext->graphics.depthImage, GContext->graphics.depthImageMemory);
 
-        GContext->graphics.depthImageView = mvCreateImageView(GContext->graphics.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-    }
+    GContext->graphics.depthImageView = mvCreateImageView(GContext->graphics.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
     //-----------------------------------------------------------------------------
     // create frame buffers
     //-----------------------------------------------------------------------------
     GContext->graphics.swapChainFramebuffers.resize(GContext->graphics.swapChainImageViews.size());
-    for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+    for (u32 i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
     {
-        mvCreateFrameBuffer(GContext->graphics.renderPass,
-            GContext->graphics.swapChainFramebuffers[i],
-            GContext->graphics.swapChainExtent.width,
-            GContext->graphics.swapChainExtent.height,
-            std::vector<VkImageView>{ GContext->graphics.swapChainImageViews[i], GContext->graphics.depthImageView });
+        VkImageView imageViews[] = { GContext->graphics.swapChainImageViews[i], GContext->graphics.depthImageView };
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = GContext->graphics.renderPass;
+        framebufferInfo.attachmentCount = 2;
+        framebufferInfo.pAttachments = imageViews;
+        framebufferInfo.width = GContext->graphics.swapChainExtent.width;
+        framebufferInfo.height = GContext->graphics.swapChainExtent.height;
+        framebufferInfo.layers = 1;
+        MV_VULKAN(vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &GContext->graphics.swapChainFramebuffers[i]));
     }
 
 
     //-----------------------------------------------------------------------------
     // create syncronization primitives
     //-----------------------------------------------------------------------------
+    GContext->graphics.imageAvailableSemaphores.resize(MV_MAX_FRAMES_IN_FLIGHT);
+    GContext->graphics.renderFinishedSemaphores.resize(MV_MAX_FRAMES_IN_FLIGHT);
+    GContext->graphics.inFlightFences.resize(MV_MAX_FRAMES_IN_FLIGHT);
+    GContext->graphics.imagesInFlight.resize(GContext->graphics.swapChainImages.size(), VK_NULL_HANDLE);
+
+    VkSemaphoreCreateInfo semaphoreInfo{};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    for (u32 i = 0; i < MV_MAX_FRAMES_IN_FLIGHT; i++)
     {
-        GContext->graphics.imageAvailableSemaphores.resize(MV_MAX_FRAMES_IN_FLIGHT);
-        GContext->graphics.renderFinishedSemaphores.resize(MV_MAX_FRAMES_IN_FLIGHT);
-        GContext->graphics.inFlightFences.resize(MV_MAX_FRAMES_IN_FLIGHT);
-        GContext->graphics.imagesInFlight.resize(GContext->graphics.swapChainImages.size(), VK_NULL_HANDLE);
-
-        VkSemaphoreCreateInfo semaphoreInfo{};
-        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-        VkFenceCreateInfo fenceInfo{};
-        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-        for (size_t i = 0; i < MV_MAX_FRAMES_IN_FLIGHT; i++)
-        {
-            if (vkCreateSemaphore(mvGetLogicalDevice(), &semaphoreInfo, nullptr, &GContext->graphics.imageAvailableSemaphores[i]) != VK_SUCCESS ||
-                vkCreateSemaphore(mvGetLogicalDevice(), &semaphoreInfo, nullptr, &GContext->graphics.renderFinishedSemaphores[i]) != VK_SUCCESS ||
-                vkCreateFence(mvGetLogicalDevice(), &fenceInfo, nullptr, &GContext->graphics.inFlightFences[i]) != VK_SUCCESS)
-                throw std::runtime_error("failed to create synchronization objects for a frame!");
-        }
+        MV_VULKAN(vkCreateSemaphore(mvGetLogicalDevice(), &semaphoreInfo, nullptr, &GContext->graphics.imageAvailableSemaphores[i]));
+        MV_VULKAN(vkCreateSemaphore(mvGetLogicalDevice(), &semaphoreInfo, nullptr, &GContext->graphics.renderFinishedSemaphores[i]));
+        MV_VULKAN(vkCreateFence(mvGetLogicalDevice(), &fenceInfo, nullptr, &GContext->graphics.inFlightFences[i]));
     }
 
     //-----------------------------------------------------------------------------
@@ -759,13 +702,14 @@ mvSetupGraphicsContext()
     mvSetupImGui(GContext->viewport.handle);
 }
 
-std::uint32_t 
+u32
 mvFindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) 
+    {
         if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) 
         {
             return i;
@@ -786,15 +730,14 @@ mvCleanupGraphicsContext()
     mvFlushResources();
 
     vkFreeCommandBuffers(mvGetLogicalDevice(),
-    GContext->graphics.commandPool,
-    static_cast<uint32_t>(GContext->graphics.commandBuffers.size()),
-    GContext->graphics.commandBuffers.data());
-    vkDestroyCommandPool(mvGetLogicalDevice(), GContext->graphics.commandPool, nullptr);
+        GContext->graphics.commandPool,
+        (u32)GContext->graphics.commandBuffers.size(),
+        GContext->graphics.commandBuffers.data());
 
-    vmaDestroyAllocator(GContext->graphics.allocator);
+    vkDestroyCommandPool(mvGetLogicalDevice(), GContext->graphics.commandPool, nullptr);
     vkDestroyDescriptorPool(GContext->graphics.logicalDevice, GContext->graphics.descriptorPool, nullptr);
 
-    for (size_t i = 0; i < MV_MAX_FRAMES_IN_FLIGHT; i++)
+    for (u32 i = 0; i < MV_MAX_FRAMES_IN_FLIGHT; i++)
     {
         vkDestroySemaphore(GContext->graphics.logicalDevice, GContext->graphics.imageAvailableSemaphores[i], nullptr);
         vkDestroySemaphore(GContext->graphics.logicalDevice, GContext->graphics.renderFinishedSemaphores[i], nullptr);
@@ -835,13 +778,18 @@ mvRecreateSwapChain()
     }
 
     GContext->graphics.swapChainFramebuffers.resize(GContext->graphics.swapChainImageViews.size());
-    for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+    for (u32 i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
     {
-        mvCreateFrameBuffer(GContext->graphics.renderPass,
-            GContext->graphics.swapChainFramebuffers[i],
-            GContext->graphics.swapChainExtent.width,
-            GContext->graphics.swapChainExtent.height,
-            std::vector<VkImageView>{ GContext->graphics.swapChainImageViews[i], GContext->graphics.depthImageView });
+        VkImageView imageViews[] = { GContext->graphics.swapChainImageViews[i], GContext->graphics.depthImageView };
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = GContext->graphics.renderPass;
+        framebufferInfo.attachmentCount = 2;
+        framebufferInfo.pAttachments = imageViews;
+        framebufferInfo.width = GContext->graphics.swapChainExtent.width;
+        framebufferInfo.height = GContext->graphics.swapChainExtent.height;
+        framebufferInfo.layers = 1;
+        MV_VULKAN(vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &GContext->graphics.swapChainFramebuffers[i]));
     }
 
     ImGui_ImplVulkan_SetMinImageCount(GContext->graphics.minImageCount);
@@ -858,13 +806,6 @@ mvGetRequiredUniformBufferSize(size_t size)
         alignedSize = (alignedSize + minUboAlignment - 1) & ~(minUboAlignment - 1);
 
     return alignedSize;
-}
-
-void 
-mvRecordImGui(VkCommandBuffer commandBuffer)
-{
-    // Record dear imgui primitives into command buffer
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 }
 
 void
@@ -923,215 +864,4 @@ mvEndSingleTimeCommands(VkCommandBuffer commandBuffer)
     vkDeviceWaitIdle(mvGetLogicalDevice());
 
     vkFreeCommandBuffers(mvGetLogicalDevice(), GContext->graphics.commandPool, 1, &commandBuffer);
-}
-
-void 
-mvCreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
-{
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = usage;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vkCreateBuffer(mvGetLogicalDevice(), &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create buffer!");
-    }
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(mvGetLogicalDevice(), buffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = mvFindMemoryType(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, properties);
-
-    if (vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate buffer memory!");
-    }
-
-    vkBindBufferMemory(mvGetLogicalDevice(), buffer, bufferMemory, 0);
-}
-
-void 
-mvCopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
-{
-    VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
-
-    VkBufferCopy copyRegion{};
-    copyRegion.size = size;
-    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-    mvEndSingleTimeCommands(commandBuffer);
-}
-
-void 
-mvTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, u32 mipLevels)
-{
-    VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = mipLevels;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-
-    VkPipelineStageFlags sourceStage;
-    VkPipelineStageFlags destinationStage;
-
-    if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-    {
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-        //if (hasStencilComponent(format))
-        //    barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-    }
-    else
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-    if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-    {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    }
-
-    else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-    {
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    }
-
-    else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-    {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    }
-    else
-        throw std::invalid_argument("unsupported layout transition!");
-
-    vkCmdPipelineBarrier(
-        commandBuffer,
-        sourceStage, destinationStage,
-        0,
-        0, nullptr,
-        0, nullptr,
-        1, &barrier
-    );
-
-    mvEndSingleTimeCommands(commandBuffer);
-}
-
-void 
-mvCopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
-{
-    VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
-
-    VkBufferImageCopy region{};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-
-    region.imageOffset = { 0, 0, 0 };
-    region.imageExtent = {
-        width,
-        height,
-        1
-    };
-
-    vkCmdCopyBufferToImage(
-        commandBuffer,
-        buffer,
-        image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        1,
-        &region
-    );
-
-    mvEndSingleTimeCommands(commandBuffer);
-}
-
-//-----------------------------------------------------------------------------
-// Vulkan Memory Allocator
-//-----------------------------------------------------------------------------
-
-VmaAllocation
-mvAllocateBuffer(VkBufferCreateInfo bufferCreateInfo, VmaMemoryUsage usage, VkBuffer& outBuffer)
-{
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = usage;
-
-    VmaAllocation allocation;
-    vmaCreateBuffer(GContext->graphics.allocator, &bufferCreateInfo, &allocCreateInfo, &outBuffer, &allocation, nullptr);
-
-    //VmaAllocationInfo allocInfo{};
-    //vmaGetAllocationInfo(GetVmaAllocator(), allocation, &allocInfo);
-
-    return allocation;
-}
-
-VmaAllocation
-mvAllocateImage(VkImageCreateInfo imageCreateInfo, VmaMemoryUsage usage, VkImage& outImage)
-{
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = usage;
-
-    VmaAllocation allocation;
-    vmaCreateImage(GContext->graphics.allocator, &imageCreateInfo, &allocCreateInfo, &outImage, &allocation, nullptr);
-
-    //VmaAllocationInfo allocInfo;
-    //vmaGetAllocationInfo(GetVmaAllocator(), allocation, &allocInfo);
-
-    return allocation;
-}
-
-void
-mvFree(VmaAllocation allocation)
-{
-    vmaFreeMemory(GContext->graphics.allocator, allocation);
-}
-
-void
-mvDestroyImage(VkImage image, VmaAllocation allocation)
-{
-    vmaDestroyImage(GContext->graphics.allocator, image, allocation);
-}
-
-void
-mvDestroyBuffer(VkBuffer buffer, VmaAllocation allocation)
-{
-    vmaDestroyBuffer(GContext->graphics.allocator, buffer, allocation);
-}
-
-void*
-mvMapMemory(VmaAllocation allocation)
-{
-    void* mappedMemory;
-    vmaMapMemory(GContext->graphics.allocator, allocation, (void**)&mappedMemory);
-    return mappedMemory;
-}
-
-void
-mvUnmapMemory(VmaAllocation allocation)
-{
-    vmaUnmapMemory(GContext->graphics.allocator, allocation);
 }

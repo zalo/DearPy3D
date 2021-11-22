@@ -204,11 +204,12 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	for (int i = 0; i < manager->bufferCount; i++)
 	{
 		vkDestroyBuffer(mvGetLogicalDevice(), manager->buffers[i].asset.buffer, nullptr);
-		mvFree(manager->buffers[i].asset.memoryAllocation);
+		vkFreeMemory(mvGetLogicalDevice(), manager->buffers[i].asset.deviceMemory, nullptr);
 
 		manager->buffers[i].asset.buffer = VK_NULL_HANDLE;
-		manager->buffers[i].asset.memoryAllocation = VK_NULL_HANDLE;
-		manager->buffers[i].asset.count = 0u;
+		manager->buffers[i].asset.deviceMemory = VK_NULL_HANDLE;
+		manager->buffers[i].asset.specification.count = 0u;
+		manager->buffers[i].asset.specification.aligned = false;
 	}
 
 	// textures

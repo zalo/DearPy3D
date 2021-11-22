@@ -5,16 +5,28 @@
 #include "mvContext.h"
 #include "mvTypes.h"
 
+struct mvBufferSpecification
+{
+    u64                   size;             // component size
+    u64                   count = 1u;       // item count
+    u64                   components = 1u;  // component count
+    b8                    aligned = false;  // use for UBOs
+    VkBufferUsageFlags    usageFlags;
+    VkMemoryPropertyFlags propertyFlags;
+};
+
 struct mvBuffer
 {
     VkBuffer               buffer = VK_NULL_HANDLE;
-    VmaAllocation          memoryAllocation = VK_NULL_HANDLE;
-    u32                    count = 0u;
-    u32                    size = 0u;
+    VkDeviceMemory         deviceMemory = VK_NULL_HANDLE;
+    VkDeviceSize           actualSize = 0u;
     VkDescriptorBufferInfo bufferInfo;
+    mvBufferSpecification  specification;
 };
 
-mvBuffer mvCreateBuffer        (void* data, u64 count, u64 size, VkBufferUsageFlags flags);
-mvBuffer mvCreateDynamicBuffer (void* data, u64 count, u64 size, VkBufferUsageFlags flags);
+mvBuffer mvCreateBuffer     (mvBufferSpecification specification, void* data = nullptr);
+void     mvCopyBuffer       (mvBuffer srcBuffer, mvBuffer dstBuffer);
+void     mvCopyBufferToImage(mvBuffer srcBuffer, VkImage dstImage, u32 width, u32 height);
+
 void     mvUpdateBuffer        (mvBuffer& buffer, void* data);
 void     mvPartialUpdateBuffer (mvBuffer& buffer, void* data, u64 index);

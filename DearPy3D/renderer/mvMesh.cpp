@@ -70,13 +70,26 @@ mvCreateTexturedCube(mvAssetManager& assetManager, float sideLength)
         vertices[14 * indices[i + 2] + 5] = n[2];
     }
 
+    mvBufferSpecification vertexBufferSpec{};
+    vertexBufferSpec.usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    vertexBufferSpec.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    vertexBufferSpec.size = sizeof(f32);
+    vertexBufferSpec.components = 14;
+    vertexBufferSpec.count = vertices.size();
+
+    mvBufferSpecification indexBufferSpec{};
+    indexBufferSpec.usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    indexBufferSpec.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    indexBufferSpec.size = sizeof(u32);
+    indexBufferSpec.count = indices.size();
+
     mvMesh mesh{};
     mesh.name = "textured cube";
     mesh.vertexBuffer = mvRegisterAsset(&assetManager, "textured_cube_vertex" + std::to_string(sideLength),
-        mvCreateBuffer(vertices.data(), vertices.size(), sizeof(u32), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT));
+        mvCreateBuffer(vertexBufferSpec, vertices.data()));
     if(mvGetBufferAssetID(&assetManager, "textured_cube_index") == MV_INVALID_ASSET_ID)
         mesh.indexBuffer = mvRegisterAsset(&assetManager, "textured_cube_index",
-            mvCreateBuffer(indices.data(), indices.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT));
+            mvCreateBuffer(indexBufferSpec, indices.data()));
     else
         mesh.indexBuffer = mvGetBufferAssetID(&assetManager, "textured_cube_index");
     
@@ -134,13 +147,26 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, float sideLength)
         vertices[14 * indices[i + 2] + 5] = n[2];
     }
 
+    mvBufferSpecification vertexBufferSpec{};
+    vertexBufferSpec.usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    vertexBufferSpec.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    vertexBufferSpec.size = sizeof(f32);
+    vertexBufferSpec.components = 14;
+    vertexBufferSpec.count = vertices.size();
+
+    mvBufferSpecification indexBufferSpec{};
+    indexBufferSpec.usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    indexBufferSpec.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    indexBufferSpec.size = sizeof(u32);
+    indexBufferSpec.count = indices.size();
+
     mvMesh mesh{};
     mesh.name = "textured quad";
     mesh.vertexBuffer = mvRegisterAsset(&assetManager, "textured_cube_vertex" + std::to_string(sideLength),
-        mvCreateBuffer(vertices.data(), vertices.size(), sizeof(u32), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT));
+        mvCreateBuffer(vertexBufferSpec, vertices.data()));
     if (mvGetBufferAssetID(&assetManager, "textured_quad_vertex") == MV_INVALID_ASSET_ID)
         mesh.indexBuffer = mvRegisterAsset(&assetManager, "textured_quad_index",
-            mvCreateBuffer(indices.data(), indices.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT));
+            mvCreateBuffer(indexBufferSpec, indices.data()));
     else
         mesh.indexBuffer = mvGetBufferAssetID(&assetManager, "textured_quad_index");
 
@@ -193,8 +219,21 @@ mvLoadOBJAssets(mvAssetManager& assetManager, const std::string& root, const std
                     materialData.useSpecularMap = true;
                 }
 
-                newMesh.vertexBuffer = mvRegisterAsset(&assetManager, newMesh.name + "_vertex", mvCreateBuffer(objModel.meshes[i]->averticies.data(), objModel.meshes[i]->averticies.size(), sizeof(f32) * 14, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT));
-                newMesh.indexBuffer = mvRegisterAsset(&assetManager, newMesh.name + "_index", mvCreateBuffer(objModel.meshes[i]->indicies.data(), objModel.meshes[i]->indicies.size(), sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT));
+                mvBufferSpecification vertexBufferSpec{};
+                vertexBufferSpec.usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+                vertexBufferSpec.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+                vertexBufferSpec.size = sizeof(f32);
+                vertexBufferSpec.components = 14;
+                vertexBufferSpec.count = objModel.meshes[i]->averticies.size();
+
+                mvBufferSpecification indexBufferSpec{};
+                indexBufferSpec.usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+                indexBufferSpec.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+                indexBufferSpec.size = sizeof(u32);
+                indexBufferSpec.count = objModel.meshes[i]->indicies.size();
+
+                newMesh.vertexBuffer = mvRegisterAsset(&assetManager, newMesh.name + "_vertex", mvCreateBuffer(vertexBufferSpec, objModel.meshes[i]->averticies.data()));
+                newMesh.indexBuffer = mvRegisterAsset(&assetManager, newMesh.name + "_index", mvCreateBuffer(indexBufferSpec, objModel.meshes[i]->indicies.data()));
                 
                 mvMaterial material = mvCreateMaterial(assetManager, materialData, "vs_shader.vert.spv", "ps_shader.frag.spv");
                 newMesh.phongMaterialID = mvRegisterAsset(&assetManager, newMesh.name + "material", material);
