@@ -14,15 +14,15 @@ mvCreatePointLight(mvAssetManager& am, const std::string& name, mvVec3 pos)
     mat1.materialColor = { 1.0f, 1.0f, 1.0f, 1.0f };
     mat1.doLighting = false;
     
-    mvMaterial material = mvCreateMaterial(am, mat1, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mvMaterial material = mvCreateMaterial(am, mat1, "phong.vert.spv", "phong.frag.spv");
     lightCube.phongMaterialID = mvRegisterAsset(&am, name, material);
 
     mvPipelineSpec spec{};
     spec.backfaceCulling = true;
     spec.depthTest = true;
     spec.depthWrite = true;
-    spec.vertexShader = "vs_shader.vert.spv";
-    spec.pixelShader = "ps_shader.frag.spv";
+    spec.vertexShader = "phong.vert.spv";
+    spec.pixelShader = "phong.frag.spv";
     spec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     am.phongMaterials[lightCube.phongMaterialID].asset.pipeline = mvGetPipelineAssetID(&am, "main_pass");

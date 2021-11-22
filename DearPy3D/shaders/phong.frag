@@ -6,7 +6,8 @@ layout(location = 1) in vec3 inViewNormal;
 layout(location = 2) in vec3 inWorldNormal;
 layout(location = 3) in vec2 inTexCoord;
 layout(location = 4) in vec4 indshadowWorldPos;
-layout(location = 5) in mat3 inTangentBasis;
+layout(location = 5) out vec4 inoshadowWorldPos;
+layout(location = 6) in mat3 inTangentBasis;
 
 
 layout(location = 0) out vec4 outColor;
@@ -29,13 +30,16 @@ layout(set = 0, binding = 0) uniform mvScene
     int pcfRange;
     //-------------------------- ( 16 bytes )
 
+    mat4 pointShadowView;
+    //-------------------------- ( 64 bytes )
+
     mat4 directionalShadowView;
     //-------------------------- ( 64 bytes )
 
     mat4 directionalShadowProjection;
     //-------------------------- ( 64 bytes )
 
-    //-------------------------- ( 1*16 + 2*64= 144 bytes )
+    //-------------------------- ( 1*16 + 3*64= 144 bytes )
 } scene;
 
 layout(set = 0, binding = 1) uniform mvPointLight 

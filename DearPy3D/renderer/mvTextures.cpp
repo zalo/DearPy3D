@@ -561,3 +561,95 @@ mvCreateTexture(u32 width, u32 height, VkFormat format, VkImageUsageFlags usage,
     
     return texture;
 }
+
+mvTexture
+mvCreateCubeTexture(u32 width, u32 height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect)
+{
+    mvTexture texture{};
+    texture.imageInfo = VkDescriptorImageInfo{};
+
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width = width;
+    imageInfo.extent.height = height;
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 6;
+    imageInfo.format = format;
+    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = usage;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+
+    VkDeviceSize imageSize = width * height * 4 * 6;
+    VkDeviceSize layerSize = imageSize / 6;
+
+    MV_VULKAN(vkCreateImage(mvGetLogicalDevice(), &imageInfo, nullptr, &texture.textureImage));
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(mvGetLogicalDevice(), texture.textureImage, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = mvFindMemoryType(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    MV_VULKAN(vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &texture.textureImageMemory));
+    MV_VULKAN(vkBindImageMemory(mvGetLogicalDevice(), texture.textureImage, texture.textureImageMemory, 0));
+
+    VkImageViewCreateInfo viewInfo{};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = texture.textureImage;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+    viewInfo.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+    viewInfo.format = format;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 6;
+    viewInfo.subresourceRange.aspectMask = aspect;
+    MV_VULKAN(vkCreateImageView(mvGetLogicalDevice(), &viewInfo, nullptr, &texture.imageInfo.imageView));
+
+    if (format == VK_FORMAT_R8G8B8A8_UNORM)
+    {
+        texture.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        VkSamplerCreateInfo samplerInfo{};
+        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerInfo.magFilter = VK_FILTER_LINEAR;
+        samplerInfo.minFilter = VK_FILTER_LINEAR;
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        samplerInfo.addressModeV = samplerInfo.addressModeU;
+        samplerInfo.addressModeW = samplerInfo.addressModeU;
+        samplerInfo.mipLodBias = 0.0f;
+        samplerInfo.maxAnisotropy = 1.0f;
+        samplerInfo.minLod = 0.0f;
+        samplerInfo.maxLod = 1.0f;
+        samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+        MV_VULKAN(vkCreateSampler(mvGetLogicalDevice(), &samplerInfo, nullptr, &texture.imageInfo.sampler));
+        texture.imguiID = ImGui_ImplVulkan_AddTexture(texture.imageInfo.sampler, texture.imageInfo.imageView, texture.imageInfo.imageLayout);
+    }
+    else
+    {
+        texture.imageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+        VkSamplerCreateInfo samplerInfo{};
+        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerInfo.magFilter = VK_FILTER_LINEAR;
+        samplerInfo.minFilter = VK_FILTER_LINEAR;
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        samplerInfo.addressModeV = samplerInfo.addressModeU;
+        samplerInfo.addressModeW = samplerInfo.addressModeU;
+        samplerInfo.mipLodBias = 0.0f;
+        samplerInfo.maxAnisotropy = 1.0f;
+        samplerInfo.minLod = 0.0f;
+        samplerInfo.maxLod = 1.0f;
+        samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+        MV_VULKAN(vkCreateSampler(mvGetLogicalDevice(), &samplerInfo, nullptr, &texture.imageInfo.sampler));
+    }
+
+    return texture;
+}

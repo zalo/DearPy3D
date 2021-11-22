@@ -41,13 +41,16 @@ struct mvSceneData
     char _pad[12];
     //-------------------------- ( 16 bytes )
 
+    mvMat4 pointShadowView = mvIdentityMat4();
+    //-------------------------- ( 64 bytes )
+
     mvMat4 directionalShadowView = mvIdentityMat4();
     //-------------------------- ( 64 bytes )
 
     mvMat4 directionalShadowProjection = mvIdentityMat4();
     //-------------------------- ( 64 bytes )
 
-    //-------------------------- ( 2 * 16 + 2*64= 160 bytes )
+    //-------------------------- ( 2 * 16 + 3*64= 224 bytes )
 };
 
 struct mvScene
@@ -61,3 +64,5 @@ struct mvScene
 mvScene mvCreateScene(mvAssetManager& am, mvSceneData sceneData);
 void    mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvAssetID shadowMap);
 void    mvBindScene(mvAssetManager& am, mvAssetID scene, mvSceneData data, u32 index);
+
+void mvShowSceneControls(const char*  windowName, mvSceneData& sceneData);

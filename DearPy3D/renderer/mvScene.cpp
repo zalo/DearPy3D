@@ -54,3 +54,18 @@ mvBindScene(mvAssetManager& am, mvAssetID sceneId, mvSceneData data, u32 index)
     uniformOffsets[2] = index * mvGetRequiredUniformBufferSize(sizeof(mvDirectionLightInfo));
     mvBindDescriptorSet(am, scene.descriptorSet, 0, 3, uniformOffsets);
 }
+
+void
+mvShowSceneControls(const char* windowName, mvSceneData& sceneData)
+{
+    ImGui::Begin(windowName);
+    ImGui::Checkbox("Diffuse Mapping", (bool*)&sceneData.doDiffuse);
+    ImGui::Checkbox("Normal Mapping", (bool*)&sceneData.doNormal);
+    ImGui::Checkbox("Specular Mapping", (bool*)&sceneData.doSpecular);
+    ImGui::Checkbox("Omni Shadows", (bool*)&sceneData.doOmniShadows);
+    ImGui::Checkbox("Direct Shadows", (bool*)&sceneData.doDirectionalShadows);
+    ImGui::Checkbox("Skybox", (bool*)&sceneData.doSkybox);
+    ImGui::Checkbox("PCF", (bool*)&sceneData.doPCF);
+    ImGui::SliderInt("pcfRange", &sceneData.pcfRange, 1, 5);
+    ImGui::End();
+}

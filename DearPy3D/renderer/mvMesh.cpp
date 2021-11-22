@@ -96,7 +96,7 @@ mvCreateTexturedCube(mvAssetManager& assetManager, float sideLength)
     mvMaterialData mat{};
     mat.materialColor = { 0.0f, 1.0f, 0.0f, 1.0f };
     mat.useTextureMap = true;
-    mvMaterial material = mvCreateMaterial(assetManager, mat, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mvMaterial material = mvCreateMaterial(assetManager, mat, "phong.vert.spv", "phong.frag.spv");
     mesh.phongMaterialID = mvRegisterAsset(&assetManager, "textured_cube_material", material);
     mesh.diffuseTexture = mvGetTextureAssetID(&assetManager, "../../Resources/brickwall.jpg");
     return mesh;
@@ -229,7 +229,7 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, float sideLength)
     mvMaterialData mat{};
     mat.materialColor = { 1.0f, 0.0f, 0.0f, 1.0f };
     mat.useTextureMap = true;
-    mvMaterial material = mvCreateMaterial(assetManager, mat, "vs_shader.vert.spv", "ps_shader.frag.spv");
+    mvMaterial material = mvCreateMaterial(assetManager, mat, "phong.vert.spv", "phong.frag.spv");
     mesh.phongMaterialID = mvRegisterAsset(&assetManager, "textured_cube_material", material);
     mesh.diffuseTexture = mvGetTextureAssetID(&assetManager, "../../Resources/brickwall.jpg");
     return mesh;
@@ -291,7 +291,7 @@ mvLoadOBJAssets(mvAssetManager& assetManager, const std::string& root, const std
                 newMesh.vertexBuffer = mvRegisterAsset(&assetManager, newMesh.name + "_vertex", mvCreateBuffer(vertexBufferSpec, objModel.meshes[i]->averticies.data()));
                 newMesh.indexBuffer = mvRegisterAsset(&assetManager, newMesh.name + "_index", mvCreateBuffer(indexBufferSpec, objModel.meshes[i]->indicies.data()));
                 
-                mvMaterial material = mvCreateMaterial(assetManager, materialData, "vs_shader.vert.spv", "ps_shader.frag.spv");
+                mvMaterial material = mvCreateMaterial(assetManager, materialData, "phong.vert.spv", "phong.frag.spv");
                 newMesh.phongMaterialID = mvRegisterAsset(&assetManager, newMesh.name + "material", material);
 
                 mvRegisterAsset(&assetManager, file + std::to_string(i), newMesh);

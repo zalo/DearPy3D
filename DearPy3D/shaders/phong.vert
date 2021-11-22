@@ -25,13 +25,16 @@ layout(set = 0, binding = 0) uniform mvScene
     int pcfRange;
     //-------------------------- ( 16 bytes )
 
+    mat4 pointShadowView;
+    //-------------------------- ( 64 bytes )
+
     mat4 directionalShadowView;
     //-------------------------- ( 64 bytes )
 
     mat4 directionalShadowProjection;
     //-------------------------- ( 64 bytes )
 
-    //-------------------------- ( 1*16 + 2*64= 144 bytes )
+    //-------------------------- ( 1*16 + 3*64= 144 bytes )
 } scene;
 
 layout(location = 0) in vec3 inPosition;
@@ -45,7 +48,8 @@ layout(location = 1) out vec3 viewNormal;
 layout(location = 2) out vec3 worldNormal;
 layout(location = 3) out vec2 texCoord;
 layout(location = 4) out vec4 dshadowWorldPos;
-layout(location = 5) out mat3 tangentBasis;
+layout(location = 5) out vec4 oshadowWorldPos;
+layout(location = 6) out mat3 tangentBasis;
 
 const mat4 biasMat = mat4( 
 	0.5, 0.0, 0.0, 0.0,
@@ -53,6 +57,11 @@ const mat4 biasMat = mat4(
 	0.0, 0.0, 1.0, 0.0,
 	0.5, 0.5, 0.0, 1.0 );
 
+vec4 ToShadowHomoSpace(vec3 pos, mat4 modelTransform)
+{
+    vec4 world = modelTransform * vec4(pos, 1.0);
+    return scene.pointShadowView * world;
+}
 
 vec4 ToDirectShadowHomoSpace(vec3 pos, mat4 modelTransform)
 {
@@ -71,4 +80,5 @@ void main()
     vec3 N = mat3(PushConstants.modelView)*inNormal;
     tangentBasis = mat3(T, B, N);
     dshadowWorldPos = ToDirectShadowHomoSpace(inPosition, PushConstants.model);
+    oshadowWorldPos = ToShadowHomoSpace(inPosition, PushConstants.model);
 }

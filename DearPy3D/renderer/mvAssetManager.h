@@ -92,7 +92,8 @@ struct mvAssetManager
 
 // startup/shutdown/resize
 void mvInitializeAssetManager   (mvAssetManager* manager);
-void mvPrepareResizeAssetManager(mvAssetManager* manager);
+void mvResizeCleanupAssetManager(mvAssetManager* manager);
+void mvResizeUpdateAssetManager (mvAssetManager* manager);
 void mvCleanupAssetManager      (mvAssetManager* manager);
 void mvShowAssetManager         (mvAssetManager& manager);
 
