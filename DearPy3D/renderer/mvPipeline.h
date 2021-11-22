@@ -39,11 +39,13 @@ struct mvPipelineSpec
 	b8                  depthTest       = true;
 	b8                  depthWrite      = true;
 	b8                  wireFrame       = false;
+	b8                  blendEnabled    = true;
 	std::string         vertexShader;
 	std::string         pixelShader;
 	f32                 width = 0.0f;  // viewport
 	f32                 height = 0.0f; // viewport
 	VkRenderPass        renderPass = VK_NULL_HANDLE;
+	VkPipelineLayout    pipelineLayout = VK_NULL_HANDLE;
 	mvVertexLayout      layout;
 	b8                  mainPass = true;
 };

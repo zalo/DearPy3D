@@ -9,7 +9,7 @@
 #include "stb_image.h"
 
 mv_internal void
-mvTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, u32 mipLevels)
+mvTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, u32 mipLevels, u32 layers = 1u)
 {
     VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
     VkImageMemoryBarrier barrier{};
@@ -23,7 +23,7 @@ mvTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout,
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = mipLevels;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.layerCount = layers;
 
     VkPipelineStageFlags sourceStage;
     VkPipelineStageFlags destinationStage;
@@ -80,7 +80,7 @@ mvTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout,
 }
 
 mv_internal void 
-mvGenerateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) 
+mvGenerateMipmaps(VkImage image, VkFormat imageFormat, i32 texWidth, i32 texHeight, u32 mipLevels, u32 layers = 1u)
 {
     // Check if image format supports linear blitting
     VkFormatProperties formatProperties;
@@ -99,7 +99,7 @@ mvGenerateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.layerCount = layers;
     barrier.subresourceRange.levelCount = 1;
 
     int32_t mipWidth = texWidth;
@@ -169,6 +169,197 @@ mvGenerateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t
     mvEndSingleTimeCommands(commandBuffer);
 }
 
+mvTexture
+mvCreateCubeTexture(const std::string& path)
+{
+    mvTexture texture{};
+    texture.file = path;
+    texture.imageInfo = VkDescriptorImageInfo{};
+    texture.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    // Load Image
+    int texWidth, texHeight, texNumChannels, textBytesPerRow;
+
+    // load 6 surfaces for cube faces
+    std::vector<unsigned char*> surfaces;
+    int texForceNumChannels = 4;
+
+    // right
+    {
+        std::string file = path + "\\right.png";
+        unsigned char* testTextureBytes = stbi_load(file.c_str(), &texWidth, &texHeight,
+            &texNumChannels, texForceNumChannels);
+        assert(testTextureBytes);
+        textBytesPerRow = 4 * texWidth;
+
+        surfaces.push_back(testTextureBytes);
+    }
+
+    // left
+    {
+        std::string file = path + "\\left.png";
+        unsigned char* testTextureBytes = stbi_load(file.c_str(), &texWidth, &texHeight,
+            &texNumChannels, texForceNumChannels);
+        assert(testTextureBytes);
+        textBytesPerRow = 4 * texWidth;
+
+        surfaces.push_back(testTextureBytes);
+    }
+
+    // top
+    {
+        std::string file = path + "\\top.png";
+        unsigned char* testTextureBytes = stbi_load(file.c_str(), &texWidth, &texHeight,
+            &texNumChannels, texForceNumChannels);
+        assert(testTextureBytes);
+        textBytesPerRow = 4 * texWidth;
+
+        surfaces.push_back(testTextureBytes);
+    }
+
+    // bottom
+    {
+        std::string file = path + "\\bottom.png";
+        unsigned char* testTextureBytes = stbi_load(file.c_str(), &texWidth, &texHeight,
+            &texNumChannels, texForceNumChannels);
+        assert(testTextureBytes);
+        textBytesPerRow = 4 * texWidth;
+
+        surfaces.push_back(testTextureBytes);
+    }
+
+    // front
+    {
+        std::string file = path + "\\front.png";
+        unsigned char* testTextureBytes = stbi_load(file.c_str(), &texWidth, &texHeight,
+            &texNumChannels, texForceNumChannels);
+        assert(testTextureBytes);
+        textBytesPerRow = 4 * texWidth;
+
+        surfaces.push_back(testTextureBytes);
+    }
+
+    // back
+    {
+        std::string file = path + "\\back.png";
+        unsigned char* testTextureBytes = stbi_load(file.c_str(), &texWidth, &texHeight,
+            &texNumChannels, texForceNumChannels);
+        assert(testTextureBytes);
+        textBytesPerRow = 4 * texWidth;
+
+        surfaces.push_back(testTextureBytes);
+    }
+
+    VkDeviceSize imageSize = texWidth * texHeight * 4 * 6;
+    VkDeviceSize layerSize = imageSize / 6;
+
+    //texture.mipLevels = (u32)mvFloor(mvLog2(mvMax(texWidth, texHeight))) + 1u;
+    texture.mipLevels = 1u;
+
+    //-----------------------------------------------------------------------------
+    // staging buffer
+    //-----------------------------------------------------------------------------
+    mvBufferSpecification bufferSpec{};
+    bufferSpec.size = imageSize;
+    bufferSpec.usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    bufferSpec.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+    mvBuffer stagingBuffer = mvCreateBuffer(bufferSpec);
+
+    void* mapping;
+    MV_VULKAN(vkMapMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory, 0, stagingBuffer.actualSize, 0, &mapping));
+    for (u32 i = 0; i < 6; ++i)
+    {
+        char* data = (char*)mapping;
+        memcpy(data + layerSize*i, surfaces[i], (size_t)layerSize);
+    }
+    vkUnmapMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory);
+    mapping = nullptr;
+
+    for (u32 i = 0; i < 6; ++i)
+    {
+        stbi_image_free(surfaces[i]);
+    }
+
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width = texWidth;
+    imageInfo.extent.height = texHeight;
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = texture.mipLevels;
+    imageInfo.arrayLayers = 6;
+    imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    MV_VULKAN(vkCreateImage(mvGetLogicalDevice(), &imageInfo, nullptr, &texture.textureImage));
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(mvGetLogicalDevice(), texture.textureImage, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = mvFindMemoryType(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    MV_VULKAN(vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &texture.textureImageMemory));
+    MV_VULKAN(vkBindImageMemory(mvGetLogicalDevice(), texture.textureImage, texture.textureImageMemory, 0));
+
+    //-----------------------------------------------------------------------------
+    // final image
+    //-----------------------------------------------------------------------------
+
+    mvTransitionImageLayout(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, imageInfo.mipLevels, 6);
+    mvCopyBufferToImage(stagingBuffer, texture.textureImage, (u32)texWidth, (u32)texHeight, 6);
+    //mvTransitionImageLayout(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, imageInfo.mipLevels);
+
+    vkDestroyBuffer(mvGetLogicalDevice(), stagingBuffer.buffer, nullptr);
+    vkFreeMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory, nullptr);
+
+    mvGenerateMipmaps(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, texWidth, texHeight, imageInfo.mipLevels, 6);
+
+    VkPhysicalDeviceProperties properties{};
+    vkGetPhysicalDeviceProperties(GContext->graphics.physicalDevice, &properties);
+
+    VkImageViewCreateInfo viewInfo{};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = texture.textureImage;
+    viewInfo.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+    viewInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = imageInfo.mipLevels;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 6;
+    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    MV_VULKAN(vkCreateImageView(mvGetLogicalDevice(), &viewInfo, nullptr, &texture.imageInfo.imageView));
+
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.anisotropyEnable = VK_TRUE;
+    samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_NEVER;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = (f32)imageInfo.mipLevels;
+
+    MV_VULKAN(vkCreateSampler(mvGetLogicalDevice(), &samplerInfo, nullptr, &texture.imageInfo.sampler));
+    texture.imguiID = ImGui_ImplVulkan_AddTexture(texture.imageInfo.sampler, texture.imageInfo.imageView, texture.imageInfo.imageLayout);
+    return texture;
+}
+
 mvTexture 
 mvCreateTexture(const std::string& file)
 {
@@ -187,6 +378,9 @@ mvCreateTexture(const std::string& file)
     if (!pixels)
         throw std::runtime_error("failed to load texture image!");
 
+    //-----------------------------------------------------------------------------
+    // staging buffer
+    //-----------------------------------------------------------------------------
     mvBufferSpecification bufferSpec{};
     bufferSpec.size = imageSize;
     bufferSpec.usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -217,9 +411,7 @@ mvCreateTexture(const std::string& file)
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.flags = 0;
-
-    if (vkCreateImage(mvGetLogicalDevice(), &imageInfo, nullptr, &texture.textureImage) != VK_SUCCESS)
-        throw std::runtime_error("failed to create image!");
+    MV_VULKAN(vkCreateImage(mvGetLogicalDevice(), &imageInfo, nullptr, &texture.textureImage));
 
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(mvGetLogicalDevice(), texture.textureImage, &memRequirements);
@@ -228,11 +420,12 @@ mvCreateTexture(const std::string& file)
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = mvFindMemoryType(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    MV_VULKAN(vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &texture.textureImageMemory));
+    MV_VULKAN(vkBindImageMemory(mvGetLogicalDevice(), texture.textureImage, texture.textureImageMemory, 0));
 
-    if (vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &texture.textureImageMemory) != VK_SUCCESS)
-        throw std::runtime_error("failed to allocate image memory!");
-
-    vkBindImageMemory(mvGetLogicalDevice(), texture.textureImage, texture.textureImageMemory, 0);
+    //-----------------------------------------------------------------------------
+    // final image
+    //-----------------------------------------------------------------------------
 
     mvTransitionImageLayout(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, imageInfo.mipLevels);
     mvCopyBufferToImage(stagingBuffer, texture.textureImage, (u32)texWidth, (u32)texHeight);
@@ -256,8 +449,7 @@ mvCreateTexture(const std::string& file)
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    if (vkCreateImageView(mvGetLogicalDevice(), &viewInfo, nullptr, &texture.imageInfo.imageView) != VK_SUCCESS)
-        throw std::runtime_error("failed to create texture image view!");
+    MV_VULKAN(vkCreateImageView(mvGetLogicalDevice(), &viewInfo, nullptr, &texture.imageInfo.imageView));
 
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -277,8 +469,7 @@ mvCreateTexture(const std::string& file)
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = (f32)imageInfo.mipLevels;
 
-    if (vkCreateSampler(mvGetLogicalDevice(), &samplerInfo, nullptr, &texture.imageInfo.sampler) != VK_SUCCESS)
-        throw std::runtime_error("failed to create texture sampler!");
+    MV_VULKAN(vkCreateSampler(mvGetLogicalDevice(), &samplerInfo, nullptr, &texture.imageInfo.sampler));
     texture.imguiID = ImGui_ImplVulkan_AddTexture(texture.imageInfo.sampler, texture.imageInfo.imageView, texture.imageInfo.imageLayout);
     return texture;
 }
@@ -305,8 +496,7 @@ mvCreateTexture(u32 width, u32 height, VkFormat format, VkImageUsageFlags usage,
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.flags = 0;
 
-    if (vkCreateImage(mvGetLogicalDevice(), &imageInfo, nullptr, &texture.textureImage) != VK_SUCCESS)
-        throw std::runtime_error("failed to create image!");
+    MV_VULKAN(vkCreateImage(mvGetLogicalDevice(), &imageInfo, nullptr, &texture.textureImage));
 
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(mvGetLogicalDevice(), texture.textureImage, &memRequirements);
@@ -316,10 +506,8 @@ mvCreateTexture(u32 width, u32 height, VkFormat format, VkImageUsageFlags usage,
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = mvFindMemoryType(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    if (vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &texture.textureImageMemory) != VK_SUCCESS)
-        throw std::runtime_error("failed to allocate image memory!");
-
-    vkBindImageMemory(mvGetLogicalDevice(), texture.textureImage, texture.textureImageMemory, 0);
+    MV_VULKAN(vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &texture.textureImageMemory));
+    MV_VULKAN(vkBindImageMemory(mvGetLogicalDevice(), texture.textureImage, texture.textureImageMemory, 0));
 
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -331,8 +519,7 @@ mvCreateTexture(u32 width, u32 height, VkFormat format, VkImageUsageFlags usage,
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;
     viewInfo.subresourceRange.aspectMask = aspect;
-    if (vkCreateImageView(mvGetLogicalDevice(), &viewInfo, nullptr, &texture.imageInfo.imageView) != VK_SUCCESS)
-        throw std::runtime_error("failed to create texture image view!");
+    MV_VULKAN(vkCreateImageView(mvGetLogicalDevice(), &viewInfo, nullptr, &texture.imageInfo.imageView));
 
     if (format == VK_FORMAT_R8G8B8A8_UNORM)
     {
@@ -350,7 +537,7 @@ mvCreateTexture(u32 width, u32 height, VkFormat format, VkImageUsageFlags usage,
         samplerInfo.minLod = 0.0f;
         samplerInfo.maxLod = 1.0f;
         samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-        vkCreateSampler(mvGetLogicalDevice(), &samplerInfo, nullptr, &texture.imageInfo.sampler);
+        MV_VULKAN(vkCreateSampler(mvGetLogicalDevice(), &samplerInfo, nullptr, &texture.imageInfo.sampler));
         texture.imguiID = ImGui_ImplVulkan_AddTexture(texture.imageInfo.sampler, texture.imageInfo.imageView, texture.imageInfo.imageLayout);
     }
     else
@@ -369,7 +556,7 @@ mvCreateTexture(u32 width, u32 height, VkFormat format, VkImageUsageFlags usage,
         samplerInfo.minLod = 0.0f;
         samplerInfo.maxLod = 1.0f;
         samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-        vkCreateSampler(mvGetLogicalDevice(), &samplerInfo, nullptr, &texture.imageInfo.sampler);
+        MV_VULKAN(vkCreateSampler(mvGetLogicalDevice(), &samplerInfo, nullptr, &texture.imageInfo.sampler));
     }
     
     return texture;

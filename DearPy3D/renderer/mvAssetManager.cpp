@@ -11,6 +11,7 @@ mvPreloadAssetManager(mvAssetManager& am)
 
 		// create descriptor set layouts
 		VkDescriptorSetLayout descriptorSetLayouts[3];
+		VkDescriptorSetLayout descriptorSetLayouts2[1];
 
 		mvDescriptorSetLayout globalLayout = mvCreateDescriptorSetLayout(
 			{
@@ -34,13 +35,20 @@ mvPreloadAssetManager(mvAssetManager& am)
 				mvCreateDynamicUniformBufferDescriptorSpec(0u)
 			});
 
+		mvDescriptorSetLayout skyboxLayout = mvCreateDescriptorSetLayout(
+			{
+				mvCreateTextureDescriptorSpec(0u)
+			});
+
 		descriptorSetLayouts[0] = globalLayout.layout;
 		descriptorSetLayouts[1] = materialLayout.layout;
 		descriptorSetLayouts[2] = perDrawLayout.layout;
+		descriptorSetLayouts2[0] = skyboxLayout.layout;
 
 		mvRegisterAsset(&am, "scene", descriptorSetLayouts[0]);
 		mvRegisterAsset(&am, "phong", descriptorSetLayouts[1]);
 		mvRegisterAsset(&am, "perdraw", descriptorSetLayouts[2]);
+		mvRegisterAsset(&am, "skybox_pass", descriptorSetLayouts2[0]);
 
 		//-----------------------------------------------------------------------------
 		// create pipeline layouts
@@ -65,8 +73,7 @@ mvPreloadAssetManager(mvAssetManager& am)
 			pipelineLayoutInfo.pushConstantRangeCount = 1;
 			pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
 
-			if (vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
-				throw std::runtime_error("failed to create pipeline layout!");
+			MV_VULKAN(vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
 			mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "main_pass", pipelineLayout);
 
@@ -96,10 +103,33 @@ mvPreloadAssetManager(mvAssetManager& am)
 			pipelineLayoutInfo.pushConstantRangeCount = 1;
 			pipelineLayoutInfo.pSetLayouts = nullptr;
 
-			if (vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
-				throw std::runtime_error("failed to create pipeline layout!");
+			MV_VULKAN(vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
 			mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "shadow_pass", pipelineLayout);
+		}
+
+		{
+			VkPipelineLayout pipelineLayout;
+			VkPushConstantRange push_constant;
+			push_constant.offset = 0;
+			push_constant.size = 64;
+			push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+			VkPipelineMultisampleStateCreateInfo multisampling{};
+			multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+			multisampling.sampleShadingEnable = VK_FALSE;
+			multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+			VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+			pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+			pipelineLayoutInfo.setLayoutCount = 1;
+			pipelineLayoutInfo.pPushConstantRanges = &push_constant;
+			pipelineLayoutInfo.pushConstantRangeCount = 1;
+			pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts2;
+
+			MV_VULKAN(vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout));
+
+			mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "skybox_pass", pipelineLayout);
 		}
 
 	}
@@ -107,28 +137,56 @@ mvPreloadAssetManager(mvAssetManager& am)
 	//-----------------------------------------------------------------------------
 	// create pipeline
 	//-----------------------------------------------------------------------------
-	mvPipelineSpec pipelineSpec{};
-	pipelineSpec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	pipelineSpec.backfaceCulling = true;
-	pipelineSpec.depthTest = true;
-	pipelineSpec.depthWrite = true;
-	pipelineSpec.wireFrame = false;
-	pipelineSpec.vertexShader = "vs_shader.vert.spv";
-	pipelineSpec.pixelShader = "ps_shader.frag.spv";
-	pipelineSpec.width = (float)GContext->graphics.swapChainExtent.width;  // use viewport
-	pipelineSpec.height = (float)GContext->graphics.swapChainExtent.height; // use viewport
-	pipelineSpec.renderPass = GContext->graphics.renderPass;
-	pipelineSpec.layout = mvCreateVertexLayout(
-		{
-			mvVertexElementType::Position3D,
-			mvVertexElementType::Normal,
-			mvVertexElementType::Tangent,
-			mvVertexElementType::Bitangent,
-			mvVertexElementType::Texture2D
-		});
+	{
+		mvPipelineSpec pipelineSpec{};
+		pipelineSpec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		pipelineSpec.backfaceCulling = true;
+		pipelineSpec.depthTest = true;
+		pipelineSpec.depthWrite = true;
+		pipelineSpec.wireFrame = false;
+		pipelineSpec.vertexShader = "shader.vert.spv";
+		pipelineSpec.pixelShader = "shader.frag.spv";
+		pipelineSpec.width = (float)GContext->graphics.swapChainExtent.width;  // use viewport
+		pipelineSpec.height = (float)GContext->graphics.swapChainExtent.height; // use viewport
+		pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "main_pass");
+		pipelineSpec.renderPass = GContext->graphics.renderPass;
+		pipelineSpec.layout = mvCreateVertexLayout(
+			{
+				mvVertexElementType::Position3D,
+				mvVertexElementType::Normal,
+				mvVertexElementType::Tangent,
+				mvVertexElementType::Bitangent,
+				mvVertexElementType::Texture2D
+			});
 
-	mvPipeline pipeline = mvCreatePipeline(am, pipelineSpec);
-	mvRegisterAsset(&am, "main_pass", pipeline);
+		mvPipeline pipeline = mvCreatePipeline(am, pipelineSpec);
+		mvRegisterAsset(&am, "main_pass", pipeline);
+	}
+
+	{
+		//-----------------------------------------------------------------------------
+		// create pipeline
+		//-----------------------------------------------------------------------------
+		mvPipelineSpec pipelineSpec{};
+		pipelineSpec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		pipelineSpec.backfaceCulling = false;
+		pipelineSpec.depthTest = true;
+		pipelineSpec.depthWrite = false;
+		pipelineSpec.wireFrame = false;
+		pipelineSpec.vertexShader = "skybox.vert.spv";
+		pipelineSpec.pixelShader = "skybox.frag.spv";
+		pipelineSpec.width = (float)GContext->graphics.swapChainExtent.width;  // use viewport
+		pipelineSpec.height = (float)GContext->graphics.swapChainExtent.height; // use viewport
+		pipelineSpec.renderPass = GContext->graphics.renderPass;
+		pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "skybox_pass");
+		pipelineSpec.layout = mvCreateVertexLayout(
+			{
+				mvVertexElementType::Position3D
+			});
+
+		mvPipeline pipeline = mvCreatePipeline(am, pipelineSpec);
+		mvRegisterAsset(&am, "skybox_pass", pipeline);
+	}
 }
 
 void 
@@ -591,6 +649,21 @@ mvGetTextureAssetID(mvAssetManager* manager, const std::string& path)
 
 	manager->textures[manager->textureCount].hash = path;
 	manager->textures[manager->textureCount].asset = mvCreateTexture(path);
+	manager->textureCount++;
+	return manager->textureCount - 1;
+}
+
+mvAssetID
+mvGetTextureAssetID2(mvAssetManager* manager, const std::string& path)
+{
+	for (s32 i = 0; i < manager->textureCount; i++)
+	{
+		if (manager->textures[i].hash == path)
+			return i;
+	}
+
+	manager->textures[manager->textureCount].hash = path;
+	manager->textures[manager->textureCount].asset = mvCreateCubeTexture(path);
 	manager->textureCount++;
 	return manager->textureCount - 1;
 }

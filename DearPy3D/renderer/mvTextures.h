@@ -16,5 +16,5 @@ struct mvTexture
 };
 
 mvTexture mvCreateTexture(const std::string& file);
-
+mvTexture mvCreateCubeTexture(const std::string& file);
 mvTexture mvCreateTexture(u32 width, u32 height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect);

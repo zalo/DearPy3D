@@ -37,6 +37,7 @@ target_sources(dearpy3d
 		"renderer/mvTextures.cpp"
 		"renderer/mvMesh.cpp"
 		"renderer/mvScene.cpp"
+		"renderer/mvSkybox.cpp"
 
 		# Vulkan Memory Allocator
 		"../Dependencies/VulkanMemoryAllocator/vk_mem_alloc.cpp"

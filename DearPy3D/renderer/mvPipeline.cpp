@@ -252,7 +252,7 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     //---------------------------------------------------------------------
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable = VK_TRUE;
+    colorBlendAttachment.blendEnable = spec.blendEnabled ? VK_TRUE : VK_FALSE;
     colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
     colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
@@ -304,17 +304,13 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
-    if (!spec.pixelShader.empty())
-        pipelineInfo.layout = mvGetRawPipelineLayoutAsset(&assetManager, "main_pass");
-    else
-        pipelineInfo.layout = mvGetRawPipelineLayoutAsset(&assetManager, "shadow_pass");
+    pipelineInfo.layout = spec.pipelineLayout;
     pipelineInfo.renderPass = spec.renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.pDepthStencilState = &depthStencil;
 
-    if (vkCreateGraphicsPipelines(mvGetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.pipeline) != VK_SUCCESS)
-        throw std::runtime_error("failed to create graphics pipeline!");
+    MV_VULKAN(vkCreateGraphicsPipelines(mvGetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.pipeline));
 
     // no longer need this
     vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.vertexShader.shaderModule, nullptr);

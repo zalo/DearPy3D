@@ -26,4 +26,5 @@ struct mvMesh
 
 mvMesh mvCreateTexturedCube(mvAssetManager& assetManager, float sideLength = 1.0f);
 mvMesh mvCreateTexturedQuad(mvAssetManager& assetManager, float sideLength = 1.0f);
-void mvLoadOBJAssets(mvAssetManager& assetManager, const std::string& root, const std::string& file);
+mvMesh mvCreateSkyboxTexture(mvAssetManager& assetManager);
+void mvLoadOBJAssets       (mvAssetManager& assetManager, const std::string& root, const std::string& file);

@@ -118,6 +118,7 @@ mvAssetID mvGetDescriptorSetLayoutAssetID(mvAssetManager* manager, const std::st
 mvAssetID mvGetDescriptorSetAssetID      (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetSceneAssetID              (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetTextureAssetID            (mvAssetManager* manager, const std::string& tag);
+mvAssetID mvGetTextureAssetID2           (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetBufferAssetID             (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetMaterialAssetID           (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetNodeAssetID               (mvAssetManager* manager, const std::string& tag);

@@ -107,7 +107,7 @@ mvCopyBuffer(mvBuffer srcBuffer, mvBuffer dstBuffer)
 }
 
 void
-mvCopyBufferToImage(mvBuffer srcBuffer, VkImage dstImage, u32 width, u32 height)
+mvCopyBufferToImage(mvBuffer srcBuffer, VkImage dstImage, u32 width, u32 height, u32 layers)
 {
     VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
 
@@ -119,7 +119,7 @@ mvCopyBufferToImage(mvBuffer srcBuffer, VkImage dstImage, u32 width, u32 height)
     region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     region.imageSubresource.mipLevel = 0;
     region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
+    region.imageSubresource.layerCount = layers;
 
     region.imageOffset = { 0, 0, 0 };
     region.imageExtent = {

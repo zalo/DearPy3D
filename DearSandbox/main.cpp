@@ -14,10 +14,11 @@
 #include "mvObjLoader.h"
 #include "mvAssetManager.h"
 #include "mvScene.h"
+#include "mvSkybox.h"
 #include <stdlib.h>
 
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
-mv_internal b8 loadSponza = true;
+mv_internal b8 loadSponza = false;
 
 int main() 
 {
@@ -39,6 +40,8 @@ int main()
 
     if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
 
+    mvSkybox skybox = mvCreateSkybox(am);
+
     mvSceneData sceneData{};
 
     mvCamera camera{};
@@ -49,7 +52,7 @@ int main()
     camera.yaw = 0.0f;
     camera.aspect = GContext->viewport.width / GContext->viewport.height;
 
-    f32 offscreenWidth = 50.0f;
+    f32 offscreenWidth = 75.0f;
     mvOrthoCamera secondaryCamera{};
     secondaryCamera.pos = { 0.0f, 100.0f, 0.0f };
     secondaryCamera.dir = { 0.0f, -1.0, 0.0f };
@@ -103,8 +106,9 @@ int main()
     offscreenPass.pipelineSpec.depthTest = true;
     offscreenPass.pipelineSpec.depthWrite = true;
     offscreenPass.pipelineSpec.wireFrame = false;
-    offscreenPass.pipelineSpec.vertexShader = "vs_shader.vert.spv";
-    offscreenPass.pipelineSpec.pixelShader = "ps_shader.frag.spv";
+    offscreenPass.pipelineSpec.vertexShader = "shader.vert.spv";
+    offscreenPass.pipelineSpec.pixelShader = "shader.frag.spv";
+    offscreenPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "main_pass");
     
     offscreenPass.pipelineSpec.layout = mvCreateVertexLayout(
         {
@@ -122,7 +126,8 @@ int main()
     shadowPass.pipelineSpec.depthTest = true;
     shadowPass.pipelineSpec.depthWrite = true;
     shadowPass.pipelineSpec.wireFrame = false;
-    shadowPass.pipelineSpec.vertexShader = "vs_shadow.vert.spv";
+    shadowPass.pipelineSpec.vertexShader = "shadow.vert.spv";
+    shadowPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "shadow_pass");
     shadowPass.pipelineSpec.layout = mvCreateVertexLayout(
         {
             mvVertexElementType::Position3D,
@@ -221,6 +226,7 @@ int main()
         // wait for fences and acquire next image
         //---------------------------------------------------------------------
         Renderer::mvBeginFrame();
+        mvUpdateSkyboxDescriptors(am, skybox, mvGetTextureAssetID2(&am, "../../Resources/SkyBox"));
         mvUpdateSceneDescriptors(am, am.scenes[scene].asset, mvGetTextureAssetID(&am, shadowPass.specification.name + std::to_string(GContext->graphics.currentImageIndex)));
         Renderer::mvUpdateDescriptors(am);
         
@@ -303,10 +309,18 @@ int main()
         for (int i = 0; i < am.sceneCount; i++)
             Renderer::mvRenderScene(am, am.scenes[i].asset, viewMatrix, projMatrix);
 
+        if (sceneData.doSkybox)
+        {
+            mvBindSkybox(am, skybox);
+            vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, mvGetRawPipelineAsset(&am, "skybox_pass")->pipeline);
+            Renderer::mvRenderSkybox(am, viewMatrix, projMatrix);
+        }
+
         ImGui::Render();
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), mvGetCurrentCommandBuffer());
 
         Renderer::mvEndPass(mvGetCurrentCommandBuffer());
+
 
         //---------------------------------------------------------------------
         // submit command buffers & present

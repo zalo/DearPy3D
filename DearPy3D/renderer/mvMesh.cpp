@@ -102,6 +102,62 @@ mvCreateTexturedCube(mvAssetManager& assetManager, float sideLength)
     return mesh;
 }
 
+mvMesh
+mvCreateSkyboxTexture(mvAssetManager& assetManager)
+{
+    const float side = 1.0f / 2.0f;
+    auto vertices = std::vector<float>{
+        -side, -side, -side,
+         side, -side, -side,
+        -side,  side, -side,
+         side,  side, -side,
+        -side, -side,  side,
+         side, -side,  side,
+        -side,  side,  side,
+         side,  side,  side
+    };
+
+    mv_local_persist auto indices = std::vector<uint32_t>{
+        0, 2, 1, 2, 3, 1,
+        1, 3, 5, 3, 7, 5,
+        2, 6, 3, 3, 6, 7,
+        4, 5, 7, 4, 7, 6,
+        0, 4, 2, 2, 4, 6,
+        0, 1, 4, 1, 5, 4
+    };
+
+    mvBufferSpecification vertexBufferSpec{};
+    vertexBufferSpec.usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    vertexBufferSpec.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    vertexBufferSpec.size = sizeof(f32);
+    vertexBufferSpec.components = 14;
+    vertexBufferSpec.count = vertices.size();
+
+    mvBufferSpecification indexBufferSpec{};
+    indexBufferSpec.usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    indexBufferSpec.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    indexBufferSpec.size = sizeof(u32);
+    indexBufferSpec.count = indices.size();
+
+    mvMesh mesh{};
+    mesh.name = "skybox cube";
+    mesh.vertexBuffer = mvRegisterAsset(&assetManager, "skybox_cube_vertex",
+        mvCreateBuffer(vertexBufferSpec, vertices.data()));
+    if (mvGetBufferAssetID(&assetManager, "skybox_cube_index") == MV_INVALID_ASSET_ID)
+        mesh.indexBuffer = mvRegisterAsset(&assetManager, "skybox_cube_index",
+            mvCreateBuffer(indexBufferSpec, indices.data()));
+    else
+        mesh.indexBuffer = mvGetBufferAssetID(&assetManager, "skybox_cube_index");
+
+    mvMaterialData mat{};
+    mat.materialColor = { 0.0f, 1.0f, 0.0f, 1.0f };
+    mat.useTextureMap = true;
+    mvMaterial material = mvCreateMaterial(assetManager, mat, "skybox.vert.spv", "skybox.frag.spv");
+    mesh.phongMaterialID = mvRegisterAsset(&assetManager, "skybox_cube_material", material);
+    mesh.diffuseTexture = mvGetTextureAssetID2(&assetManager, "../../Resources/SkyBox");
+    return mesh;
+}
+
 mvMesh 
 mvCreateTexturedQuad(mvAssetManager& assetManager, float sideLength)
 {

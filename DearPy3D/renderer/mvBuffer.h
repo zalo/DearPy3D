@@ -26,7 +26,7 @@ struct mvBuffer
 
 mvBuffer mvCreateBuffer     (mvBufferSpecification specification, void* data = nullptr);
 void     mvCopyBuffer       (mvBuffer srcBuffer, mvBuffer dstBuffer);
-void     mvCopyBufferToImage(mvBuffer srcBuffer, VkImage dstImage, u32 width, u32 height);
+void     mvCopyBufferToImage(mvBuffer srcBuffer, VkImage dstImage, u32 width, u32 height, u32 layers = 1u);
 
 void     mvUpdateBuffer        (mvBuffer& buffer, void* data);
 void     mvPartialUpdateBuffer (mvBuffer& buffer, void* data, u64 index);

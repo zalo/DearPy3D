@@ -110,6 +110,34 @@ namespace Renderer {
         vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
     }
 
+    void 
+    mvRenderSkybox(mvAssetManager& am, mvMat4 cam, mvMat4 proj)
+    {
+        mv_local_persist VkDeviceSize offsets = { 0 };
+
+        mv_local_persist mvMesh mesh = mvCreateSkyboxTexture(am);
+
+        VkCommandBuffer commandBuffer = GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex];
+        VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
+        VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
+
+        //mvBindDescriptorSet(am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSet, 1);
+        vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &vertexBuffer, &offsets);
+
+        mvTransforms transforms;
+        transforms.model = mvIdentityMat4();
+        transforms.modelView = cam * transforms.model;
+        transforms.modelViewProjection = proj * transforms.modelView;
+
+        mvMat4 modelViewProjection = transforms.modelViewProjection;
+
+        VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "skybox_pass");
+        vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvMat4), &modelViewProjection);
+
+        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
+    }
+
     void
     mvBeginPass(mvAssetManager& am, VkCommandBuffer commandBuffer, mvPass& pass)
     {
