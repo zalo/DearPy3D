@@ -1,12 +1,15 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
+#define EPSILON 0.01
+#define SHADOW_OPACITY 0.0
+
 layout(location = 0) in vec3 inViewPos;
 layout(location = 1) in vec3 inViewNormal;
 layout(location = 2) in vec3 inWorldNormal;
 layout(location = 3) in vec2 inTexCoord;
 layout(location = 4) in vec4 indshadowWorldPos;
-layout(location = 5) out vec4 inoshadowWorldPos;
+layout(location = 5) in vec4 inoshadowWorldPos;
 layout(location = 6) in mat3 inTangentBasis;
 
 
@@ -73,6 +76,7 @@ layout(set = 0, binding = 2) uniform mvDirectionalLight
 } directionLight;
 
 layout(set = 0, binding = 3) uniform sampler2D shadowMap;
+layout(set = 0, binding = 4) uniform samplerCube shadowCubeMap;
 
 layout(set = 1, binding = 0) uniform sampler2D colorSampler;
 layout(set = 1, binding = 1) uniform sampler2D normalSampler;
@@ -218,12 +222,24 @@ void main()
         vec3 lightVec = pointlight.viewLightPos - inViewPos;
         float lightDistFromFrag = length(lightVec);
         vec3 lightDirVec = lightVec / lightDistFromFrag;
+        float shadow = 1.0;
+
+        if (scene.doOmniShadows)
+        {
+            //vec3 lightVec2 = inoshadowWorldPos.xyz - pointlight.viewLightPos;
+            vec3 lightVec2 = pointlight.viewLightPos - inViewPos;
+            float dist = length(lightVec2);
+            float sampledDist = texture(shadowCubeMap, inoshadowWorldPos.xyz).r;
+            
+	        // Check if fragment is in shadow
+            shadow = (dist <= sampledDist - EPSILON) ? 1.0 : SHADOW_OPACITY;
+        }
     
 	    // attenuation
         const float att = Attenuate(pointlight.attConst, pointlight.attLin, pointlight.attQuad, lightDistFromFrag);
     
 	    // diffuse
-        diffuse += pointlight.diffuseColor * pointlight.diffuseIntensity * att * max(0.0, dot(lightDirVec, viewNormal));
+        diffuse += shadow * pointlight.diffuseColor * pointlight.diffuseIntensity * att * max(0.0, dot(lightDirVec, viewNormal));
     
         // specular
         
@@ -234,7 +250,7 @@ void main()
         // vector from camera to fragment
         const vec3 viewCamToFrag = normalize(inViewPos);
         
-        specularReflected += att * pointlight.diffuseColor * pointlight.diffuseIntensity * specularReflectedColor * 1.0 * pow(max(0.0, dot(-r, viewCamToFrag)), specularPowerLoaded);
+        specularReflected += shadow * att * pointlight.diffuseColor * pointlight.diffuseIntensity * specularReflectedColor * 1.0 * pow(max(0.0, dot(-r, viewCamToFrag)), specularPowerLoaded);
     }
 
     //-----------------------------------------------------------------------------

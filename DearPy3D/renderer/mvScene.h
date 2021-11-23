@@ -62,7 +62,7 @@ struct mvScene
 };
 
 mvScene mvCreateScene(mvAssetManager& am, mvSceneData sceneData);
-void    mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvAssetID shadowMap);
+void    mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvAssetID shadowMap, mvAssetID shadowCubeMap);
 void    mvBindScene(mvAssetManager& am, mvAssetID scene, mvSceneData data, u32 index);
 
 void mvShowSceneControls(const char*  windowName, mvSceneData& sceneData);

@@ -96,3 +96,41 @@ create_shadow_pass(mvAssetManager& am)
 
     return shadowPass;
 }
+
+mvPass
+create_omnishadow_pass(mvAssetManager& am)
+{
+    mvPassSpecification offscreenPassSpec{};
+    offscreenPassSpec.name = "omnishadow_pass";
+    offscreenPassSpec.depthBias = 0.0f;
+    offscreenPassSpec.slopeDepthBias = 0.0f;
+    offscreenPassSpec.width = 1024.0f;
+    offscreenPassSpec.height = 1024.0f;
+    offscreenPassSpec.colorFormat = VK_FORMAT_R32_SFLOAT;
+    offscreenPassSpec.depthFormat = VK_FORMAT_D32_SFLOAT_S8_UINT;
+    offscreenPassSpec.hasColor = true;
+    offscreenPassSpec.hasDepth = true;
+
+    mvPass offscreenPass = Renderer::mvCreateOmniShadowRenderPass(am, offscreenPassSpec);
+    offscreenPass.pipelineSpec.backfaceCulling = true;
+    offscreenPass.pipelineSpec.depthTest = true;
+    offscreenPass.pipelineSpec.depthWrite = true;
+    offscreenPass.pipelineSpec.wireFrame = false;
+    offscreenPass.pipelineSpec.blendEnabled = false;
+    offscreenPass.pipelineSpec.vertexShader = "omnishadow.vert.spv";
+    offscreenPass.pipelineSpec.pixelShader = "omnishadow.frag.spv";
+    offscreenPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "omnishadow_pass");
+
+    offscreenPass.pipelineSpec.layout = mvCreateVertexLayout(
+        {
+            mvVertexElementType::Position3D,
+            mvVertexElementType::Normal,
+            mvVertexElementType::Tangent,
+            mvVertexElementType::Bitangent,
+            mvVertexElementType::Texture2D
+        });
+
+    offscreenPass.specification.pipeline = mvRegisterAsset(&am, "omnishadow_pass", mvCreatePipeline(am, offscreenPass.pipelineSpec));
+
+    return offscreenPass;
+}

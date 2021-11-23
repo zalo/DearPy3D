@@ -54,7 +54,8 @@ namespace Renderer {
         MV_VULKAN(vkQueueSubmit(GContext->graphics.graphicsQueue, 1, &submitInfo, GContext->graphics.inFlightFences[GContext->graphics.currentFrame]));
     }
 
-    void mvUpdateDescriptors(mvAssetManager& am)
+    void 
+    mvUpdateDescriptors(mvAssetManager& am)
     {
         for (int i = 0; i < am.meshCount; i++)
         {
@@ -83,6 +84,37 @@ namespace Renderer {
 
         VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "main_pass");
         vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
+
+        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
+    }
+
+    void
+    mvRenderMeshOmniShadow(mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection, mvVec4 lightPos)
+    {
+        mv_local_persist VkDeviceSize offsets = { 0 };
+
+        VkCommandBuffer commandBuffer = GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex];
+        VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
+        VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
+
+        //mvBindDescriptorSet(am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSet, 1);
+        vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &vertexBuffer, &offsets);
+
+        mvTransforms transforms;
+        transforms.model = accumulatedTransform;
+        transforms.modelView = camera * transforms.model;
+        transforms.modelViewProjection = projection * transforms.modelView;
+
+        struct tempstruct
+        {
+            mvMat4 mvp;
+            mvVec4 lightPos;
+        };
+
+        tempstruct push = { transforms.modelViewProjection, lightPos };
+        VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "omnishadow_pass");
+        vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(tempstruct), &push);
 
         vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
     }
@@ -227,6 +259,19 @@ namespace Renderer {
         }
     }
 
+    mv_internal void
+    mvRenderNodeOmniShadow(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj, mvVec4 lightPos)
+    {
+
+        if (node.mesh > -1)
+            mvRenderMeshOmniShadow(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj, lightPos);
+
+        for (u32 i = 0; i < node.childCount; i++)
+        {
+            mvRenderNodeOmniShadow(am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj, lightPos);
+        }
+    }
+
     void
     mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
     {
@@ -261,6 +306,142 @@ namespace Renderer {
                 mvRenderNodeShadow(am, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj);
             }
         }
+    }
+
+    void
+    mvRenderSceneOmniShadow(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvVec4 lightPos)
+    {
+
+        for (u32 i = 0; i < scene.nodeCount; i++)
+        {
+            mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
+
+            if (rootNode.mesh > -1)
+                mvRenderMeshOmniShadow(am, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj, lightPos);
+
+            for (u32 j = 0; j < rootNode.childCount; j++)
+            {
+                mvRenderNodeOmniShadow(am, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj, lightPos);
+            }
+        }
+    }
+
+    mvPass
+    mvCreateOmniShadowRenderPass(mvAssetManager& am, mvPassSpecification specification)
+    {
+
+        mvPass pass{};
+        pass.specification = specification;
+
+        VkAttachmentDescription attchmentDescriptions[2];
+
+        // Color attachment
+        attchmentDescriptions[0].flags = 0;
+        attchmentDescriptions[0].format = specification.colorFormat;
+        attchmentDescriptions[0].samples = VK_SAMPLE_COUNT_1_BIT;
+        attchmentDescriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attchmentDescriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attchmentDescriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attchmentDescriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attchmentDescriptions[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attchmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        // Depth attachment
+        attchmentDescriptions[1].flags = 0;
+        attchmentDescriptions[1].format = specification.depthFormat;
+        attchmentDescriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
+        attchmentDescriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attchmentDescriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attchmentDescriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attchmentDescriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attchmentDescriptions[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attchmentDescriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+        VkAttachmentReference depthReference = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+        VkSubpassDescription subpassDescription = {};
+        subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpassDescription.colorAttachmentCount = 1;
+        subpassDescription.pColorAttachments = &colorReference;
+        subpassDescription.pDepthStencilAttachment = &depthReference;
+
+        // Create the actual renderpass
+        VkRenderPassCreateInfo renderPassInfo = {};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderPassInfo.attachmentCount = 2;
+        renderPassInfo.pAttachments = attchmentDescriptions;
+        renderPassInfo.subpassCount = 1;
+        renderPassInfo.pSubpasses = &subpassDescription;
+
+        MV_VULKAN(vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, &pass.renderPass));
+
+        mvRegisterAsset(&am, specification.name, pass.renderPass);
+
+        pass.colorTextures.resize(GContext->graphics.swapChainImageViews.size());
+        pass.depthTextures.resize(GContext->graphics.swapChainImageViews.size());
+        pass.frameBuffers.resize(GContext->graphics.swapChainImageViews.size());
+        for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+        {
+            pass.colorTextures[i] = mvCreateTexture(
+                specification.width, specification.height, specification.colorFormat,
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT);
+
+            VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
+            mvTransitionImageLayout(commandBuffer, pass.colorTextures[i].textureImage,
+                VK_IMAGE_ASPECT_COLOR_BIT,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            );
+            mvEndSingleTimeCommands(commandBuffer);
+
+            pass.depthTextures[i] = mvCreateTexture(
+                specification.width, specification.height, specification.depthFormat,
+                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+
+            VkCommandBuffer commandBuffer2 = mvBeginSingleTimeCommands();
+            mvTransitionImageLayout(commandBuffer2, pass.depthTextures[i].textureImage,
+                VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            );
+
+            mvEndSingleTimeCommands(commandBuffer2);
+
+            VkImageView imageViews[] = { pass.colorTextures[i].imageInfo.imageView, pass.depthTextures[i].imageInfo.imageView };
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = pass.renderPass;
+            framebufferInfo.attachmentCount = 2;
+            framebufferInfo.pAttachments = imageViews;
+            framebufferInfo.width = specification.width;
+            framebufferInfo.height = specification.height;
+            framebufferInfo.layers = 1;
+            MV_VULKAN(vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &pass.frameBuffers[i]));
+
+
+            mvRegisterAsset(&am, specification.name + std::to_string(i), pass.colorTextures[i]);
+            mvRegisterAsset(&am, specification.name + "d" + std::to_string(i), pass.depthTextures[i]);
+            mvRegisterAsset(&am, specification.name + std::to_string(i), pass.frameBuffers[i]);
+        }
+
+        pass.pipelineSpec.width = pass.specification.width;
+        pass.pipelineSpec.height = pass.specification.height;
+        pass.pipelineSpec.renderPass = pass.renderPass;
+        pass.pipelineSpec.mainPass = false;
+
+        pass.viewport.x = 0.0f;
+        pass.viewport.y = pass.specification.height;
+        pass.viewport.width = pass.specification.width;
+        pass.viewport.height = -pass.specification.height;
+        pass.viewport.minDepth = 0.0f;
+        pass.viewport.maxDepth = 1.0f;
+        pass.extent.width = (u32)pass.specification.width;
+        pass.extent.height = (u32)pass.viewport.y;
+
+        return pass;
     }
 
     mvPass

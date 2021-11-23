@@ -34,6 +34,8 @@ else()
 	add_shader(shadow.vert)
 	add_shader(skybox.vert)
 	add_shader(skybox.frag)
+	add_shader(omnishadow.frag)
+	add_shader(omnishadow.vert)
 endif()
 
 target_sources(dearpy3dsandbox

@@ -270,7 +270,7 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
         colorBlending.attachmentCount = 0;
     colorBlending.pAttachments = &colorBlendAttachment;
     colorBlending.blendConstants[0] = 0.0f;
-    colorBlending.blendConstants[1] = 0.5f;
+    colorBlending.blendConstants[1] = 0.0f;
     colorBlending.blendConstants[2] = 0.0f;
     colorBlending.blendConstants[3] = 0.0f;
 

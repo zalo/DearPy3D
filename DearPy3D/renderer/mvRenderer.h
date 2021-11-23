@@ -41,6 +41,7 @@ namespace Renderer
 	void mvBeginPass(mvAssetManager& am, VkCommandBuffer commandBuffer, mvPass& pass);
 	void mvEndPass(VkCommandBuffer commandBuffer);
 
+	mvPass mvCreateOmniShadowRenderPass(mvAssetManager& am, mvPassSpecification specification);
 	mvPass mvCreateOffscreenRenderPass(mvAssetManager& am, mvPassSpecification specification);
 	mvPass mvCreateDepthOnlyRenderPass(mvAssetManager& am, mvPassSpecification specification);
 
@@ -49,7 +50,9 @@ namespace Renderer
 	void mvRenderSkybox(mvAssetManager& am, mvMat4 cam, mvMat4 proj);
 
 	void mvRenderMeshShadow(mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
+	void mvRenderMeshOmniShadow(mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection, mvVec4 lightPos);
 	void mvRenderSceneShadow(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj);
+	void mvRenderSceneOmniShadow(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvVec4 lightPos);
 
 	void mvUpdateDescriptors(mvAssetManager& am);
 }

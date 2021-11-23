@@ -18,20 +18,22 @@ mvCreateScene(mvAssetManager& am, mvSceneData sceneData)
     scene.descriptorSet.descriptors.push_back(mvCreateDynamicUniformBufferDescriptor(am, mvCreateDynamicUniformBufferDescriptorSpec(1u), hash + "light", 3, sizeof(mvPointLightInfo), &pointLightInfo));
     scene.descriptorSet.descriptors.push_back(mvCreateDynamicUniformBufferDescriptor(am, mvCreateDynamicUniformBufferDescriptorSpec(2u), hash + "dlight", 3, sizeof(mvDirectionLightInfo), &dpointLightInfo));
     scene.descriptorSet.descriptors.push_back(mvCreateTextureDescriptor(am, mvCreateTextureDescriptorSpec(3u)));
+    scene.descriptorSet.descriptors.push_back(mvCreateTextureDescriptor(am, mvCreateTextureDescriptorSpec(4u)));
     mvRegisterAsset(&am, hash, scene.descriptorSet);
 
     return scene;
 }
 
 void
-mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvAssetID shadowMap)
+mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvAssetID shadowMap, mvAssetID shadowCubeMap)
 {
-    VkWriteDescriptorSet descriptorWrites[4];
+    VkWriteDescriptorSet descriptorWrites[5];
 
     scene.descriptorSet.descriptors[0].write.pBufferInfo = &am.buffers[scene.descriptorSet.descriptors[0].bufferID[GContext->graphics.currentImageIndex]].asset.bufferInfo;
     scene.descriptorSet.descriptors[1].write.pBufferInfo = &am.buffers[scene.descriptorSet.descriptors[1].bufferID[GContext->graphics.currentImageIndex]].asset.bufferInfo;
     scene.descriptorSet.descriptors[2].write.pBufferInfo = &am.buffers[scene.descriptorSet.descriptors[2].bufferID[GContext->graphics.currentImageIndex]].asset.bufferInfo;
     scene.descriptorSet.descriptors[3].write.pImageInfo = &am.textures[shadowMap].asset.imageInfo;
+    scene.descriptorSet.descriptors[4].write.pImageInfo = &am.textures[shadowCubeMap].asset.imageInfo;
 
     for (u32 i = 0; i < scene.descriptorSet.descriptors.size(); i++)
     {
@@ -39,7 +41,7 @@ mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvAssetID shadowMap
         descriptorWrites[i] = scene.descriptorSet.descriptors[i].write;
     }
 
-    vkUpdateDescriptorSets(mvGetLogicalDevice(), 4, descriptorWrites, 0, nullptr);
+    vkUpdateDescriptorSets(mvGetLogicalDevice(), 5, descriptorWrites, 0, nullptr);
 }
 
 void

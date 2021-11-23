@@ -11,7 +11,8 @@ preload_descriptorset_layouts(mvAssetManager& am)
 			mvCreateDynamicUniformBufferDescriptorSpec(0u),
 			mvCreateDynamicUniformBufferDescriptorSpec(1u),
 			mvCreateDynamicUniformBufferDescriptorSpec(2u),
-			mvCreateTextureDescriptorSpec(3u)
+			mvCreateTextureDescriptorSpec(3u),
+			mvCreateTextureDescriptorSpec(4u)
 		});
 
 	mvDescriptorSetLayout materialLayout = mvCreateDescriptorSetLayout(
@@ -131,14 +132,35 @@ preload_pipeline_layouts(mvAssetManager& am)
 
 		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "skybox_pass", pipelineLayout);
 	}
+
+	{
+		VkPipelineLayout pipelineLayout;
+		VkPushConstantRange push_constant;
+		push_constant.offset = 0;
+		push_constant.size = 80;
+		push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		VkPipelineMultisampleStateCreateInfo multisampling{};
+		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampling.sampleShadingEnable = VK_FALSE;
+		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutInfo.setLayoutCount = 0;
+		pipelineLayoutInfo.pPushConstantRanges = &push_constant;
+		pipelineLayoutInfo.pushConstantRangeCount = 1;
+		pipelineLayoutInfo.pSetLayouts = nullptr;
+
+		MV_VULKAN(vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout));
+
+		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "omnishadow_pass", pipelineLayout);
+	}
 }
 
 void
 preload_pipelines(mvAssetManager& am)
 {
-	//-----------------------------------------------------------------------------
-	// create pipeline
-	//-----------------------------------------------------------------------------
 	{
 		mvPipelineSpec pipelineSpec{};
 		pipelineSpec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -166,9 +188,6 @@ preload_pipelines(mvAssetManager& am)
 	}
 
 	{
-		//-----------------------------------------------------------------------------
-		// create pipeline
-		//-----------------------------------------------------------------------------
 		mvPipelineSpec pipelineSpec{};
 		pipelineSpec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		pipelineSpec.backfaceCulling = false;
