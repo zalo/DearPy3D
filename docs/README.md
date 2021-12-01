@@ -20,7 +20,7 @@ The goals are:
 3. Learn/Experiment with real time rendering techniques.
 
 ## API
-We are still not unsure how we want the API to look but at the moment we believe we would like to have
+We are still unsure how we want the API to look but at the moment we believe we would like to have
 both a low and high level API. The question is how low and how high? 
 
 ### Low-level
