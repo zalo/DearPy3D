@@ -333,8 +333,10 @@ int main()
         ImGui::End();
 
         ImGui::Begin("Light Controls");
-        ImGui::SliderFloat("depthBias", &shadowPass.specification.depthBias, 0.0f, 50.0f);
-        ImGui::SliderFloat("slopeDepthBias", &shadowPass.specification.slopeDepthBias, 0.0f, 50.0f);
+        ImGui::SliderFloat("omni depthBias", &omniShadowPass.specification.depthBias, 0.0f, 50.0f);
+        ImGui::SliderFloat("omni slopeDepthBias", &omniShadowPass.specification.slopeDepthBias, 0.0f, 50.0f);
+        ImGui::SliderFloat("directional depthBias", &shadowPass.specification.depthBias, 0.0f, 50.0f);
+        ImGui::SliderFloat("directional slopeDepthBias", &shadowPass.specification.slopeDepthBias, 0.0f, 50.0f);
         if (ImGui::SliderFloat3("Position", &light1.info.viewLightPos.x, -50.0f, 50.0f))
         {
             lightTransform = mvTranslate(mvIdentityMat4(), light1.info.viewLightPos.xyz());

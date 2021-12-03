@@ -102,8 +102,8 @@ create_omnishadow_pass(mvAssetManager& am)
 {
     mvPassSpecification offscreenPassSpec{};
     offscreenPassSpec.name = "omnishadow_pass";
-    offscreenPassSpec.depthBias = 0.0f;
-    offscreenPassSpec.slopeDepthBias = 0.0f;
+    offscreenPassSpec.depthBias = 50.0f;
+    offscreenPassSpec.slopeDepthBias = 2.0f;
     offscreenPassSpec.width = 1024.0f;
     offscreenPassSpec.height = 1024.0f;
     offscreenPassSpec.colorFormat = VK_FORMAT_R32_SFLOAT;
