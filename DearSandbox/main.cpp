@@ -21,7 +21,7 @@
 #include "pipelines.h"
 
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
-mv_internal b8 loadSponza = false;
+mv_internal b8 loadSponza = true;
 
 int main() 
 {
@@ -53,12 +53,14 @@ int main()
     mvCamera camera{};
     camera.aspect = GContext->viewport.width / GContext->viewport.height;
 
-    
+    f32 angle = 10.0f;
+    f32 zcomponent = sinf(MV_PI * angle / 180.0f);
+    f32 ycomponent = cosf(MV_PI * angle / 180.0f);
 
     f32 offscreenWidth = 75.0f;
     mvOrthoCamera secondaryCamera{};
-    secondaryCamera.pos = { 0.0f, 100.0f, 0.0f };
-    secondaryCamera.dir = { 0.0f, -1.0, 0.0f };
+    secondaryCamera.pos = { 0.0f, 70.0f, 0.0f };
+    secondaryCamera.dir = { 0.0f, -ycomponent, zcomponent };
     secondaryCamera.up = { 1.0f, 0.0f, 0.0f };
     secondaryCamera.left = -offscreenWidth;
     secondaryCamera.right = offscreenWidth;
@@ -69,7 +71,7 @@ int main()
     
     mvPointLight light1 = mvCreatePointLight(am, "light1", { 0.0f, 10.0f, 0.0f });
     mvMat4 lightTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 10.0f, 0.0f });
-    mvDirectionLight dlight1 = mvCreateDirectionLight(am, "dlight1", mvVec3{ 0.0, -1.0f, 0.0f });
+    mvDirectionLight dlight1 = mvCreateDirectionLight(am, "dlight1", mvVec3{ 0.0, -ycomponent, zcomponent });
 
     mvCamera lightcamera{};
     lightcamera.pos = light1.info.viewLightPos.xyz();
@@ -337,6 +339,15 @@ int main()
         {
             lightTransform = mvTranslate(mvIdentityMat4(), light1.info.viewLightPos.xyz());
             lightcamera.pos = light1.info.viewLightPos.xyz();
+        }
+
+        if(ImGui::SliderFloat("Directional Light Angle", &angle, -45.0f, 45.0f))
+        {
+            zcomponent = sinf(MV_PI * angle / 180.0f);
+            ycomponent = cosf(MV_PI * angle / 180.0f);
+
+            secondaryCamera.dir = { 0.0f, -ycomponent, zcomponent };
+            dlight1.info.viewLightDir = mvVec3{ 0.0, -ycomponent, zcomponent };
         }
         ImGui::End();
 
