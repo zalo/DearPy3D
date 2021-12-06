@@ -220,9 +220,7 @@ namespace Renderer {
 
         if (pass.specification.pipeline != MV_INVALID_ASSET_ID)
         {
-            VkPipeline pipeline = pass.specification.mainPass ? 
-                am.pipelines[pass.specification.pipeline].asset.pipeline 
-                : am.secondaryPipelines[pass.specification.pipeline].asset.pipeline;
+            VkPipeline pipeline = am.pipelines[pass.specification.pipeline].asset.pipeline;
             vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         }
     }
@@ -430,7 +428,6 @@ namespace Renderer {
         pass.pipelineSpec.width = pass.specification.width;
         pass.pipelineSpec.height = pass.specification.height;
         pass.pipelineSpec.renderPass = pass.renderPass;
-        pass.pipelineSpec.mainPass = false;
 
         pass.viewport.x = 0.0f;
         pass.viewport.y = pass.specification.height;
@@ -442,6 +439,147 @@ namespace Renderer {
         pass.extent.height = (u32)pass.viewport.y;
 
         return pass;
+    }
+
+    mvPass
+    mvCreatePrimaryRenderPass(mvAssetManager& am, mvPassSpecification specification)
+    {
+
+        mvPass pass{};
+        pass.specification = specification;
+
+        VkAttachmentDescription attchmentDescriptions[2];
+
+        // Color attachment
+        attchmentDescriptions[0].flags = 0;
+        attchmentDescriptions[0].format = specification.colorFormat;
+        attchmentDescriptions[0].samples = VK_SAMPLE_COUNT_1_BIT;
+        attchmentDescriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attchmentDescriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attchmentDescriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attchmentDescriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attchmentDescriptions[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attchmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        // Depth attachment
+        attchmentDescriptions[1].flags = 0;
+        attchmentDescriptions[1].format = specification.depthFormat;
+        attchmentDescriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
+        attchmentDescriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attchmentDescriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attchmentDescriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attchmentDescriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attchmentDescriptions[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attchmentDescriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+        VkAttachmentReference depthReference = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+        VkSubpassDescription subpassDescription = {};
+        subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpassDescription.colorAttachmentCount = 1;
+        subpassDescription.pColorAttachments = &colorReference;
+        subpassDescription.pDepthStencilAttachment = &depthReference;
+
+        // Use subpass dependencies for layout transitions
+        VkSubpassDependency dependencies[2];
+
+        dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependencies[0].dstSubpass = 0;
+        dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+        dependencies[1].srcSubpass = 0;
+        dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+        dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+        // Create the actual renderpass
+        VkRenderPassCreateInfo renderPassInfo = {};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderPassInfo.attachmentCount = 2;
+        renderPassInfo.pAttachments = attchmentDescriptions;
+        renderPassInfo.subpassCount = 1;
+        renderPassInfo.pSubpasses = &subpassDescription;
+        renderPassInfo.dependencyCount = 2;
+        renderPassInfo.pDependencies = dependencies;
+
+        MV_VULKAN(vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, &pass.renderPass));
+
+        //mvRegisterAsset(&am, specification.name, pass.renderPass);
+
+        pass.colorTextures.resize(GContext->graphics.swapChainImageViews.size());
+        pass.depthTextures.resize(GContext->graphics.swapChainImageViews.size());
+        pass.frameBuffers.resize(GContext->graphics.swapChainImageViews.size());
+        for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+        {
+            pass.colorTextures[i] = mvCreateTexture(
+                specification.width, specification.height, specification.colorFormat,
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT);
+
+            pass.depthTextures[i] = mvCreateTexture(
+                specification.width, specification.height, specification.depthFormat,
+                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                VK_IMAGE_ASPECT_DEPTH_BIT);
+
+            VkImageView imageViews[] = { pass.colorTextures[i].imageInfo.imageView, pass.depthTextures[i].imageInfo.imageView };
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = pass.renderPass;
+            framebufferInfo.attachmentCount = 2;
+            framebufferInfo.pAttachments = imageViews;
+            framebufferInfo.width = specification.width;
+            framebufferInfo.height = specification.height;
+            framebufferInfo.layers = 1;
+            MV_VULKAN(vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &pass.frameBuffers[i]));
+
+
+            //mvRegisterAsset(&am, specification.name + std::to_string(i), pass.colorTextures[i]);
+            //mvRegisterAsset(&am, specification.name + "d" + std::to_string(i), pass.depthTextures[i]);
+            //mvRegisterAsset(&am, specification.name + std::to_string(i), pass.frameBuffers[i]);
+        }
+
+        pass.pipelineSpec.width = pass.specification.width;
+        pass.pipelineSpec.height = pass.specification.height;
+        pass.pipelineSpec.renderPass = pass.renderPass;
+
+        pass.viewport.x = 0.0f;
+        pass.viewport.y = pass.specification.height;
+        pass.viewport.width = pass.specification.width;
+        pass.viewport.height = -pass.specification.height;
+        pass.viewport.minDepth = 0.0f;
+        pass.viewport.maxDepth = 1.0f;
+        pass.extent.width = (u32)pass.specification.width;
+        pass.extent.height = (u32)pass.viewport.y;
+
+        return pass;
+    }
+
+    void 
+    mvCleanupPass(mvPass& pass)
+    {
+        vkDeviceWaitIdle(mvGetLogicalDevice());
+        for (u32 i = 0; i < GContext->graphics.swapChainFramebuffers.size(); i++)
+        {
+            vkDestroySampler(mvGetLogicalDevice(), pass.colorTextures[i].imageInfo.sampler, nullptr);
+            vkDestroySampler(mvGetLogicalDevice(), pass.depthTextures[i].imageInfo.sampler, nullptr);
+            vkDestroyImage(mvGetLogicalDevice(), pass.colorTextures[i].textureImage, nullptr);
+            vkDestroyImage(mvGetLogicalDevice(), pass.depthTextures[i].textureImage, nullptr);
+            vkDestroyImageView(mvGetLogicalDevice(), pass.colorTextures[i].imageInfo.imageView, nullptr);
+            vkDestroyImageView(mvGetLogicalDevice(), pass.depthTextures[i].imageInfo.imageView, nullptr);
+            vkDestroyFramebuffer(mvGetLogicalDevice(), pass.frameBuffers[i], nullptr);
+            vkFreeMemory(mvGetLogicalDevice(), pass.colorTextures[i].textureImageMemory, nullptr);
+            vkFreeMemory(mvGetLogicalDevice(), pass.depthTextures[i].textureImageMemory, nullptr);
+
+        }
+        vkDestroyRenderPass(mvGetLogicalDevice(), pass.renderPass, nullptr);
     }
 
     mvPass
@@ -552,7 +690,6 @@ namespace Renderer {
         pass.pipelineSpec.width = pass.specification.width;
         pass.pipelineSpec.height = pass.specification.height;
         pass.pipelineSpec.renderPass = pass.renderPass;
-        pass.pipelineSpec.mainPass = false;
 
         pass.viewport.x = 0.0f;
         pass.viewport.y = pass.specification.height;
@@ -654,7 +791,6 @@ namespace Renderer {
         pass.pipelineSpec.width = pass.specification.width;
         pass.pipelineSpec.height = pass.specification.height;
         pass.pipelineSpec.renderPass = pass.renderPass;
-        pass.pipelineSpec.mainPass = false;
 
         pass.viewport.x = 0.0f;
         pass.viewport.y = pass.specification.height;

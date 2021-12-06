@@ -47,7 +47,6 @@ struct mvPipelineSpec
 	VkRenderPass        renderPass = VK_NULL_HANDLE;
 	VkPipelineLayout    pipelineLayout = VK_NULL_HANDLE;
 	mvVertexLayout      layout;
-	b8                  mainPass = true;
 };
 
 struct mvPipeline

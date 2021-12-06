@@ -26,6 +26,64 @@ create_main_pass(mvAssetManager& am)
     return mainPass;
 }
 
+mvPass
+create_primary_pass(mvAssetManager& am, f32 width, f32 height)
+{
+    mvPassSpecification offscreenPassSpec{};
+    offscreenPassSpec.name = "primary_pass";
+    offscreenPassSpec.depthBias = 0.0f;
+    offscreenPassSpec.slopeDepthBias = 0.0f;
+    offscreenPassSpec.width = width;
+    offscreenPassSpec.height = height;
+    offscreenPassSpec.colorFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    offscreenPassSpec.depthFormat = VK_FORMAT_D32_SFLOAT;
+    offscreenPassSpec.hasColor = true;
+    offscreenPassSpec.hasDepth = true;
+
+    mvPass offscreenPass = Renderer::mvCreatePrimaryRenderPass(am, offscreenPassSpec);
+    offscreenPass.pipelineSpec.backfaceCulling = true;
+    offscreenPass.pipelineSpec.depthTest = true;
+    offscreenPass.pipelineSpec.depthWrite = true;
+    offscreenPass.pipelineSpec.wireFrame = false;
+    offscreenPass.pipelineSpec.vertexShader = "phong.vert.spv";
+    offscreenPass.pipelineSpec.pixelShader = "phong.frag.spv";
+    offscreenPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "main_pass");
+
+    offscreenPass.pipelineSpec.layout = mvCreateVertexLayout(
+        {
+            mvVertexElementType::Position3D,
+            mvVertexElementType::Normal,
+            mvVertexElementType::Tangent,
+            mvVertexElementType::Bitangent,
+            mvVertexElementType::Texture2D
+        });
+
+    offscreenPass.specification.pipeline = mvResetPipeline(&am, "primary_pass", mvCreatePipeline(am, offscreenPass.pipelineSpec));
+
+    {
+        mvPipelineSpec pipelineSpec{};
+        pipelineSpec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        pipelineSpec.backfaceCulling = false;
+        pipelineSpec.depthTest = true;
+        pipelineSpec.depthWrite = false;
+        pipelineSpec.wireFrame = false;
+        pipelineSpec.vertexShader = "skybox.vert.spv";
+        pipelineSpec.pixelShader = "skybox.frag.spv";
+        pipelineSpec.width = (float)width;
+        pipelineSpec.height = (float)height;
+        pipelineSpec.renderPass = offscreenPass.renderPass;
+        pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "skybox_pass");
+        pipelineSpec.layout = mvCreateVertexLayout(
+            {
+                mvVertexElementType::Position3D
+            });
+
+        mvResetPipeline(&am, "skybox_pass", mvCreatePipeline(am, pipelineSpec));
+    }
+
+    return offscreenPass;
+}
+
 mvPass 
 create_offscreen_pass(mvAssetManager& am)
 {

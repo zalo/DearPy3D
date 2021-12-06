@@ -42,8 +42,11 @@ namespace Renderer
 	void mvEndPass(VkCommandBuffer commandBuffer);
 
 	mvPass mvCreateOmniShadowRenderPass(mvAssetManager& am, mvPassSpecification specification);
+	mvPass mvCreatePrimaryRenderPass(mvAssetManager& am, mvPassSpecification specification);
 	mvPass mvCreateOffscreenRenderPass(mvAssetManager& am, mvPassSpecification specification);
 	mvPass mvCreateDepthOnlyRenderPass(mvAssetManager& am, mvPassSpecification specification);
+
+	void mvCleanupPass(mvPass& pass);
 
 	void mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
 	void mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj);

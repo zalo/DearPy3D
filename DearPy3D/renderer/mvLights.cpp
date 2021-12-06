@@ -25,7 +25,6 @@ mvCreatePointLight(mvAssetManager& am, const std::string& name, mvVec3 pos)
     spec.pixelShader = "phong.frag.spv";
     spec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-    am.phongMaterials[lightCube.phongMaterialID].asset.pipeline = mvGetPipelineAssetID(&am, "main_pass");
     mvRegisterAsset(&am, name, lightCube);
 
     light.mesh = mvGetRawMeshAsset(&am, name);

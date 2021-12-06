@@ -55,10 +55,6 @@ struct mvAssetManager
 	u32                   pipelineCount = 0u;
 	mvPipelineAsset*      pipelines = nullptr;
 
-	// secondary pipelines	       	  
-	u32                   secondaryPipelineCount = 0u;
-	mvPipelineAsset*      secondaryPipelines = nullptr;
-
 	// pipeline layouts       	  
 	u32                    maxPipelineLayoutCount = 50u;
 	u32                    pipelineLayoutCount = 0u;
@@ -92,10 +88,10 @@ struct mvAssetManager
 
 // startup/shutdown/resize
 void mvInitializeAssetManager   (mvAssetManager* manager);
-void mvResizeCleanupAssetManager(mvAssetManager* manager);
-void mvResizeUpdateAssetManager (mvAssetManager* manager);
 void mvCleanupAssetManager      (mvAssetManager* manager);
 void mvShowAssetManager         (mvAssetManager& manager);
+mvAssetID mvResetPipeline(mvAssetManager* manager, const std::string& tag, mvPipeline asset);
+
 
 // registering
 mvAssetID mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvPipeline asset);

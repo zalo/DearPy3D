@@ -9,7 +9,6 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->meshes = new mvMeshAsset[manager->maxMeshCount];
 	manager->phongMaterials = new mvPhongMaterialAsset[manager->maxPhongMaterialCount];
 	manager->pipelines = new mvPipelineAsset[manager->maxPipelineCount];
-	manager->secondaryPipelines = new mvPipelineAsset[manager->maxPipelineCount];
 	manager->pipelineLayouts = new mvPipelineLayoutAsset[manager->maxPipelineLayoutCount];
 	manager->scenes = new mvSceneAsset[manager->maxSceneCount];
 	manager->descriptorSetLayouts = new mvDescriptorSetLayoutAsset[manager->maxDescriptorSetLayoutCount];
@@ -17,39 +16,6 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->nodes = new mvNodeAsset[manager->maxNodeCount];
 	manager->renderPasses = new mvRenderPassAsset[manager->maxRenderPassCount];
 	manager->frameBuffers = new mvFrameBufferAsset[manager->maxFrameBufferCount];
-}
-
-void
-mvResizeCleanupAssetManager(mvAssetManager* manager)
-{
-	vkDeviceWaitIdle(mvGetLogicalDevice());
-
-	// cleanup pipelines
-	for (int i = 0; i < manager->pipelineCount; i++)
-	{
-		vkDestroyPipeline(mvGetLogicalDevice(), manager->pipelines[i].asset.pipeline, nullptr);
-	}
-	manager->pipelineCount = 0u;
-
-}
-
-void
-mvResizeUpdateAssetManager(mvAssetManager* manager)
-{
-
-	for (int i = 0; i < manager->phongMaterialCount; i++)
-	{
-		mvPipelineSpec spec{};
-		spec.backfaceCulling = true;
-		spec.depthTest = true;
-		spec.wireFrame = false;
-		spec.depthWrite = true;
-		spec.vertexShader = manager->phongMaterials[i].asset.vertexShader;
-		spec.pixelShader = manager->phongMaterials[i].asset.pixelShader;
-		spec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		manager->phongMaterials[i].asset.pipeline = mvGetPipelineLayoutAssetID(manager, "main_pass");
-	}
-
 }
 
 void 
@@ -112,13 +78,6 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	}
 	manager->pipelineCount = 0u;
 
-	// cleanup secondary pipelines
-	for (int i = 0; i < manager->secondaryPipelineCount; i++)
-	{
-		vkDestroyPipeline(mvGetLogicalDevice(), manager->secondaryPipelines[i].asset.pipeline, nullptr);
-	}
-	manager->pipelineCount = 0u;
-
 	// frame buffers
 	for (int i = 0; i < manager->frameBufferCount; i++)
 	{
@@ -135,7 +94,6 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->buffers;
 	delete[] manager->meshes;
 	delete[] manager->pipelines;
-	delete[] manager->secondaryPipelines;
 	delete[] manager->pipelineLayouts;
 	delete[] manager->scenes;
 	delete[] manager->descriptorSetLayouts;
@@ -148,7 +106,6 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	manager->meshes = nullptr;
 	manager->phongMaterials = nullptr;
 	manager->pipelines = nullptr;
-	manager->secondaryPipelines = nullptr;
 	manager->pipelineLayouts = nullptr;
 	manager->scenes = nullptr;
 	manager->descriptorSetLayouts = nullptr;
@@ -161,7 +118,6 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	manager->meshCount = 0u;
 	manager->phongMaterialCount = 0u;
 	manager->pipelineCount = 0u;
-	manager->secondaryPipelines = 0u;
 	manager->pipelineLayoutCount = 0u;
 	manager->sceneCount = 0u;
 	manager->nodeCount = 0u;
@@ -174,21 +130,34 @@ mvCleanupAssetManager(mvAssetManager* manager)
 // pipelines
 //-----------------------------------------------------------------------------
 
+mvAssetID 
+mvResetPipeline(mvAssetManager* manager, const std::string& tag, mvPipeline asset)
+{
+	for (s32 i = 0; i < manager->pipelineCount; i++)
+	{
+		if (manager->pipelines[i].hash == tag)
+		{
+			vkDestroyPipeline(mvGetLogicalDevice(), manager->pipelines[i].asset.pipeline, nullptr);
+			manager->pipelines[i].asset = asset;
+			return i;
+		}
+	}
+
+	manager->pipelines[manager->pipelineCount].asset = asset;
+	manager->pipelines[manager->pipelineCount].hash = tag;
+	manager->pipelineCount++;
+	return manager->pipelineCount - 1;
+}
+
 mvAssetID
 mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvPipeline asset)
 {
-	if (asset.specification.mainPass)
-	{
-		manager->pipelines[manager->pipelineCount].asset = asset;
-		manager->pipelines[manager->pipelineCount].hash = tag;
-		manager->pipelineCount++;
-		return manager->pipelineCount - 1;
-	}
 
-	manager->secondaryPipelines[manager->secondaryPipelineCount].asset = asset;
-	manager->secondaryPipelines[manager->secondaryPipelineCount].hash = tag;
-	manager->secondaryPipelineCount++;
-	return manager->secondaryPipelineCount - 1;
+	manager->pipelines[manager->pipelineCount].asset = asset;
+	manager->pipelines[manager->pipelineCount].hash = tag;
+	manager->pipelineCount++;
+	return manager->pipelineCount - 1;
+
 }
 
 mvAssetID

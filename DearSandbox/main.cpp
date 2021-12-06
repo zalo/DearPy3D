@@ -22,6 +22,7 @@
 
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
 mv_internal b8 loadSponza = true;
+mv_internal ImVec2 oldContentRegion = ImVec2(500, 500);
 
 int main() 
 {
@@ -40,7 +41,30 @@ int main()
     mvInitializeAssetManager(&am);
     preload_descriptorset_layouts(am);
     preload_pipeline_layouts(am);
-    preload_pipelines(am);
+
+    mvPipelineSpec pipelineSpec{};
+    pipelineSpec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    pipelineSpec.backfaceCulling = true;
+    pipelineSpec.depthTest = true;
+    pipelineSpec.depthWrite = true;
+    pipelineSpec.wireFrame = false;
+    pipelineSpec.vertexShader = "phong.vert.spv";
+    pipelineSpec.pixelShader = "phong.frag.spv";
+    pipelineSpec.width = (float)GContext->graphics.swapChainExtent.width;  // use viewport
+    pipelineSpec.height = (float)GContext->graphics.swapChainExtent.height; // use viewport
+    pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "main_pass");
+    pipelineSpec.renderPass = GContext->graphics.renderPass;
+    pipelineSpec.layout = mvCreateVertexLayout(
+        {
+            mvVertexElementType::Position3D,
+            mvVertexElementType::Normal,
+            mvVertexElementType::Tangent,
+            mvVertexElementType::Bitangent,
+            mvVertexElementType::Texture2D
+        });
+
+    mvPipeline pipeline = mvCreatePipeline(am, pipelineSpec);
+    mvRegisterAsset(&am, "main_pass", pipeline);
 
     mvAssetID scene = mvRegisterAsset(&am, "test_scene", mvCreateScene(am, {}));
 
@@ -51,7 +75,7 @@ int main()
     mvSceneData sceneData{};
 
     mvCamera camera{};
-    camera.aspect = GContext->viewport.width / GContext->viewport.height;
+    camera.aspect = oldContentRegion.x / oldContentRegion.y;
 
     f32 angle = 10.0f;
     f32 zcomponent = sinf(MV_PI * angle / 180.0f);
@@ -59,15 +83,15 @@ int main()
 
     f32 offscreenWidth = 75.0f;
     mvOrthoCamera secondaryCamera{};
-    secondaryCamera.pos = { 0.0f, 70.0f, 0.0f };
+    secondaryCamera.pos = { 0.0f, 100.0f, 0.0f };
     secondaryCamera.dir = { 0.0f, -ycomponent, zcomponent };
     secondaryCamera.up = { 1.0f, 0.0f, 0.0f };
     secondaryCamera.left = -offscreenWidth;
     secondaryCamera.right = offscreenWidth;
     secondaryCamera.bottom = -offscreenWidth;
     secondaryCamera.top = offscreenWidth;
-    secondaryCamera.nearZ = -101.0f;
-    secondaryCamera.farZ = 101.0f;
+    secondaryCamera.nearZ = -121.0f;
+    secondaryCamera.farZ = 121.0f;
     
     mvPointLight light1 = mvCreatePointLight(am, "light1", { 0.0f, 10.0f, 0.0f });
     mvMat4 lightTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 10.0f, 0.0f });
@@ -78,6 +102,7 @@ int main()
     lightcamera.fieldOfView = M_PI_2;
    
     // passes
+    mvPass primaryPass = create_primary_pass(am, 500.0f, 500.0f);
     mvPass offscreenPass = create_offscreen_pass(am);
     mvPass shadowPass = create_shadow_pass(am);
     mvPass mainPass = create_main_pass(am);
@@ -96,6 +121,7 @@ int main()
     // main loop
     //---------------------------------------------------------------------
     mvTimer timer;
+    bool recreatePrimaryRender = false;
 
     while (GContext->viewport.running)
     {
@@ -117,15 +143,14 @@ int main()
                 glfwWaitEvents();
             }
 
-            camera.aspect = (float)newwidth/(float)newheight;
-
             // cleanup
             GContext->viewport.width = newwidth;
             GContext->viewport.height = newheight;
             mvRecreateSwapChain();
-            mvResizeCleanupAssetManager(&am);
-            preload_pipelines(am);
-            mvResizeUpdateAssetManager(&am);
+            pipelineSpec.width = (float)GContext->graphics.swapChainExtent.width;
+            pipelineSpec.height = (float)GContext->graphics.swapChainExtent.height;
+            pipelineSpec.renderPass = GContext->graphics.renderPass;
+            mvResetPipeline(&am, "main_pass", mvCreatePipeline(am, pipelineSpec));
 
             mainPass.renderPass = GContext->graphics.renderPass;
             mainPass.frameBuffers = GContext->graphics.swapChainFramebuffers;
@@ -140,6 +165,13 @@ int main()
             mainPass.extent.height = (u32)mainPass.viewport.y;
 
             GContext->viewport.resized = false;
+        }
+
+        if (recreatePrimaryRender)
+        {
+            Renderer::mvCleanupPass(primaryPass);
+            primaryPass = create_primary_pass(am, primaryPass.viewport.width, abs(primaryPass.viewport.height));
+            recreatePrimaryRender = false;
         }
 
         //---------------------------------------------------------------------
@@ -307,12 +339,12 @@ int main()
         Renderer::mvEndPass(mvGetCurrentCommandBuffer());
 
         //---------------------------------------------------------------------
-        // main pass
+        // primary pass
         //---------------------------------------------------------------------
         mvUpdateLightBuffers(am, light1, am.scenes[scene].asset.descriptorSet.descriptors[1].bufferID[GContext->graphics.currentImageIndex], viewMatrix, 1);
         mvUpdateLightBuffers(am, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].bufferID[GContext->graphics.currentImageIndex], viewMatrix, 1);
         mvBindScene(am, scene, sceneData, 1);
-        Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), mainPass);
+        Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), primaryPass);
 
         Renderer::mvRenderMesh(am, *light1.mesh, lightTransform, viewMatrix, projMatrix);
 
@@ -326,11 +358,50 @@ int main()
             Renderer::mvRenderSkybox(am, viewMatrix, projMatrix);
         }
 
-        if (ImGui::Begin("Debug Output", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        Renderer::mvEndPass(mvGetCurrentCommandBuffer());
+
+        //---------------------------------------------------------------------
+        // main pass
+        //---------------------------------------------------------------------
+        Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), mainPass);
+
+        ImGui::DockSpaceOverViewport(0);
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        if (ImGui::Begin("Debug Output", nullptr))
         {
             ImGui::Image(offscreenPass.colorTextures[GContext->graphics.currentImageIndex].imguiID, ImVec2(512, 512));
         }
         ImGui::End();
+
+        ImGui::PopStyleVar();
+        ImGui::PopStyleVar();
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        ImGui::Begin("Model", 0, ImGuiWindowFlags_NoDecoration);
+
+        ImVec2 contentSize = ImGui::GetWindowContentRegionMax();
+        camera.aspect = primaryPass.viewport.width / abs(primaryPass.viewport.height);
+        ImGui::Image(primaryPass.colorTextures[GContext->graphics.currentImageIndex].imguiID, contentSize);
+
+        if (contentSize.x == oldContentRegion.x && contentSize.y == oldContentRegion.y)
+        {
+        }
+        else
+        {
+            primaryPass.viewport.width = contentSize.x;
+            primaryPass.viewport.height = contentSize.y;
+            recreatePrimaryRender = true;
+        }
+
+        oldContentRegion = contentSize;
+
+        ImGui::End();
+
+        ImGui::PopStyleVar();
+        ImGui::PopStyleVar();
 
         ImGui::Begin("Light Controls");
         ImGui::SliderFloat("omni depthBias", &omniShadowPass.specification.depthBias, 0.0f, 50.0f);
@@ -368,6 +439,7 @@ int main()
         mvPresent();
     }
 
+    Renderer::mvCleanupPass(primaryPass);
     mvCleanupAssetManager(&am);
     mvCleanupGraphicsContext();
     DestroyContext();

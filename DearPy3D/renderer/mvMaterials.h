@@ -36,7 +36,6 @@ struct mvMaterialData
 
 struct mvMaterial
 {
-    mvAssetID             pipeline;
     u32                   offsetIndex = 0u;
     mvDescriptorSet       descriptorSet;
     std::string           vertexShader;
