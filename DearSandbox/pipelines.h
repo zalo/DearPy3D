@@ -57,6 +57,24 @@ preload_pipeline_layouts(mvAssetManager& am)
 
 	{
 		VkPipelineLayout pipelineLayout;
+
+		VkPipelineMultisampleStateCreateInfo multisampling{};
+		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampling.sampleShadingEnable = VK_FALSE;
+		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutInfo.setLayoutCount = 0;
+		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
+
+		MV_VULKAN(vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout));
+
+		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "main_pass", pipelineLayout);
+	}
+
+	{
+		VkPipelineLayout pipelineLayout;
 		VkPushConstantRange push_constant;
 		push_constant.offset = 0;
 		push_constant.size = 192;
@@ -76,7 +94,7 @@ preload_pipeline_layouts(mvAssetManager& am)
 
 		MV_VULKAN(vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
-		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "main_pass", pipelineLayout);
+		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "primary_pass", pipelineLayout);
 
 		mvTransforms* transforms = new mvTransforms[am.maxMeshCount * 3];
 		mvDescriptorSet descriptorSet = mvCreateDescriptorSet(am, descriptorSetLayouts[2], pipelineLayoutID);

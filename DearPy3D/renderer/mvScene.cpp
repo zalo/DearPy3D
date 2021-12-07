@@ -13,7 +13,7 @@ mvCreateScene(mvAssetManager& am, mvSceneData sceneData)
     mv_local_persist mvDirectionLightInfo dpointLightInfo{};
 
     mvScene scene{};
-    scene.descriptorSet = mvCreateDescriptorSet(am, mvGetRawDescriptorSetLayoutAsset(&am, "scene"), mvGetPipelineLayoutAssetID(&am, "main_pass"));
+    scene.descriptorSet = mvCreateDescriptorSet(am, mvGetRawDescriptorSetLayoutAsset(&am, "scene"), mvGetPipelineLayoutAssetID(&am, "primary_pass"));
     scene.descriptorSet.descriptors.push_back(mvCreateDynamicUniformBufferDescriptor(am, mvCreateDynamicUniformBufferDescriptorSpec(0u), hash, 3, sizeof(mvSceneData), &sceneData));
     scene.descriptorSet.descriptors.push_back(mvCreateDynamicUniformBufferDescriptor(am, mvCreateDynamicUniformBufferDescriptorSpec(1u), hash + "light", 3, sizeof(mvPointLightInfo), &pointLightInfo));
     scene.descriptorSet.descriptors.push_back(mvCreateDynamicUniformBufferDescriptor(am, mvCreateDynamicUniformBufferDescriptorSpec(2u), hash + "dlight", 3, sizeof(mvDirectionLightInfo), &dpointLightInfo));

@@ -146,7 +146,8 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
 
     mvPipeline pipeline{};
 
-    pipeline.vertexShader = mvCreateShader(spec.vertexShader);
+    if(!spec.vertexShader.empty())
+        pipeline.vertexShader = mvCreateShader(spec.vertexShader);
     if(!spec.pixelShader.empty())
         pipeline.fragShader = mvCreateShader(spec.pixelShader);
     pipeline.specification = spec;
@@ -283,7 +284,8 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     // Create Pipeline
     //---------------------------------------------------------------------
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-    shaderStages.push_back(vertShaderStageInfo);
+    if (!spec.vertexShader.empty())
+        shaderStages.push_back(vertShaderStageInfo);
     if (!spec.pixelShader.empty())
         shaderStages.push_back(fragShaderStageInfo);
 
@@ -313,7 +315,8 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     MV_VULKAN(vkCreateGraphicsPipelines(mvGetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.pipeline));
 
     // no longer need this
-    vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.vertexShader.shaderModule, nullptr);
+    if (!spec.vertexShader.empty())
+        vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.vertexShader.shaderModule, nullptr);
     if (!spec.pixelShader.empty())
         vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.fragShader.shaderModule, nullptr);
     pipeline.vertexShader.shaderModule = VK_NULL_HANDLE;

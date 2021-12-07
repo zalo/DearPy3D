@@ -82,7 +82,7 @@ namespace Renderer {
         transforms.modelView = camera * transforms.model;
         transforms.modelViewProjection = projection * transforms.modelView;
 
-        VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "main_pass");
+        VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "primary_pass");
         vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
         vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);

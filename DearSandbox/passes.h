@@ -5,7 +5,6 @@ create_main_pass(mvAssetManager& am)
 {
     mvPassSpecification mainPassSpec{};
     mainPassSpec.mainPass = true;
-    mainPassSpec.pipeline = mvGetPipelineAssetID(&am, "main_pass");
 
     mvPass mainPass{
         mainPassSpec,
@@ -47,7 +46,7 @@ create_primary_pass(mvAssetManager& am, f32 width, f32 height)
     offscreenPass.pipelineSpec.wireFrame = false;
     offscreenPass.pipelineSpec.vertexShader = "phong.vert.spv";
     offscreenPass.pipelineSpec.pixelShader = "phong.frag.spv";
-    offscreenPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "main_pass");
+    offscreenPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "primary_pass");
 
     offscreenPass.pipelineSpec.layout = mvCreateVertexLayout(
         {
@@ -105,7 +104,7 @@ create_offscreen_pass(mvAssetManager& am)
     offscreenPass.pipelineSpec.wireFrame = false;
     offscreenPass.pipelineSpec.vertexShader = "phong.vert.spv";
     offscreenPass.pipelineSpec.pixelShader = "phong.frag.spv";
-    offscreenPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "main_pass");
+    offscreenPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "primary_pass");
 
     offscreenPass.pipelineSpec.layout = mvCreateVertexLayout(
         {

@@ -42,30 +42,6 @@ int main()
     preload_descriptorset_layouts(am);
     preload_pipeline_layouts(am);
 
-    mvPipelineSpec pipelineSpec{};
-    pipelineSpec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    pipelineSpec.backfaceCulling = true;
-    pipelineSpec.depthTest = true;
-    pipelineSpec.depthWrite = true;
-    pipelineSpec.wireFrame = false;
-    pipelineSpec.vertexShader = "phong.vert.spv";
-    pipelineSpec.pixelShader = "phong.frag.spv";
-    pipelineSpec.width = (float)GContext->graphics.swapChainExtent.width;  // use viewport
-    pipelineSpec.height = (float)GContext->graphics.swapChainExtent.height; // use viewport
-    pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "main_pass");
-    pipelineSpec.renderPass = GContext->graphics.renderPass;
-    pipelineSpec.layout = mvCreateVertexLayout(
-        {
-            mvVertexElementType::Position3D,
-            mvVertexElementType::Normal,
-            mvVertexElementType::Tangent,
-            mvVertexElementType::Bitangent,
-            mvVertexElementType::Texture2D
-        });
-
-    mvPipeline pipeline = mvCreatePipeline(am, pipelineSpec);
-    mvRegisterAsset(&am, "main_pass", pipeline);
-
     mvAssetID scene = mvRegisterAsset(&am, "test_scene", mvCreateScene(am, {}));
 
     if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
@@ -102,10 +78,10 @@ int main()
     lightcamera.fieldOfView = M_PI_2;
    
     // passes
-    mvPass primaryPass = create_primary_pass(am, 500.0f, 500.0f);
+    mvPass mainPass = create_main_pass(am);
+    mvPass primaryPass = create_primary_pass(am, oldContentRegion.x, oldContentRegion.y);
     mvPass offscreenPass = create_offscreen_pass(am);
     mvPass shadowPass = create_shadow_pass(am);
-    mvPass mainPass = create_main_pass(am);
     mvPass omniShadowPass = create_omnishadow_pass(am);
 
     mvTexture shadowMapCube = mvCreateCubeTexture(
@@ -147,23 +123,7 @@ int main()
             GContext->viewport.width = newwidth;
             GContext->viewport.height = newheight;
             mvRecreateSwapChain();
-            pipelineSpec.width = (float)GContext->graphics.swapChainExtent.width;
-            pipelineSpec.height = (float)GContext->graphics.swapChainExtent.height;
-            pipelineSpec.renderPass = GContext->graphics.renderPass;
-            mvResetPipeline(&am, "main_pass", mvCreatePipeline(am, pipelineSpec));
-
-            mainPass.renderPass = GContext->graphics.renderPass;
-            mainPass.frameBuffers = GContext->graphics.swapChainFramebuffers;
-            mainPass.viewport.x = 0.0f;
-            mainPass.viewport.y = newheight;
-            mainPass.viewport.width = newwidth;
-            mainPass.viewport.height = -newheight;
-            mainPass.viewport.minDepth = 0.0f;
-            mainPass.viewport.maxDepth = 1.0f;
-
-            mainPass.extent.width = (u32)newwidth;
-            mainPass.extent.height = (u32)mainPass.viewport.y;
-
+            mainPass = create_main_pass(am);
             GContext->viewport.resized = false;
         }
 
@@ -320,8 +280,7 @@ int main()
 
         //---------------------------------------------------------------------
         // offscreen pass
-        //---------------------------------------------------------------------
-        
+        //--------------------------------------------------------------------- 
         mvUpdateLightBuffers(am, light1, am.scenes[scene].asset.descriptorSet.descriptors[1].bufferID[GContext->graphics.currentImageIndex], secondaryViewMatrix, 0);
         mvUpdateLightBuffers(am, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].bufferID[GContext->graphics.currentImageIndex], secondaryViewMatrix, 0);
         mvBindScene(am, scene, sceneData, 0);

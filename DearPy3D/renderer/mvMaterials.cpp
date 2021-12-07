@@ -25,7 +25,7 @@ mvCreateMaterial(mvAssetManager& am, mvMaterialData materialData, const char* ve
     //i++;
     hash.append(std::to_string(i));
 
-    material.descriptorSet = mvCreateDescriptorSet(am, mvGetRawDescriptorSetLayoutAsset(&am, "phong"), mvGetPipelineLayoutAssetID(&am, "main_pass"));
+    material.descriptorSet = mvCreateDescriptorSet(am, mvGetRawDescriptorSetLayoutAsset(&am, "phong"), mvGetPipelineLayoutAssetID(&am, "primary_pass"));
     material.descriptorSet.descriptors.push_back(mvCreateTextureDescriptor(am, mvCreateTextureDescriptorSpec(0u)));
     material.descriptorSet.descriptors.push_back(mvCreateTextureDescriptor(am, mvCreateTextureDescriptorSpec(1u)));
     material.descriptorSet.descriptors.push_back(mvCreateTextureDescriptor(am, mvCreateTextureDescriptorSpec(2u)));
