@@ -170,7 +170,7 @@ create_omnishadow_pass(mvAssetManager& am)
     offscreenPassSpec.hasDepth = true;
 
     mvPass offscreenPass = Renderer::mvCreateOmniShadowRenderPass(am, offscreenPassSpec);
-    offscreenPass.pipelineSpec.backfaceCulling = true;
+    offscreenPass.pipelineSpec.backfaceCulling = false;
     offscreenPass.pipelineSpec.depthTest = true;
     offscreenPass.pipelineSpec.depthWrite = true;
     offscreenPass.pipelineSpec.wireFrame = false;

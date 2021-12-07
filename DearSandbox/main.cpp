@@ -199,10 +199,6 @@ int main()
         );
         Renderer::mvUpdateDescriptors(am);
         
-        ImGuiIO& io = ImGui::GetIO();
-        ImGui::GetForegroundDrawList()->AddText(ImVec2(45, 45),
-            ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(io.Framerate) + " FPS").c_str());
-
         //mvShowAssetManager(am);
 
         //---------------------------------------------------------------------
@@ -398,7 +394,13 @@ int main()
 
         oldContentRegion = contentSize;
 
+        ImGuiIO& io = ImGui::GetIO();
+        ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x+45, 45),
+            ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(io.Framerate) + " FPS").c_str());
+
         ImGui::End();
+
+
 
         ImGui::PopStyleVar();
         ImGui::PopStyleVar();

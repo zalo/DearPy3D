@@ -10,5 +10,5 @@ layout(location = 0) out float outColor;
 void main() 
 {
     vec3 lightVec = inPos.xyz - inLightPos;
-    outColor = length(lightVec)+1.0;
+    outColor = length(lightVec)+0.5;
 }

@@ -72,7 +72,7 @@ mvBuffer mvCreateBuffer(mvBufferSpecification specification, void* data)
         {
             void* mapping;
             MV_VULKAN(vkMapMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory, 0, stagingBuffer.actualSize, 0, &mapping));
-            memcpy(mapping, data, (size_t)specification.size * specification.count * specification.components);
+            memcpy(mapping, data, specification.size * specification.count * specification.components);
             vkUnmapMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory);
         }
 
