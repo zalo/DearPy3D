@@ -43,35 +43,11 @@ mvCreateDirectionLight(mvAssetManager& am, const std::string& name, mvVec3 dir)
 void
 mvUpdateLightBuffers(mvAssetManager& am, mvPointLight& light, mvAssetID bufferID, mvMat4 viewMatrix, u64 index)
 {
-
-    mvVec4 posCopy = light.info.viewLightPos;
-
-    mvVec4 out = viewMatrix * light.info.viewLightPos;
-    light.info.viewLightPos.x = out.x;
-    light.info.viewLightPos.y = out.y;
-    light.info.viewLightPos.z = out.z;
-
     mvPartialUpdateBuffer(am.buffers[bufferID].asset, &light.info, index);
-
-    light.info.viewLightPos = posCopy;
 }
 
 void
 mvUpdateLightBuffers(mvAssetManager& am, mvDirectionLight& light, mvAssetID bufferID, mvMat4 viewMatrix, u64 index)
 {
-
-    mvVec3 posCopy = light.info.viewLightDir;
-
-    mvVec4 out = viewMatrix * mvVec4{
-        light.info.viewLightDir.x,
-        light.info.viewLightDir.y,
-        light.info.viewLightDir.z,
-        0.0f };
-    light.info.viewLightDir.x = out.x;
-    light.info.viewLightDir.y = out.y;
-    light.info.viewLightDir.z = out.z;
-
     mvPartialUpdateBuffer(am.buffers[bufferID].asset, &light.info, index);
-
-    light.info.viewLightDir = posCopy;
 }

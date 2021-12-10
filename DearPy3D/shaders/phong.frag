@@ -4,13 +4,15 @@
 #define EPSILON 0.01
 #define SHADOW_OPACITY 0.0
 
-layout(location = 0) in vec3 inViewPos;
-layout(location = 1) in vec3 inViewNormal;
-layout(location = 2) in vec3 inWorldNormal;
-layout(location = 3) in vec2 inTexCoord;
-layout(location = 4) in vec4 indshadowWorldPos;
-layout(location = 5) in vec4 inoshadowWorldPos;
-layout(location = 6) in mat3 inTangentBasis;
+layout(location = 0) in vec3 Pos;
+layout(location = 1) in vec3 WorldPos;
+layout(location = 2) in vec3 Normal;
+layout(location = 3) in vec2 UV;
+layout(location = 4) in vec3 Tangent;
+layout(location = 5) in vec4 dshadowWorldPos;
+layout(location = 6) in vec4 oshadowWorldPos;
+layout(location = 7) in vec3 ViewPos;
+layout(location = 8) in vec3 ViewNormal;
 
 
 layout(location = 0) out vec4 outColor;
@@ -29,7 +31,8 @@ layout(set = 0, binding = 0) uniform mvScene
     bool doSkybox;
     bool doPCF;
     //-------------------------- ( 16 bytes )
-    
+
+    vec3 camPos;    
     int pcfRange;
     //-------------------------- ( 16 bytes )
 
@@ -149,6 +152,33 @@ float filterPCF(vec4 sc, int range)
 	return shadowFactor / count;
 }
 
+vec3 calculateNormal()
+{
+    vec3 N = normalize(Normal);
+
+    if(hasAlpha)
+    {
+        // flip normal when backface
+        if (dot(ViewNormal, ViewPos) >= 0.0)
+        {
+            N = -N;
+        }
+    }    
+    vec3 T = normalize(Tangent);
+    vec3 B = normalize(cross(N, T));
+    mat3 TBN = transpose(mat3(T, B, N));
+//    mat3 TBN = mat3(T, B, N);
+
+    if(useNormalMap && scene.doNormal)
+    {
+        //vec3 tangentNormal = texture(normalSampler, UV).xyz;
+        vec3 tangentNormal = texture(normalSampler, UV).xyz * 2.0 - 1.0;
+        return normalize(TBN*tangentNormal);
+    }
+
+    return N;
+}
+
 void main() 
 {
 
@@ -162,39 +192,20 @@ void main()
 
     if(scene.doDiffuse)
     {
-        if(useTextureMap) materialColor = texture(colorSampler, inTexCoord);
+        if(useTextureMap) materialColor = texture(colorSampler, UV);
     }
     
 
     vec3 diffuse = { 0.0, 0.0, 0.0 };
     vec3 specularReflected = { 0.0, 0.0, 0.0 };
     vec3 specularReflectedColor = specularColor;
-    vec3 viewNormal = inViewNormal;
 
     if(hasAlpha)
     {
         if(materialColor.a < 0.1) discard;
-
-        // flip normal when backface
-        if (dot(viewNormal, inViewPos) >= 0.0)
-        {
-            viewNormal = -inViewNormal;
-        }
     }
 
-    // normalize the mesh normal
-    viewNormal = normalize(viewNormal);
-
-    if(useNormalMap)
-    {
-        if(scene.doNormal)
-        {
-            const vec4 normalSample = texture(normalSampler, inTexCoord);
-            const vec4 tanNormal = normalSample * 2.0 - 1.0;
-            const vec3 mappedNormal = normalize(inTangentBasis * tanNormal.rgb);
-            viewNormal = mix(viewNormal, mappedNormal, normalMapWeight);
-        }
-    }
+    vec3 N = calculateNormal();
 
     // specular parameter determination (mapped or uniform)
     float specularPowerLoaded = specularGloss;
@@ -203,13 +214,11 @@ void main()
     {
         if(scene.doSpecular)
         {
-            const vec4 specularSample = texture(specularSampler, inTexCoord);
+            const vec4 specularSample = texture(specularSampler, UV);
             specularReflectedColor = specularSample.rgb;
-            //specularReflectedColor = vec3(specularSample.x, specularSample.y, specularSample.z);
-        
             if (useGlossAlpha)
             {
-                specularPowerLoaded = pow(2.0, specularSample.a * 13.0f);
+                specularPowerLoaded = pow(2.0, specularSample.a * 13.0);
             }
         }
     }
@@ -219,17 +228,17 @@ void main()
     //-----------------------------------------------------------------------------
     {
         // fragment to light vector data
-        vec3 lightVec = pointlight.viewLightPos - inViewPos;
+        vec3 lightVec = pointlight.viewLightPos - WorldPos;
         float lightDistFromFrag = length(lightVec);
-        vec3 lightDirVec = lightVec / lightDistFromFrag;
+        vec3 lightDir = normalize(lightVec/lightDistFromFrag);
         float shadow = 1.0;
 
         if (scene.doOmniShadows)
         {
-            //vec3 lightVec2 = inoshadowWorldPos.xyz - pointlight.viewLightPos;
-            vec3 lightVec2 = pointlight.viewLightPos - inViewPos;
-            float dist = length(lightVec2);
-            float sampledDist = texture(shadowCubeMap, inoshadowWorldPos.xyz).r;
+            float dist = length(lightVec);
+            vec3 oshadowWorldPosMod = oshadowWorldPos.xyz;
+            oshadowWorldPosMod.z = -oshadowWorldPos.z;
+            float sampledDist = texture(shadowCubeMap, oshadowWorldPosMod).r;
             
 	        // Check if fragment is in shadow
             shadow = (dist <= sampledDist - EPSILON) ? 1.0 : SHADOW_OPACITY;
@@ -239,18 +248,14 @@ void main()
         const float att = Attenuate(pointlight.attConst, pointlight.attLin, pointlight.attQuad, lightDistFromFrag);
     
 	    // diffuse
-        diffuse += shadow * pointlight.diffuseColor * pointlight.diffuseIntensity * att * max(0.0, dot(lightDirVec, viewNormal));
+        diffuse += shadow * pointlight.diffuseColor * pointlight.diffuseIntensity * att * max(0.0, dot(lightDir, N));
     
         // specular
-        
-        // calculate reflected light vector
-        const vec3 w = viewNormal * dot(lightVec, viewNormal);
-        const vec3 r = normalize(w * 2.0 - lightVec);
-        
-        // vector from camera to fragment
-        const vec3 viewCamToFrag = normalize(inViewPos);
-        
-        specularReflected += shadow * att * pointlight.diffuseColor * pointlight.diffuseIntensity * specularReflectedColor * 1.0 * pow(max(0.0, dot(-r, viewCamToFrag)), specularPowerLoaded);
+        const vec3 viewDir = normalize(scene.camPos - WorldPos);
+        const vec3 r = reflect(-viewDir, N);
+
+        float spec = pow(max(dot(viewDir, r), 0.0), specularPowerLoaded);
+        //specularReflected += shadow * att * pointlight.diffuseColor * pointlight.diffuseIntensity * specularReflectedColor * spec;
     }
 
     //-----------------------------------------------------------------------------
@@ -265,22 +270,22 @@ void main()
         //if ((clamp(projectTexCoord.x, 0.0, 1.0) == projectTexCoord.x) && (clamp(projectTexCoord.y, 0.0, 1.0) == projectTexCoord.y) && scene.doDirectionalShadows)
         if (scene.doDirectionalShadows)
         {
-            shadow = (scene.doPCF) ? filterPCF(indshadowWorldPos / indshadowWorldPos.w, scene.pcfRange) : textureProj(indshadowWorldPos / indshadowWorldPos.w, vec2(0.0));
+            shadow = (scene.doPCF) ? filterPCF(dshadowWorldPos / dshadowWorldPos.w, scene.pcfRange) : textureProj(dshadowWorldPos / dshadowWorldPos.w, vec2(0.0));
         }
 
         // diffuse
-        diffuse += shadow * directionLight.diffuseColor * directionLight.diffuseIntensity * max(0.0, dot(normalize(lightDir), viewNormal));
+        //diffuse += shadow * directionLight.diffuseColor * directionLight.diffuseIntensity * max(0.0, dot(normalize(lightDir), N));
     
         // specular
         
         // calculate reflected light vector
-        const vec3 w = viewNormal * dot(normalize(lightDir), viewNormal);
+        const vec3 w = N * dot(normalize(lightDir), N);
         const vec3 r = normalize(w * 2.0 - normalize(lightDir));
         
         // vector from camera to fragment
-        const vec3 viewCamToFrag = normalize(inViewPos);
+        const vec3 viewCamToFrag = normalize(WorldPos - scene.camPos);
         
-        specularReflected += shadow * directionLight.diffuseColor * directionLight.diffuseIntensity * specularReflectedColor * 1.0 * pow(max(0.0, dot(-r, viewCamToFrag)), specularPowerLoaded);
+        //specularReflected += shadow * directionLight.diffuseColor * directionLight.diffuseIntensity * specularReflectedColor * 1.0 * pow(max(0.0, dot(-r, viewCamToFrag)), specularPowerLoaded);
         
     }
 

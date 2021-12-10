@@ -37,19 +37,21 @@ layout(set = 0, binding = 0) uniform mvScene
     //-------------------------- ( 1*16 + 3*64= 144 bytes )
 } scene;
 
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inNormal;
-layout(location = 2) in vec3 inTangent;
+layout(location = 0) in vec3 pos;
+layout(location = 1) in vec3 n;
+layout(location = 2) in vec3 t;
 layout(location = 3) in vec3 inBitangent;
-layout(location = 4) in vec2 inTexCoord;
+layout(location = 4) in vec2 tc;
 
-layout(location = 0) out vec3 viewPos;
-layout(location = 1) out vec3 viewNormal;
-layout(location = 2) out vec3 worldNormal;
-layout(location = 3) out vec2 texCoord;
-layout(location = 4) out vec4 dshadowWorldPos;
-layout(location = 5) out vec4 oshadowWorldPos;
-layout(location = 6) out mat3 tangentBasis;
+layout(location = 0) out vec3 Pos;
+layout(location = 1) out vec3 WorldPos;
+layout(location = 2) out vec3 Normal;
+layout(location = 3) out vec2 UV;
+layout(location = 4) out vec3 Tangent;
+layout(location = 5) out vec4 dshadowWorldPos;
+layout(location = 6) out vec4 oshadowWorldPos;
+layout(location = 7) out vec3 ViewPos;
+layout(location = 8) out vec3 ViewNormal;
 
 const mat4 biasMat = mat4( 
 	0.5, 0.0, 0.0, 0.0,
@@ -70,15 +72,15 @@ vec4 ToDirectShadowHomoSpace(vec3 pos, mat4 modelTransform)
 
 void main() 
 {
-    gl_Position = PushConstants.modelViewProj * vec4(inPosition, 1.0);
-    viewPos = vec3(PushConstants.modelView * vec4(inPosition, 1.0));
-    viewNormal = mat3(PushConstants.modelView) * inNormal;
-    worldNormal = mat3(PushConstants.model) * inNormal;
-    texCoord = inTexCoord;
-    vec3 T = mat3(PushConstants.modelView)*inTangent;
-    vec3 B = mat3(PushConstants.modelView)*inBitangent;
-    vec3 N = mat3(PushConstants.modelView)*inNormal;
-    tangentBasis = mat3(T, B, N);
-    dshadowWorldPos = ToDirectShadowHomoSpace(inPosition, PushConstants.model);
-    oshadowWorldPos = ToShadowHomoSpace(inPosition, PushConstants.model);
+    gl_Position = PushConstants.modelViewProj * vec4(pos, 1.0);
+    vec4 locPos = PushConstants.model * vec4(pos, 1.0);
+    ViewPos = vec3(PushConstants.modelView * vec4(pos, 1.0));
+    ViewNormal = mat3(PushConstants.modelView) * n;
+    WorldPos = locPos.xyz;
+    Pos = gl_Position.xyz;
+    Normal = mat3(PushConstants.model) * n;
+    Tangent = mat3(PushConstants.model) * t;
+    UV = tc;
+    dshadowWorldPos = ToDirectShadowHomoSpace(pos, PushConstants.model);
+    oshadowWorldPos = ToShadowHomoSpace(pos, PushConstants.model);
 }

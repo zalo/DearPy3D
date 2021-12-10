@@ -141,7 +141,7 @@ int main()
 
         mvMat4 viewMatrix = mvCreateFPSView(camera);
         mvMat4 projMatrix = mvCreateLookAtProjection(camera);
-
+        
         mvMat4 secondaryViewMatrix = mvCreateOrthoView(secondaryCamera);
         mvMat4 secondaryProjMatrix = mvCreateOrthoProjection(secondaryCamera);
         sceneData.pointShadowView = mvCreateLookAtView(lightcamera);
@@ -184,35 +184,35 @@ int main()
             switch (i)
             {
             case 0: // POSITIVE_X
-                look_target = light1.info.viewLightPos.xyz() + mvVec3{ 0.0f, 0.0f, -1.0f };
-                camera_matrix = mvLookAtLH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
+                look_target = light1.info.viewLightPos.xyz() + mvVec3{ 0.0f, 0.0f, 1.0f };
+                camera_matrix = mvLookAtRH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
                 break;
             case 1:	// NEGATIVE_X
-                look_target = light1.info.viewLightPos.xyz() + mvVec3{ 0.0f, 0.0f, 1.0f };
-                camera_matrix = mvLookAtLH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
+                look_target = light1.info.viewLightPos.xyz() + mvVec3{ 0.0f, 0.0f, -1.0f };
+                camera_matrix = mvLookAtRH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
                 break;
             case 2:	// POSITIVE_Y
-                look_target = light1.info.viewLightPos.xyz() + mvVec3{ 0.0f, 1.0f, 0.0f };
-                camera_matrix = mvLookAtLH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ -1.0f, 0.0f, 0.0f });
+                look_target = light1.info.viewLightPos.xyz() + mvVec3{ 0.0f, -1.0f, 0.0f };
+                camera_matrix = mvLookAtRH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 1.0f, 0.0f, 0.0f });
                 break;
             case 3:	// NEGATIVE_Y
-                look_target = light1.info.viewLightPos.xyz() + mvVec3{ 0.0f, -1.0f, 0.0f };
-                camera_matrix = mvLookAtLH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 1.0f, 0.0f, 0.0f });
+                look_target = light1.info.viewLightPos.xyz() + mvVec3{ 0.0f, 1.0f, 0.0f };
+                camera_matrix = mvLookAtRH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ -1.0f, 0.0f, 0.0f });
                 break;
             case 4:	// POSITIVE_Z
                 look_target = light1.info.viewLightPos.xyz() + mvVec3{ 1.0f, 0.0f, 0.0f };
-                camera_matrix = mvLookAtLH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
+                camera_matrix = mvLookAtRH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
                 break;
             case 5:	// NEGATIVE_Z
                 look_target = light1.info.viewLightPos.xyz() + mvVec3{ -1.0f, 0.0f, 0.0f };
-                camera_matrix = mvLookAtLH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
+                camera_matrix = mvLookAtRH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
                 break;
             }
 
             Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), omniShadowPass);
 
             for (int i = 0; i < am.sceneCount; i++)
-                Renderer::mvRenderSceneOmniShadow(am, am.scenes[i].asset, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.1f, 400.0f), light1.info.viewLightPos);
+                Renderer::mvRenderSceneOmniShadow(am, am.scenes[i].asset, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.1f, 400.0f), light1.info.viewLightPos);
 
             Renderer::mvEndPass(mvGetCurrentCommandBuffer());
 
@@ -283,6 +283,7 @@ int main()
         //--------------------------------------------------------------------- 
         mvUpdateLightBuffers(am, light1, am.scenes[scene].asset.descriptorSet.descriptors[1].bufferID[GContext->graphics.currentImageIndex], secondaryViewMatrix, 0);
         mvUpdateLightBuffers(am, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].bufferID[GContext->graphics.currentImageIndex], secondaryViewMatrix, 0);
+        sceneData.camPos = secondaryCamera.pos;
         mvBindScene(am, scene, sceneData, 0);
         Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), offscreenPass);
 
@@ -298,6 +299,7 @@ int main()
         //---------------------------------------------------------------------
         mvUpdateLightBuffers(am, light1, am.scenes[scene].asset.descriptorSet.descriptors[1].bufferID[GContext->graphics.currentImageIndex], viewMatrix, 1);
         mvUpdateLightBuffers(am, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].bufferID[GContext->graphics.currentImageIndex], viewMatrix, 1);
+        sceneData.camPos = camera.pos;
         mvBindScene(am, scene, sceneData, 1);
         Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), primaryPass);
 
