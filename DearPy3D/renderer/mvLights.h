@@ -10,7 +10,7 @@ struct mvAssetManager;
 struct mvPointLightInfo
 {
 
-    mvVec4 viewLightPos = { 0.0f, 0.0f, 0.0f, 1.0f };
+    mvVec4 worldPos = { 0.0f, 0.0f, 0.0f, 1.0f };
     //-------------------------- ( 16 bytes )
 
     mvVec3 diffuseColor = { 1.0f, 1.0f, 1.0f };
@@ -23,6 +23,7 @@ struct mvPointLightInfo
     char _pad1[4];
     //-------------------------- ( 16 bytes )
 
+    mvVec4 viewPos = { 0.0f, 0.0f, 0.0f, 1.0f };
     //-------------------------- ( 4*16 = 64 bytes )
 };
 

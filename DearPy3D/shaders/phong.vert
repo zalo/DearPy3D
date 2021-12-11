@@ -40,18 +40,16 @@ layout(set = 0, binding = 0) uniform mvScene
 layout(location = 0) in vec3 pos;
 layout(location = 1) in vec3 n;
 layout(location = 2) in vec3 t;
-layout(location = 3) in vec3 inBitangent;
+layout(location = 3) in vec3 b;
 layout(location = 4) in vec2 tc;
 
-layout(location = 0) out vec3 Pos;
-layout(location = 1) out vec3 WorldPos;
-layout(location = 2) out vec3 Normal;
-layout(location = 3) out vec2 UV;
-layout(location = 4) out vec3 Tangent;
-layout(location = 5) out vec4 dshadowWorldPos;
-layout(location = 6) out vec4 oshadowWorldPos;
-layout(location = 7) out vec3 ViewPos;
-layout(location = 8) out vec3 ViewNormal;
+layout(location = 0) out vec3 WorldPos;
+layout(location = 1) out vec2 UV;
+layout(location = 2) out vec4 dshadowWorldPos;
+layout(location = 3) out vec4 oshadowWorldPos;
+layout(location = 4) out vec3 WorldNormal;
+layout(location = 5) out vec3 Pos;
+layout(location = 6) out mat3 TBN;
 
 const mat4 biasMat = mat4( 
 	0.5, 0.0, 0.0, 0.0,
@@ -73,13 +71,12 @@ vec4 ToDirectShadowHomoSpace(vec3 pos, mat4 modelTransform)
 void main() 
 {
     gl_Position = PushConstants.modelViewProj * vec4(pos, 1.0);
-    vec4 locPos = PushConstants.model * vec4(pos, 1.0);
-    ViewPos = vec3(PushConstants.modelView * vec4(pos, 1.0));
-    ViewNormal = mat3(PushConstants.modelView) * n;
-    WorldPos = locPos.xyz;
     Pos = gl_Position.xyz;
-    Normal = mat3(PushConstants.model) * n;
-    Tangent = mat3(PushConstants.model) * t;
+    WorldPos = (PushConstants.model * vec4(pos, 1.0)).xyz;
+    WorldNormal = normalize(mat3(PushConstants.model) * n);
+    vec3 WorldTangent = normalize(mat3(PushConstants.model) * t);
+    vec3 WorldBitangent = mat3(PushConstants.model)*b;
+    TBN = mat3(WorldTangent, WorldBitangent, WorldNormal);
     UV = tc;
     dshadowWorldPos = ToDirectShadowHomoSpace(pos, PushConstants.model);
     oshadowWorldPos = ToShadowHomoSpace(pos, PushConstants.model);

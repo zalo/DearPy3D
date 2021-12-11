@@ -316,15 +316,10 @@ PostProcess(std::vector<mvObjMesh*>& meshes)
 			mesh->averticies[i0].bitangent = mvNormalize(mesh->averticies[i0].bitangent);
 			mesh->averticies[i1].bitangent = mvNormalize(mesh->averticies[i1].bitangent);
 			mesh->averticies[i2].bitangent = mvNormalize(mesh->averticies[i2].bitangent);
-		}
+
 
 #if 1
-		for (size_t i = 0; i < mesh->triangleCount; i++)
-		{
-			size_t i0 = mesh->indicies[i * 3];
-			size_t i1 = mesh->indicies[i * 3 + 1];
-			size_t i2 = mesh->indicies[i * 3 + 2];
-
+			// left hand
 			mesh->indicies[i * 3] = i2;
 			mesh->indicies[i * 3 + 2] = i0;
 
@@ -348,9 +343,8 @@ PostProcess(std::vector<mvObjMesh*>& meshes)
 			mesh->averticies[i1].uv.g = 1 - mesh->averticies[i1].uv.g;
 			mesh->averticies[i2].uv.g = 1 - mesh->averticies[i2].uv.g;
 
-		}
 #endif
-
+		}
 	}
 }
 
