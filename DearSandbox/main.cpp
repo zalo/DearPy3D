@@ -52,6 +52,9 @@ int main()
 
     mvCamera camera{};
     camera.aspect = oldContentRegion.x / oldContentRegion.y;
+    camera.pos = { -18.0f, 12.0f, 1.0f };
+    camera.pitch = 0.0f;
+    camera.yaw = -M_PI_2;
 
     f32 angle = 10.0f;
     f32 zcomponent = sinf(MV_PI * angle / 180.0f);
@@ -69,12 +72,12 @@ int main()
     secondaryCamera.nearZ = -121.0f;
     secondaryCamera.farZ = 121.0f;
     
-    mvPointLight light1 = mvCreatePointLight(am, "light1", { 0.0f, 10.0f, 0.0f });
-    mvMat4 lightTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 10.0f, 0.0f });
+    mvPointLight light1 = mvCreatePointLight(am, "light1", { 40.0f, 10.0f, 0.0f });
+    mvMat4 lightTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 40.0f, 10.0f, 0.0f });
     mvDirectionLight dlight1 = mvCreateDirectionLight(am, "dlight1", mvVec3{ 0.0, -ycomponent, zcomponent });
 
     mvCamera lightcamera{};
-    lightcamera.pos = light1.info.viewLightPos.xyz();
+    lightcamera.pos = light1.info.worldPos.xyz();
     lightcamera.fieldOfView = M_PI_2;
    
     // passes
@@ -141,7 +144,7 @@ int main()
 
         mvMat4 viewMatrix = mvCreateFPSView(camera);
         mvMat4 projMatrix = mvCreateLookAtProjection(camera);
-
+        
         mvMat4 secondaryViewMatrix = mvCreateOrthoView(secondaryCamera);
         mvMat4 secondaryProjMatrix = mvCreateOrthoProjection(secondaryCamera);
         sceneData.pointShadowView = mvCreateLookAtView(lightcamera);
@@ -184,35 +187,35 @@ int main()
             switch (i)
             {
             case 0: // POSITIVE_X
-                look_target = light1.info.viewLightPos.xyz() + mvVec3{ 0.0f, 0.0f, -1.0f };
-                camera_matrix = mvLookAtLH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
+                look_target = light1.info.worldPos.xyz() + mvVec3{ 0.0f, 0.0f, 1.0f };
+                camera_matrix = mvLookAtRH(light1.info.worldPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
                 break;
             case 1:	// NEGATIVE_X
-                look_target = light1.info.viewLightPos.xyz() + mvVec3{ 0.0f, 0.0f, 1.0f };
-                camera_matrix = mvLookAtLH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
+                look_target = light1.info.worldPos.xyz() + mvVec3{ 0.0f, 0.0f, -1.0f };
+                camera_matrix = mvLookAtRH(light1.info.worldPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
                 break;
             case 2:	// POSITIVE_Y
-                look_target = light1.info.viewLightPos.xyz() + mvVec3{ 0.0f, 1.0f, 0.0f };
-                camera_matrix = mvLookAtLH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ -1.0f, 0.0f, 0.0f });
+                look_target = light1.info.worldPos.xyz() + mvVec3{ 0.0f, -1.0f, 0.0f };
+                camera_matrix = mvLookAtRH(light1.info.worldPos.xyz(), look_target, mvVec3{ 1.0f, 0.0f, 0.0f });
                 break;
             case 3:	// NEGATIVE_Y
-                look_target = light1.info.viewLightPos.xyz() + mvVec3{ 0.0f, -1.0f, 0.0f };
-                camera_matrix = mvLookAtLH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 1.0f, 0.0f, 0.0f });
+                look_target = light1.info.worldPos.xyz() + mvVec3{ 0.0f, 1.0f, 0.0f };
+                camera_matrix = mvLookAtRH(light1.info.worldPos.xyz(), look_target, mvVec3{ -1.0f, 0.0f, 0.0f });
                 break;
             case 4:	// POSITIVE_Z
-                look_target = light1.info.viewLightPos.xyz() + mvVec3{ 1.0f, 0.0f, 0.0f };
-                camera_matrix = mvLookAtLH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
+                look_target = light1.info.worldPos.xyz() + mvVec3{ 1.0f, 0.0f, 0.0f };
+                camera_matrix = mvLookAtRH(light1.info.worldPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
                 break;
             case 5:	// NEGATIVE_Z
-                look_target = light1.info.viewLightPos.xyz() + mvVec3{ -1.0f, 0.0f, 0.0f };
-                camera_matrix = mvLookAtLH(light1.info.viewLightPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
+                look_target = light1.info.worldPos.xyz() + mvVec3{ -1.0f, 0.0f, 0.0f };
+                camera_matrix = mvLookAtRH(light1.info.worldPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
                 break;
             }
 
             Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), omniShadowPass);
 
             for (int i = 0; i < am.sceneCount; i++)
-                Renderer::mvRenderSceneOmniShadow(am, am.scenes[i].asset, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.1f, 400.0f), light1.info.viewLightPos);
+                Renderer::mvRenderSceneOmniShadow(am, am.scenes[i].asset, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.1f, 400.0f), light1.info.worldPos);
 
             Renderer::mvEndPass(mvGetCurrentCommandBuffer());
 
@@ -283,6 +286,7 @@ int main()
         //--------------------------------------------------------------------- 
         mvUpdateLightBuffers(am, light1, am.scenes[scene].asset.descriptorSet.descriptors[1].bufferID[GContext->graphics.currentImageIndex], secondaryViewMatrix, 0);
         mvUpdateLightBuffers(am, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].bufferID[GContext->graphics.currentImageIndex], secondaryViewMatrix, 0);
+        sceneData.camPos = secondaryCamera.pos;
         mvBindScene(am, scene, sceneData, 0);
         Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), offscreenPass);
 
@@ -298,6 +302,7 @@ int main()
         //---------------------------------------------------------------------
         mvUpdateLightBuffers(am, light1, am.scenes[scene].asset.descriptorSet.descriptors[1].bufferID[GContext->graphics.currentImageIndex], viewMatrix, 1);
         mvUpdateLightBuffers(am, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].bufferID[GContext->graphics.currentImageIndex], viewMatrix, 1);
+        sceneData.camPos = camera.pos;
         mvBindScene(am, scene, sceneData, 1);
         Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), primaryPass);
 
@@ -357,6 +362,13 @@ int main()
         ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x+45, 45),
             ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(io.Framerate) + " FPS").c_str());
 
+        ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x + 45, 65),
+            ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(camera.pos.x) + ", "
+                + std::to_string(camera.pos.y) + ", " + std::to_string(camera.pos.z)).c_str());
+        ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x + 45, 85),
+            ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(camera.pitch) + ", "
+                + std::to_string(camera.yaw)).c_str());
+
         ImGui::End();
 
 
@@ -369,10 +381,10 @@ int main()
         ImGui::SliderFloat("omni slopeDepthBias", &omniShadowPass.specification.slopeDepthBias, 0.0f, 50.0f);
         ImGui::SliderFloat("directional depthBias", &shadowPass.specification.depthBias, 0.0f, 50.0f);
         ImGui::SliderFloat("directional slopeDepthBias", &shadowPass.specification.slopeDepthBias, 0.0f, 50.0f);
-        if (ImGui::SliderFloat3("Position", &light1.info.viewLightPos.x, -50.0f, 50.0f))
+        if (ImGui::SliderFloat3("Position", &light1.info.worldPos.x, -50.0f, 50.0f))
         {
-            lightTransform = mvTranslate(mvIdentityMat4(), light1.info.viewLightPos.xyz());
-            lightcamera.pos = light1.info.viewLightPos.xyz();
+            lightTransform = mvTranslate(mvIdentityMat4(), light1.info.worldPos.xyz());
+            lightcamera.pos = light1.info.worldPos.xyz();
         }
 
         if(ImGui::SliderFloat("Directional Light Angle", &angle, -45.0f, 45.0f))

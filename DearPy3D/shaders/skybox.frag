@@ -9,5 +9,7 @@ layout (location = 0) out vec4 outFragColor;
 
 void main() 
 {
-	outFragColor = texture(samplerCubeMap, worldPos);
+	vec3 worldPosMod = worldPos;
+	worldPosMod.z = -worldPos.z;
+	outFragColor = texture(samplerCubeMap, worldPosMod);
 }

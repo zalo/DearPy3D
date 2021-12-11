@@ -37,8 +37,8 @@ struct mvSceneData
     b32 doPCF= false;
     //-------------------------- ( 16 bytes )
      
+    mvVec3 camPos = {0.0f, 0.0f, 0.0f};
     i32 pcfRange = 1;
-    char _pad[12];
     //-------------------------- ( 16 bytes )
 
     mvMat4 pointShadowView = mvIdentityMat4();

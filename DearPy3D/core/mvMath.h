@@ -94,15 +94,12 @@ f32    mvMax(f32 v1, f32 v2);
 f32    mvLog2(f32 value);
 
 mvMat4 mvYawPitchRoll(f32 yaw, f32 pitch, f32 roll);
-mvMat4 mvLookAtLH(mvVec3 eye, mvVec3 center, mvVec3 up); // world space eye, center, up
 mvMat4 mvLookAtRH(mvVec3 eye, mvVec3 center, mvVec3 up); // world space eye, center, up
 mvMat4 mvFPSViewRH(mvVec3 eye, f32 pitch, float yaw);   // world space eye, center, up
 mvMat4 mvTranslate(mvMat4 m, mvVec3 v);
 mvMat4 mvRotate(mvMat4 m, f32 angle, mvVec3 v);
 mvMat4 mvScale(mvMat4 m, mvVec3 v);
-mvMat4 mvOrthoLH(f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar);
 mvMat4 mvOrthoRH(f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar);
-mvMat4 mvPerspectiveLH(f32 fovy, f32 aspect, f32 zNear, f32 zFar);
 mvMat4 mvPerspectiveRH(f32 fovy, f32 aspect, f32 zNear, f32 zFar);
 mvMat4 mvInvert(mvMat4& m);
 mvMat4 mvCreateMatrix(
