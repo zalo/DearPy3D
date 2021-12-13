@@ -19,6 +19,7 @@
 
 #include "passes.h"
 #include "pipelines.h"
+//#include <crtdbg.h>
 
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
 mv_internal b8 loadSponza = true;
@@ -26,7 +27,7 @@ mv_internal ImVec2 oldContentRegion = ImVec2(500, 500);
 
 int main() 
 {
-
+    //_CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_ALLOC_MEM_DF);
     CreateContext();
     int result = putenv("VK_LAYER_PATH=..\\..\\Dependencies\\vk_sdk_lite\\Bin");
     mvInitializeViewport(500, 500);
@@ -325,79 +326,112 @@ int main()
         //---------------------------------------------------------------------
         Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), mainPass);
 
-        ImGui::DockSpaceOverViewport(0);
+        ImGui::SetNextWindowBgAlpha(1.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f); // to prevent main window corners from showing
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(14.0f, 5.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_TableBorderLight, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_TableBorderStrong, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+        ImGui::SetNextWindowSize(ImVec2((float)GContext->viewport.width, (float)GContext->viewport.height));
 
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-        if (ImGui::Begin("Debug Output", nullptr))
+        static ImGuiWindowFlags windowFlags =
+            ImGuiWindowFlags_NoBringToFrontOnFocus |
+            ImGuiWindowFlags_NoDecoration;
+
+        ImGui::Begin("Main Window", 0, windowFlags);
+
+        static ImGuiTableFlags tableflags =
+            ImGuiTableFlags_Borders |
+            ImGuiTableFlags_Resizable |
+            ImGuiTableFlags_SizingStretchProp |
+            ImGuiTableFlags_NoHostExtendX;
+
+        if (ImGui::BeginTable("Main Table", 3, tableflags))
         {
+
+            ImGui::TableSetupColumn("Scene Controls", ImGuiTableColumnFlags_WidthFixed, 300.0f);
+            ImGui::TableSetupColumn("Primary Scene");
+            ImGui::TableSetupColumn("Light Controls", ImGuiTableColumnFlags_WidthFixed, 300.0f);
+            ImGui::TableNextColumn();
+
+            //-----------------------------------------------------------------------------
+            // left panel
+            //-----------------------------------------------------------------------------
+
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Dummy(ImVec2(50.0f, 75.0f));
+
+            ImGui::Checkbox("Diffuse Mapping", (bool*)&sceneData.doDiffuse);
+            ImGui::Checkbox("Normal Mapping", (bool*)&sceneData.doNormal);
+            ImGui::Checkbox("Specular Mapping", (bool*)&sceneData.doSpecular);
+            ImGui::Checkbox("Omni Shadows", (bool*)&sceneData.doOmniShadows);
+            ImGui::Checkbox("Direct Shadows", (bool*)&sceneData.doDirectionalShadows);
+            ImGui::Checkbox("Skybox", (bool*)&sceneData.doSkybox);
+            ImGui::Checkbox("PCF", (bool*)&sceneData.doPCF);
+            ImGui::SliderInt("pcfRange", &sceneData.pcfRange, 1, 5);
+
+            //-----------------------------------------------------------------------------
+            // center panel
+            //-----------------------------------------------------------------------------
+            ImGui::TableSetColumnIndex(1);
+
+            ImGuiIO& io = ImGui::GetIO();
+            ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x + 45, 15),
+                ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(io.Framerate) + " FPS").c_str());
+
+            ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x + 45, 30),
+                ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(camera.pos.x) + ", "
+                    + std::to_string(camera.pos.y) + ", " + std::to_string(camera.pos.z)).c_str());
+            ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x + 45, 45),
+                ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(camera.pitch) + ", "
+                    + std::to_string(camera.yaw)).c_str());
+
+            ImVec2 contentSize = ImGui::GetContentRegionAvail();
+            
+            ImGui::Image(primaryPass.colorTextures[GContext->graphics.currentImageIndex].imguiID, contentSize);
+            if (!(contentSize.x == oldContentRegion.x && contentSize.y == oldContentRegion.y))
+            {
+                primaryPass.viewport.width = contentSize.x;
+                primaryPass.viewport.height = contentSize.y;
+                camera.aspect = primaryPass.viewport.width / abs(primaryPass.viewport.height);
+                recreatePrimaryRender = true;
+            }
+            oldContentRegion = contentSize;
+
+            //-----------------------------------------------------------------------------
+            // right panel
+            //-----------------------------------------------------------------------------
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Dummy(ImVec2(50.0f, 25.0f));
+            ImGui::Indent(14.0f);
+            ImGui::SliderFloat("omni depthBias", &omniShadowPass.specification.depthBias, 0.0f, 50.0f);
+            ImGui::SliderFloat("omni slopeDepthBias", &omniShadowPass.specification.slopeDepthBias, 0.0f, 50.0f);
+            ImGui::SliderFloat("directional depthBias", &shadowPass.specification.depthBias, 0.0f, 50.0f);
+            ImGui::SliderFloat("directional slopeDepthBias", &shadowPass.specification.slopeDepthBias, 0.0f, 50.0f);
+            if (ImGui::SliderFloat3("Position", &light1.info.worldPos.x, -50.0f, 50.0f))
+            {
+                lightTransform = mvTranslate(mvIdentityMat4(), light1.info.worldPos.xyz());
+                lightcamera.pos = light1.info.worldPos.xyz();
+            }
+
+            if (ImGui::SliderFloat("Directional Light Angle", &angle, -45.0f, 45.0f))
+            {
+                zcomponent = sinf(MV_PI * angle / 180.0f);
+                ycomponent = cosf(MV_PI * angle / 180.0f);
+
+                secondaryCamera.dir = { 0.0f, -ycomponent, zcomponent };
+                dlight1.info.viewLightDir = mvVec3{ 0.0, -ycomponent, zcomponent };
+            }
+
             ImGui::Image(offscreenPass.colorTextures[GContext->graphics.currentImageIndex].imguiID, ImVec2(512, 512));
+            ImGui::Unindent(14.0f);
+            ImGui::EndTable();
+            ImGui::End();
+            ImGui::PopStyleVar(3);
+            ImGui::PopStyleColor(2);
+
         }
-        ImGui::End();
-
-        ImGui::PopStyleVar();
-        ImGui::PopStyleVar();
-
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-        ImGui::Begin("Model", 0, ImGuiWindowFlags_NoDecoration);
-
-        ImVec2 contentSize = ImGui::GetWindowContentRegionMax();
-        camera.aspect = primaryPass.viewport.width / abs(primaryPass.viewport.height);
-        ImGui::Image(primaryPass.colorTextures[GContext->graphics.currentImageIndex].imguiID, contentSize);
-
-        if (contentSize.x == oldContentRegion.x && contentSize.y == oldContentRegion.y)
-        {
-        }
-        else
-        {
-            primaryPass.viewport.width = contentSize.x;
-            primaryPass.viewport.height = contentSize.y;
-            recreatePrimaryRender = true;
-        }
-
-        oldContentRegion = contentSize;
-
-        ImGuiIO& io = ImGui::GetIO();
-        ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x+45, 45),
-            ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(io.Framerate) + " FPS").c_str());
-
-        ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x + 45, 65),
-            ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(camera.pos.x) + ", "
-                + std::to_string(camera.pos.y) + ", " + std::to_string(camera.pos.z)).c_str());
-        ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x + 45, 85),
-            ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(camera.pitch) + ", "
-                + std::to_string(camera.yaw)).c_str());
-
-        ImGui::End();
-
-
-
-        ImGui::PopStyleVar();
-        ImGui::PopStyleVar();
-
-        ImGui::Begin("Light Controls");
-        ImGui::SliderFloat("omni depthBias", &omniShadowPass.specification.depthBias, 0.0f, 50.0f);
-        ImGui::SliderFloat("omni slopeDepthBias", &omniShadowPass.specification.slopeDepthBias, 0.0f, 50.0f);
-        ImGui::SliderFloat("directional depthBias", &shadowPass.specification.depthBias, 0.0f, 50.0f);
-        ImGui::SliderFloat("directional slopeDepthBias", &shadowPass.specification.slopeDepthBias, 0.0f, 50.0f);
-        if (ImGui::SliderFloat3("Position", &light1.info.worldPos.x, -50.0f, 50.0f))
-        {
-            lightTransform = mvTranslate(mvIdentityMat4(), light1.info.worldPos.xyz());
-            lightcamera.pos = light1.info.worldPos.xyz();
-        }
-
-        if(ImGui::SliderFloat("Directional Light Angle", &angle, -45.0f, 45.0f))
-        {
-            zcomponent = sinf(MV_PI * angle / 180.0f);
-            ycomponent = cosf(MV_PI * angle / 180.0f);
-
-            secondaryCamera.dir = { 0.0f, -ycomponent, zcomponent };
-            dlight1.info.viewLightDir = mvVec3{ 0.0, -ycomponent, zcomponent };
-        }
-        ImGui::End();
-
-        mvShowSceneControls("Scene", sceneData);
 
         ImGui::Render();
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), mvGetCurrentCommandBuffer());
