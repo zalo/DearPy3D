@@ -39,7 +39,7 @@ mvCreateShader(const std::string& file)
     createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
     VkShaderModule shaderModule;
-    if (vkCreateShaderModule(mvGetLogicalDevice(), &createInfo, nullptr, &shader.shaderModule) != VK_SUCCESS)
+    if (vkCreateShaderModule(GContext->graphics.logicalDevice, &createInfo, nullptr, &shader.shaderModule) != VK_SUCCESS)
         throw std::runtime_error("failed to create shader module!");
 
     return shader;
@@ -55,7 +55,7 @@ struct mvVertexElement
 };
 
 mvVertexLayout
-mvCreateVertexLayout(std::vector<mvVertexElementType> elements)
+create_vertex_layout(std::vector<mvVertexElementType> elements)
 {
     std::vector<mvVertexElement> velements;
     size_t stride = 0;
@@ -141,7 +141,7 @@ mvCreateVertexLayout(std::vector<mvVertexElementType> elements)
 }
 
 mvPipeline
-mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
+create_pipeline(mvGraphics& graphics, mvAssetManager& assetManager, mvPipelineSpec& spec)
 {
 
     mvPipeline pipeline{};
@@ -312,13 +312,13 @@ mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec)
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.pDepthStencilState = &depthStencil;
 
-    MV_VULKAN(vkCreateGraphicsPipelines(mvGetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.pipeline));
+    MV_VULKAN(vkCreateGraphicsPipelines(graphics.logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.pipeline));
 
     // no longer need this
     if (!spec.vertexShader.empty())
-        vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.vertexShader.shaderModule, nullptr);
+        vkDestroyShaderModule(graphics.logicalDevice, pipeline.vertexShader.shaderModule, nullptr);
     if (!spec.pixelShader.empty())
-        vkDestroyShaderModule(mvGetLogicalDevice(), pipeline.fragShader.shaderModule, nullptr);
+        vkDestroyShaderModule(graphics.logicalDevice, pipeline.fragShader.shaderModule, nullptr);
     pipeline.vertexShader.shaderModule = VK_NULL_HANDLE;
     pipeline.fragShader.shaderModule = VK_NULL_HANDLE;
 

@@ -25,7 +25,7 @@ mvUpdateSkyboxDescriptors(mvAssetManager& am, mvSkybox& skybox, mvAssetID textur
     skybox.descriptorSet.descriptors[0].write.dstSet = skybox.descriptorSet.descriptorSets[GContext->graphics.currentImageIndex];
     descriptorWrites[0] = skybox.descriptorSet.descriptors[0].write;
 
-    vkUpdateDescriptorSets(mvGetLogicalDevice(), 1, descriptorWrites, 0, nullptr);
+    vkUpdateDescriptorSets(GContext->graphics.logicalDevice, 1, descriptorWrites, 0, nullptr);
 }
 
 void

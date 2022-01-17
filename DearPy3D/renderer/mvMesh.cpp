@@ -86,10 +86,10 @@ mvCreateTexturedCube(mvAssetManager& assetManager, float sideLength)
     mvMesh mesh{};
     mesh.name = "textured cube";
     mesh.vertexBuffer = mvRegisterAsset(&assetManager, "textured_cube_vertex" + std::to_string(sideLength),
-        mvCreateBuffer(vertexBufferSpec, vertices.data()));
+        create_buffer(GContext->graphics, vertexBufferSpec, vertices.data()));
     if(mvGetBufferAssetID(&assetManager, "textured_cube_index") == MV_INVALID_ASSET_ID)
         mesh.indexBuffer = mvRegisterAsset(&assetManager, "textured_cube_index",
-            mvCreateBuffer(indexBufferSpec, indices.data()));
+            create_buffer(GContext->graphics, indexBufferSpec, indices.data()));
     else
         mesh.indexBuffer = mvGetBufferAssetID(&assetManager, "textured_cube_index");
     
@@ -142,10 +142,10 @@ mvCreateSkyboxTexture(mvAssetManager& assetManager)
     mvMesh mesh{};
     mesh.name = "skybox cube";
     mesh.vertexBuffer = mvRegisterAsset(&assetManager, "skybox_cube_vertex",
-        mvCreateBuffer(vertexBufferSpec, vertices.data()));
+        create_buffer(GContext->graphics, vertexBufferSpec, vertices.data()));
     if (mvGetBufferAssetID(&assetManager, "skybox_cube_index") == MV_INVALID_ASSET_ID)
         mesh.indexBuffer = mvRegisterAsset(&assetManager, "skybox_cube_index",
-            mvCreateBuffer(indexBufferSpec, indices.data()));
+            create_buffer(GContext->graphics, indexBufferSpec, indices.data()));
     else
         mesh.indexBuffer = mvGetBufferAssetID(&assetManager, "skybox_cube_index");
 
@@ -219,10 +219,10 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, float sideLength)
     mvMesh mesh{};
     mesh.name = "textured quad";
     mesh.vertexBuffer = mvRegisterAsset(&assetManager, "textured_cube_vertex" + std::to_string(sideLength),
-        mvCreateBuffer(vertexBufferSpec, vertices.data()));
+        create_buffer(GContext->graphics, vertexBufferSpec, vertices.data()));
     if (mvGetBufferAssetID(&assetManager, "textured_quad_vertex") == MV_INVALID_ASSET_ID)
         mesh.indexBuffer = mvRegisterAsset(&assetManager, "textured_quad_index",
-            mvCreateBuffer(indexBufferSpec, indices.data()));
+            create_buffer(GContext->graphics, indexBufferSpec, indices.data()));
     else
         mesh.indexBuffer = mvGetBufferAssetID(&assetManager, "textured_quad_index");
 
@@ -288,8 +288,8 @@ mvLoadOBJAssets(mvAssetManager& assetManager, const std::string& root, const std
                 indexBufferSpec.size = sizeof(u32);
                 indexBufferSpec.count = objModel.meshes[i]->indicies.size();
 
-                newMesh.vertexBuffer = mvRegisterAsset(&assetManager, newMesh.name + "_vertex", mvCreateBuffer(vertexBufferSpec, objModel.meshes[i]->averticies.data()));
-                newMesh.indexBuffer = mvRegisterAsset(&assetManager, newMesh.name + "_index", mvCreateBuffer(indexBufferSpec, objModel.meshes[i]->indicies.data()));
+                newMesh.vertexBuffer = mvRegisterAsset(&assetManager, newMesh.name + "_vertex", create_buffer(GContext->graphics, vertexBufferSpec, objModel.meshes[i]->averticies.data()));
+                newMesh.indexBuffer = mvRegisterAsset(&assetManager, newMesh.name + "_index", create_buffer(GContext->graphics, indexBufferSpec, objModel.meshes[i]->indicies.data()));
                 
                 mvMaterial material = mvCreateMaterial(assetManager, materialData, "phong.vert.spv", "phong.frag.spv");
                 newMesh.phongMaterialID = mvRegisterAsset(&assetManager, newMesh.name + "material", material);

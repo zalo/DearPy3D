@@ -1,5 +1,6 @@
 #include <imgui.h>
 #include <imgui_impl_vulkan.h>
+#include <imgui_impl_glfw.h>
 #include <array>
 #include "mvContext.h"
 #include "mvMesh.h"
@@ -36,7 +37,7 @@ int main()
     GContext->graphics.validationLayers = { "VK_LAYER_KHRONOS_validation" };
     GContext->graphics.deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-    mvSetupGraphicsContext();
+    setup_graphics_context(GContext->graphics, GContext->viewport);
 
     mvAssetManager am{};
     mvInitializeAssetManager(&am);
@@ -88,7 +89,7 @@ int main()
     mvPass shadowPass = create_shadow_pass(am);
     mvPass omniShadowPass = create_omnishadow_pass(am);
 
-    mvTexture shadowMapCube = mvCreateCubeTexture(
+    mvTexture shadowMapCube = create_texture_cube(GContext->graphics,
         1024, 1024,
         VK_FORMAT_R32_SFLOAT,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
@@ -126,7 +127,7 @@ int main()
             // cleanup
             GContext->viewport.width = newwidth;
             GContext->viewport.height = newheight;
-            mvRecreateSwapChain();
+            recreate_swapchain(GContext->graphics);
             mainPass = create_main_pass(am);
             GContext->viewport.resized = false;
         }
@@ -168,14 +169,14 @@ int main()
         //---------------------------------------------------------------------
         // shadow pass
         //---------------------------------------------------------------------
-        Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), shadowPass);
+        Renderer::mvBeginPass(am, get_current_command_buffer(GContext->graphics), shadowPass);
 
         Renderer::mvRenderMeshShadow(am, *light1.mesh, lightTransform, secondaryViewMatrix, secondaryProjMatrix);
 
         for (int i = 0; i < am.sceneCount; i++)
             Renderer::mvRenderSceneShadow(am, am.scenes[i].asset, secondaryViewMatrix, secondaryProjMatrix);
 
-        Renderer::mvEndPass(mvGetCurrentCommandBuffer());
+        Renderer::mvEndPass(get_current_command_buffer(GContext->graphics));
 
         //---------------------------------------------------------------------
         // omni shadow pass
@@ -213,14 +214,14 @@ int main()
                 break;
             }
 
-            Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), omniShadowPass);
+            Renderer::mvBeginPass(am, get_current_command_buffer(GContext->graphics), omniShadowPass);
 
             for (int i = 0; i < am.sceneCount; i++)
                 Renderer::mvRenderSceneOmniShadow(am, am.scenes[i].asset, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.1f, 400.0f), light1.info.worldPos);
 
-            Renderer::mvEndPass(mvGetCurrentCommandBuffer());
+            Renderer::mvEndPass(get_current_command_buffer(GContext->graphics));
 
-            mvTransitionImageLayout(mvGetCurrentCommandBuffer(),
+            transition_image_layout(get_current_command_buffer(GContext->graphics),
                 omniShadowPass.colorTextures[GContext->graphics.currentImageIndex].textureImage,
                 VK_IMAGE_ASPECT_COLOR_BIT,
                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -233,7 +234,7 @@ int main()
             cubeFaceSubresourceRange.baseArrayLayer = i;
             cubeFaceSubresourceRange.layerCount = 1;
 
-            mvTransitionImageLayout(mvGetCurrentCommandBuffer(),
+            transition_image_layout(get_current_command_buffer(GContext->graphics),
                 shadowMapCube.textureImage,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -261,7 +262,7 @@ int main()
 
             // Put image copy into command buffer
             vkCmdCopyImage(
-                mvGetCurrentCommandBuffer(),
+                get_current_command_buffer(GContext->graphics),
                 omniShadowPass.colorTextures[GContext->graphics.currentImageIndex].textureImage,
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 shadowMapCube.textureImage,
@@ -269,13 +270,13 @@ int main()
                 1,
                 &copyRegion);
 
-            mvTransitionImageLayout(mvGetCurrentCommandBuffer(),
+            transition_image_layout(get_current_command_buffer(GContext->graphics),
                 omniShadowPass.colorTextures[GContext->graphics.currentImageIndex].textureImage,
                 VK_IMAGE_ASPECT_COLOR_BIT,
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-            mvTransitionImageLayout(mvGetCurrentCommandBuffer(),
+            transition_image_layout(get_current_command_buffer(GContext->graphics),
                 shadowMapCube.textureImage,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -289,14 +290,14 @@ int main()
         mvUpdateLightBuffers(am, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].bufferID[GContext->graphics.currentImageIndex], secondaryViewMatrix, 0);
         sceneData.camPos = secondaryCamera.pos;
         mvBindScene(am, scene, sceneData, 0);
-        Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), offscreenPass);
+        Renderer::mvBeginPass(am, get_current_command_buffer(GContext->graphics), offscreenPass);
 
         Renderer::mvRenderMesh(am, *light1.mesh, lightTransform, secondaryViewMatrix, secondaryProjMatrix);
 
         for (int i = 0; i < am.sceneCount; i++)
             Renderer::mvRenderScene(am, am.scenes[i].asset, secondaryViewMatrix, secondaryProjMatrix);
 
-        Renderer::mvEndPass(mvGetCurrentCommandBuffer());
+        Renderer::mvEndPass(get_current_command_buffer(GContext->graphics));
 
         //---------------------------------------------------------------------
         // primary pass
@@ -305,7 +306,7 @@ int main()
         mvUpdateLightBuffers(am, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].bufferID[GContext->graphics.currentImageIndex], viewMatrix, 1);
         sceneData.camPos = camera.pos;
         mvBindScene(am, scene, sceneData, 1);
-        Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), primaryPass);
+        Renderer::mvBeginPass(am, get_current_command_buffer(GContext->graphics), primaryPass);
 
         Renderer::mvRenderMesh(am, *light1.mesh, lightTransform, viewMatrix, projMatrix);
 
@@ -315,16 +316,16 @@ int main()
         if (sceneData.doSkybox)
         {
             mvBindSkybox(am, skybox);
-            vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, mvGetRawPipelineAsset(&am, "skybox_pass")->pipeline);
+            vkCmdBindPipeline(get_current_command_buffer(GContext->graphics), VK_PIPELINE_BIND_POINT_GRAPHICS, mvGetRawPipelineAsset(&am, "skybox_pass")->pipeline);
             Renderer::mvRenderSkybox(am, viewMatrix, projMatrix);
         }
 
-        Renderer::mvEndPass(mvGetCurrentCommandBuffer());
+        Renderer::mvEndPass(get_current_command_buffer(GContext->graphics));
 
         //---------------------------------------------------------------------
         // main pass
         //---------------------------------------------------------------------
-        Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), mainPass);
+        Renderer::mvBeginPass(am, get_current_command_buffer(GContext->graphics), mainPass);
 
         ImGui::SetNextWindowBgAlpha(1.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f); // to prevent main window corners from showing
@@ -434,20 +435,26 @@ int main()
         }
 
         ImGui::Render();
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), mvGetCurrentCommandBuffer());
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), get_current_command_buffer(GContext->graphics));
 
-        Renderer::mvEndPass(mvGetCurrentCommandBuffer());
+        Renderer::mvEndPass(get_current_command_buffer(GContext->graphics));
 
 
         //---------------------------------------------------------------------
         // submit command buffers & present
         //---------------------------------------------------------------------
         Renderer::mvEndFrame();
-        mvPresent();
+        present(GContext->graphics);
     }
 
     Renderer::mvCleanupPass(primaryPass);
     mvCleanupAssetManager(&am);
-    mvCleanupGraphicsContext();
+
+    // cleanup imgui
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    cleanup_graphics_context(GContext->graphics);
     DestroyContext();
 }

@@ -57,5 +57,5 @@ mvUpdateMaterialDescriptors(mvAssetManager& am, mvMaterial& material, mvAssetID 
         descriptorWrites[i] = material.descriptorSet.descriptors[i].write;
     }
 
-    vkUpdateDescriptorSets(mvGetLogicalDevice(), 4, descriptorWrites, 0, nullptr);
+    vkUpdateDescriptorSets(GContext->graphics.logicalDevice, 4, descriptorWrites, 0, nullptr);
 }

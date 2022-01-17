@@ -44,11 +44,11 @@ void
 mvUpdateLightBuffers(mvAssetManager& am, mvPointLight& light, mvAssetID bufferID, mvMat4 viewMatrix, u64 index)
 {
     light.info.viewPos = viewMatrix * light.info.worldPos;
-    mvPartialUpdateBuffer(am.buffers[bufferID].asset, &light.info, index);
+    partial_buffer_update(GContext->graphics, am.buffers[bufferID].asset, &light.info, index);
 }
 
 void
 mvUpdateLightBuffers(mvAssetManager& am, mvDirectionLight& light, mvAssetID bufferID, mvMat4 viewMatrix, u64 index)
 {
-    mvPartialUpdateBuffer(am.buffers[bufferID].asset, &light.info, index);
+    partial_buffer_update(GContext->graphics, am.buffers[bufferID].asset, &light.info, index);
 }

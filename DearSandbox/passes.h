@@ -48,7 +48,7 @@ create_primary_pass(mvAssetManager& am, f32 width, f32 height)
     offscreenPass.pipelineSpec.pixelShader = "phong.frag.spv";
     offscreenPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "primary_pass");
 
-    offscreenPass.pipelineSpec.layout = mvCreateVertexLayout(
+    offscreenPass.pipelineSpec.layout = create_vertex_layout(
         {
             mvVertexElementType::Position3D,
             mvVertexElementType::Normal,
@@ -57,7 +57,7 @@ create_primary_pass(mvAssetManager& am, f32 width, f32 height)
             mvVertexElementType::Texture2D
         });
 
-    offscreenPass.specification.pipeline = mvResetPipeline(&am, "primary_pass", mvCreatePipeline(am, offscreenPass.pipelineSpec));
+    offscreenPass.specification.pipeline = mvResetPipeline(&am, "primary_pass", create_pipeline(GContext->graphics, am, offscreenPass.pipelineSpec));
 
     {
         mvPipelineSpec pipelineSpec{};
@@ -72,12 +72,12 @@ create_primary_pass(mvAssetManager& am, f32 width, f32 height)
         pipelineSpec.height = (float)height;
         pipelineSpec.renderPass = offscreenPass.renderPass;
         pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "skybox_pass");
-        pipelineSpec.layout = mvCreateVertexLayout(
+        pipelineSpec.layout = create_vertex_layout(
             {
                 mvVertexElementType::Position3D
             });
 
-        mvResetPipeline(&am, "skybox_pass", mvCreatePipeline(am, pipelineSpec));
+        mvResetPipeline(&am, "skybox_pass", create_pipeline(GContext->graphics, am, pipelineSpec));
     }
 
     return offscreenPass;
@@ -106,7 +106,7 @@ create_offscreen_pass(mvAssetManager& am)
     offscreenPass.pipelineSpec.pixelShader = "phong.frag.spv";
     offscreenPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "primary_pass");
 
-    offscreenPass.pipelineSpec.layout = mvCreateVertexLayout(
+    offscreenPass.pipelineSpec.layout = create_vertex_layout(
         {
             mvVertexElementType::Position3D,
             mvVertexElementType::Normal,
@@ -115,7 +115,7 @@ create_offscreen_pass(mvAssetManager& am)
             mvVertexElementType::Texture2D
         });
 
-    offscreenPass.specification.pipeline = mvRegisterAsset(&am, "secondary_pass", mvCreatePipeline(am, offscreenPass.pipelineSpec));
+    offscreenPass.specification.pipeline = mvRegisterAsset(&am, "secondary_pass", create_pipeline(GContext->graphics, am, offscreenPass.pipelineSpec));
 
     return offscreenPass;
 }
@@ -140,7 +140,7 @@ create_shadow_pass(mvAssetManager& am)
     shadowPass.pipelineSpec.wireFrame = false;
     shadowPass.pipelineSpec.vertexShader = "shadow.vert.spv";
     shadowPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "shadow_pass");
-    shadowPass.pipelineSpec.layout = mvCreateVertexLayout(
+    shadowPass.pipelineSpec.layout = create_vertex_layout(
         {
             mvVertexElementType::Position3D,
             mvVertexElementType::Normal,
@@ -149,7 +149,7 @@ create_shadow_pass(mvAssetManager& am)
             mvVertexElementType::Texture2D
         });
 
-    shadowPass.specification.pipeline = mvRegisterAsset(&am, "shadow_pass", mvCreatePipeline(am, shadowPass.pipelineSpec));
+    shadowPass.specification.pipeline = mvRegisterAsset(&am, "shadow_pass", create_pipeline(GContext->graphics, am, shadowPass.pipelineSpec));
 
     return shadowPass;
 }
@@ -178,7 +178,7 @@ create_omnishadow_pass(mvAssetManager& am)
     offscreenPass.pipelineSpec.pixelShader = "omnishadow.frag.spv";
     offscreenPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "omnishadow_pass");
 
-    offscreenPass.pipelineSpec.layout = mvCreateVertexLayout(
+    offscreenPass.pipelineSpec.layout = create_vertex_layout(
         {
             mvVertexElementType::Position3D,
             mvVertexElementType::Normal,
@@ -187,7 +187,7 @@ create_omnishadow_pass(mvAssetManager& am)
             mvVertexElementType::Texture2D
         });
 
-    offscreenPass.specification.pipeline = mvRegisterAsset(&am, "omnishadow_pass", mvCreatePipeline(am, offscreenPass.pipelineSpec));
+    offscreenPass.specification.pipeline = mvRegisterAsset(&am, "omnishadow_pass", create_pipeline(GContext->graphics, am, offscreenPass.pipelineSpec));
 
     return offscreenPass;
 }

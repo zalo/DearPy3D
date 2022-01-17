@@ -18,7 +18,7 @@ mvCreateDescriptorSetLayout(std::vector<mvDescriptorSpec> specs)
     layoutInfo.bindingCount = specs.size();
     layoutInfo.pBindings = bindings;
 
-    MV_VULKAN(vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &layout.layout));
+    MV_VULKAN(vkCreateDescriptorSetLayout(GContext->graphics.logicalDevice, &layoutInfo, nullptr, &layout.layout));
     delete[] bindings;
     return layout;
 }
@@ -50,7 +50,7 @@ mvCreateUniformBufferDescriptor(mvAssetManager& am, mvDescriptorSpec spec, const
     bufferSpec.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        descriptor.bufferID.push_back(mvRegisterAsset(&am, name+std::to_string(i), mvCreateBuffer(bufferSpec, data)));
+        descriptor.bufferID.push_back(mvRegisterAsset(&am, name+std::to_string(i), create_buffer(GContext->graphics, bufferSpec, data)));
 
     return descriptor;
 }
@@ -82,7 +82,7 @@ mvCreateDynamicUniformBufferDescriptor(mvAssetManager& am, mvDescriptorSpec spec
     bufferSpec.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
     for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        descriptor.bufferID.push_back(mvRegisterAsset(&am, name + std::to_string(i), mvCreateBuffer(bufferSpec, data)));
+        descriptor.bufferID.push_back(mvRegisterAsset(&am, name + std::to_string(i), create_buffer(GContext->graphics, bufferSpec, data)));
 
     return descriptor;
 }
@@ -124,7 +124,7 @@ mvCreateDescriptorSetLayout(mvDescriptorSetLayout descriptorSetLayout)
     layoutInfo.bindingCount = descriptorSetLayout.specs.size();
     layoutInfo.pBindings = bindings;
 
-    MV_VULKAN(vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &layout));
+    MV_VULKAN(vkCreateDescriptorSetLayout(GContext->graphics.logicalDevice, &layoutInfo, nullptr, &layout));
     delete[] bindings;
     return layout;
 }
@@ -180,7 +180,7 @@ mvCreateDescriptorSet(mvAssetManager& am, VkDescriptorSetLayout layout, mvAssetI
     allocInfo.descriptorSetCount = GContext->graphics.swapChainImages.size();
     allocInfo.pSetLayouts = layouts.data();
 
-    MV_VULKAN(vkAllocateDescriptorSets(mvGetLogicalDevice(), &allocInfo, descriptorSet.descriptorSets));
+    MV_VULKAN(vkAllocateDescriptorSets(GContext->graphics.logicalDevice, &allocInfo, descriptorSet.descriptorSets));
 
     return descriptorSet;
 }
@@ -190,5 +190,5 @@ mvBindDescriptorSet(mvAssetManager& am, mvDescriptorSet& descriptorSet, u32 set,
 {
     VkDescriptorSet rawDescriptorSet = descriptorSet.descriptorSets[GContext->graphics.currentImageIndex];
     VkPipelineLayout layout = am.pipelineLayouts[descriptorSet.pipelineLayout].asset;
-    vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, layout, set, 1, &rawDescriptorSet, dynamicDescriptorCount, dynamicOffset);
+    vkCmdBindDescriptorSets(get_current_command_buffer(GContext->graphics), VK_PIPELINE_BIND_POINT_GRAPHICS, layout, set, 1, &rawDescriptorSet, dynamicDescriptorCount, dynamicOffset);
 }

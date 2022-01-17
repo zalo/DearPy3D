@@ -41,19 +41,19 @@ mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvAssetID shadowMap
         descriptorWrites[i] = scene.descriptorSet.descriptors[i].write;
     }
 
-    vkUpdateDescriptorSets(mvGetLogicalDevice(), 5, descriptorWrites, 0, nullptr);
+    vkUpdateDescriptorSets(GContext->graphics.logicalDevice, 5, descriptorWrites, 0, nullptr);
 }
 
 void
 mvBindScene(mvAssetManager& am, mvAssetID sceneId, mvSceneData data, u32 index)
 {
     mvScene& scene = am.scenes[sceneId].asset;
-    mvPartialUpdateBuffer(am.buffers[scene.descriptorSet.descriptors[0].bufferID[GContext->graphics.currentImageIndex]].asset, &data, index);
+    partial_buffer_update(GContext->graphics, am.buffers[scene.descriptorSet.descriptors[0].bufferID[GContext->graphics.currentImageIndex]].asset, &data, index);
 
     u32 uniformOffsets[3];
-    uniformOffsets[0] = index * mvGetRequiredUniformBufferSize(sizeof(mvSceneData));
-    uniformOffsets[1] = index * mvGetRequiredUniformBufferSize(sizeof(mvPointLightInfo));
-    uniformOffsets[2] = index * mvGetRequiredUniformBufferSize(sizeof(mvDirectionLightInfo));
+    uniformOffsets[0] = index * get_required_uniform_buffer_size(GContext->graphics, sizeof(mvSceneData));
+    uniformOffsets[1] = index * get_required_uniform_buffer_size(GContext->graphics, sizeof(mvPointLightInfo));
+    uniformOffsets[2] = index * get_required_uniform_buffer_size(GContext->graphics, sizeof(mvDirectionLightInfo));
     mvBindDescriptorSet(am, scene.descriptorSet, 0, 3, uniformOffsets);
 }
 

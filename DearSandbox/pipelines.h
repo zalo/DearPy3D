@@ -68,7 +68,7 @@ preload_pipeline_layouts(mvAssetManager& am)
 		pipelineLayoutInfo.setLayoutCount = 0;
 		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
 
-		MV_VULKAN(vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout));
+		MV_VULKAN(vkCreatePipelineLayout(GContext->graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
 		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "main_pass", pipelineLayout);
 	}
@@ -92,7 +92,7 @@ preload_pipeline_layouts(mvAssetManager& am)
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
 
-		MV_VULKAN(vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout));
+		MV_VULKAN(vkCreatePipelineLayout(GContext->graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
 		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "primary_pass", pipelineLayout);
 
@@ -122,7 +122,7 @@ preload_pipeline_layouts(mvAssetManager& am)
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pSetLayouts = nullptr;
 
-		MV_VULKAN(vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout));
+		MV_VULKAN(vkCreatePipelineLayout(GContext->graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
 		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "shadow_pass", pipelineLayout);
 	}
@@ -146,7 +146,7 @@ preload_pipeline_layouts(mvAssetManager& am)
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayouts[3];
 
-		MV_VULKAN(vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout));
+		MV_VULKAN(vkCreatePipelineLayout(GContext->graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
 		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "skybox_pass", pipelineLayout);
 	}
@@ -170,9 +170,8 @@ preload_pipeline_layouts(mvAssetManager& am)
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pSetLayouts = nullptr;
 
-		MV_VULKAN(vkCreatePipelineLayout(mvGetLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout));
+		MV_VULKAN(vkCreatePipelineLayout(GContext->graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
 		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "omnishadow_pass", pipelineLayout);
 	}
 }
-

@@ -9,13 +9,13 @@ namespace Renderer {
     void
     mvBeginFrame()
     {
-        MV_VULKAN(vkWaitForFences(mvGetLogicalDevice(), 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame], VK_TRUE, UINT64_MAX));
+        MV_VULKAN(vkWaitForFences(GContext->graphics.logicalDevice, 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame], VK_TRUE, UINT64_MAX));
 
-        MV_VULKAN(vkAcquireNextImageKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, UINT64_MAX, GContext->graphics.imageAvailableSemaphores[GContext->graphics.currentFrame],
+        MV_VULKAN(vkAcquireNextImageKHR(GContext->graphics.logicalDevice, GContext->graphics.swapChain, UINT64_MAX, GContext->graphics.imageAvailableSemaphores[GContext->graphics.currentFrame],
             VK_NULL_HANDLE, &GContext->graphics.currentImageIndex));
 
         if (GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex] != VK_NULL_HANDLE)
-            MV_VULKAN(vkWaitForFences(mvGetLogicalDevice(), 1, &GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex], VK_TRUE, UINT64_MAX));
+            MV_VULKAN(vkWaitForFences(GContext->graphics.logicalDevice, 1, &GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex], VK_TRUE, UINT64_MAX));
 
         // just in case the acquired image is out of order
         GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex] = GContext->graphics.inFlightFences[GContext->graphics.currentFrame];
@@ -27,14 +27,14 @@ namespace Renderer {
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-        MV_VULKAN(vkBeginCommandBuffer(mvGetCurrentCommandBuffer(), &beginInfo));
+        MV_VULKAN(vkBeginCommandBuffer(get_current_command_buffer(GContext->graphics), &beginInfo));
     }
 
     void
     mvEndFrame()
     {
 
-        MV_VULKAN(vkEndCommandBuffer(mvGetCurrentCommandBuffer()));
+        MV_VULKAN(vkEndCommandBuffer(get_current_command_buffer(GContext->graphics)));
 
         VkSemaphore waitSemaphores[] = { GContext->graphics.imageAvailableSemaphores[GContext->graphics.currentFrame] };
         VkSemaphore signalSemaphores[] = { GContext->graphics.renderFinishedSemaphores[GContext->graphics.currentFrame] };
@@ -50,7 +50,7 @@ namespace Renderer {
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        MV_VULKAN(vkResetFences(mvGetLogicalDevice(), 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame]));
+        MV_VULKAN(vkResetFences(GContext->graphics.logicalDevice, 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame]));
         MV_VULKAN(vkQueueSubmit(GContext->graphics.graphicsQueue, 1, &submitInfo, GContext->graphics.inFlightFences[GContext->graphics.currentFrame]));
     }
 
@@ -74,8 +74,8 @@ namespace Renderer {
         VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
 
         mvBindDescriptorSet(am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSet, 1);
-        vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &vertexBuffer, &offsets);
+        vkCmdBindIndexBuffer(get_current_command_buffer(GContext->graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(get_current_command_buffer(GContext->graphics), 0, 1, &vertexBuffer, &offsets);
 
         mvTransforms transforms;
         transforms.model = accumulatedTransform;
@@ -85,7 +85,7 @@ namespace Renderer {
         VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "primary_pass");
         vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
-        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(get_current_command_buffer(GContext->graphics), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
     }
 
     void
@@ -98,8 +98,8 @@ namespace Renderer {
         VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
 
         //mvBindDescriptorSet(am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSet, 1);
-        vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &vertexBuffer, &offsets);
+        vkCmdBindIndexBuffer(get_current_command_buffer(GContext->graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(get_current_command_buffer(GContext->graphics), 0, 1, &vertexBuffer, &offsets);
 
         mvTransforms transforms;
         transforms.model = accumulatedTransform;
@@ -116,7 +116,7 @@ namespace Renderer {
         VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "omnishadow_pass");
         vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(tempstruct), &push);
 
-        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(get_current_command_buffer(GContext->graphics), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
     }
 
     void
@@ -128,8 +128,8 @@ namespace Renderer {
         VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
         VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
 
-        vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &vertexBuffer, &offsets);
+        vkCmdBindIndexBuffer(get_current_command_buffer(GContext->graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(get_current_command_buffer(GContext->graphics), 0, 1, &vertexBuffer, &offsets);
 
         mvTransforms transforms;
         transforms.model = accumulatedTransform;
@@ -139,7 +139,7 @@ namespace Renderer {
         VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "shadow_pass");
         vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
-        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(get_current_command_buffer(GContext->graphics), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
     }
 
     void 
@@ -154,8 +154,8 @@ namespace Renderer {
         VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
 
         //mvBindDescriptorSet(am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSet, 1);
-        vkCmdBindIndexBuffer(mvGetCurrentCommandBuffer(), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindVertexBuffers(mvGetCurrentCommandBuffer(), 0, 1, &vertexBuffer, &offsets);
+        vkCmdBindIndexBuffer(get_current_command_buffer(GContext->graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(get_current_command_buffer(GContext->graphics), 0, 1, &vertexBuffer, &offsets);
 
         mvTransforms transforms;
         transforms.model = mvIdentityMat4();
@@ -167,7 +167,7 @@ namespace Renderer {
         VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "skybox_pass");
         vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvMat4), &modelViewProjection);
 
-        vkCmdDrawIndexed(mvGetCurrentCommandBuffer(), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(get_current_command_buffer(GContext->graphics), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
     }
 
     void
@@ -213,7 +213,7 @@ namespace Renderer {
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
         vkCmdSetDepthBias(
-            mvGetCurrentCommandBuffer(),
+            get_current_command_buffer(GContext->graphics),
             pass.specification.depthBias,
             0.0f,
             pass.specification.slopeDepthBias);
@@ -221,7 +221,7 @@ namespace Renderer {
         if (pass.specification.pipeline != MV_INVALID_ASSET_ID)
         {
             VkPipeline pipeline = am.pipelines[pass.specification.pipeline].asset.pipeline;
-            vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+            vkCmdBindPipeline(get_current_command_buffer(GContext->graphics), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         }
     }
 
@@ -372,7 +372,7 @@ namespace Renderer {
         renderPassInfo.subpassCount = 1;
         renderPassInfo.pSubpasses = &subpassDescription;
 
-        MV_VULKAN(vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, &pass.renderPass));
+        MV_VULKAN(vkCreateRenderPass(GContext->graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
 
         mvRegisterAsset(&am, specification.name, pass.renderPass);
 
@@ -381,32 +381,32 @@ namespace Renderer {
         pass.frameBuffers.resize(GContext->graphics.swapChainImageViews.size());
         for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
         {
-            pass.colorTextures[i] = mvCreateTexture(
+            pass.colorTextures[i] = create_texture(GContext->graphics,
                 specification.width, specification.height, specification.colorFormat,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT);
 
-            VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
-            mvTransitionImageLayout(commandBuffer, pass.colorTextures[i].textureImage,
+            VkCommandBuffer commandBuffer = begin_command_buffer(GContext->graphics);
+            transition_image_layout(commandBuffer, pass.colorTextures[i].textureImage,
                 VK_IMAGE_ASPECT_COLOR_BIT,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
             );
-            mvEndSingleTimeCommands(commandBuffer);
+            submit_command_buffer(GContext->graphics, commandBuffer);
 
-            pass.depthTextures[i] = mvCreateTexture(
+            pass.depthTextures[i] = create_texture(GContext->graphics,
                 specification.width, specification.height, specification.depthFormat,
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                 VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
 
-            VkCommandBuffer commandBuffer2 = mvBeginSingleTimeCommands();
-            mvTransitionImageLayout(commandBuffer2, pass.depthTextures[i].textureImage,
+            VkCommandBuffer commandBuffer2 = begin_command_buffer(GContext->graphics);
+            transition_image_layout(commandBuffer2, pass.depthTextures[i].textureImage,
                 VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
             );
 
-            mvEndSingleTimeCommands(commandBuffer2);
+            submit_command_buffer(GContext->graphics, commandBuffer2);
 
             VkImageView imageViews[] = { pass.colorTextures[i].imageInfo.imageView, pass.depthTextures[i].imageInfo.imageView };
             VkFramebufferCreateInfo framebufferInfo{};
@@ -417,7 +417,7 @@ namespace Renderer {
             framebufferInfo.width = specification.width;
             framebufferInfo.height = specification.height;
             framebufferInfo.layers = 1;
-            MV_VULKAN(vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &pass.frameBuffers[i]));
+            MV_VULKAN(vkCreateFramebuffer(GContext->graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
 
 
             mvRegisterAsset(&am, specification.name + std::to_string(i), pass.colorTextures[i]);
@@ -510,7 +510,7 @@ namespace Renderer {
         renderPassInfo.dependencyCount = 2;
         renderPassInfo.pDependencies = dependencies;
 
-        MV_VULKAN(vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, &pass.renderPass));
+        MV_VULKAN(vkCreateRenderPass(GContext->graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
 
         //mvRegisterAsset(&am, specification.name, pass.renderPass);
 
@@ -519,12 +519,12 @@ namespace Renderer {
         pass.frameBuffers.resize(GContext->graphics.swapChainImageViews.size());
         for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
         {
-            pass.colorTextures[i] = mvCreateTexture(
+            pass.colorTextures[i] = create_texture(GContext->graphics,
                 specification.width, specification.height, specification.colorFormat,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT);
 
-            pass.depthTextures[i] = mvCreateTexture(
+            pass.depthTextures[i] = create_texture(GContext->graphics,
                 specification.width, specification.height, specification.depthFormat,
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                 VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -538,7 +538,7 @@ namespace Renderer {
             framebufferInfo.width = specification.width;
             framebufferInfo.height = specification.height;
             framebufferInfo.layers = 1;
-            MV_VULKAN(vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &pass.frameBuffers[i]));
+            MV_VULKAN(vkCreateFramebuffer(GContext->graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
 
 
             //mvRegisterAsset(&am, specification.name + std::to_string(i), pass.colorTextures[i]);
@@ -565,21 +565,21 @@ namespace Renderer {
     void 
     mvCleanupPass(mvPass& pass)
     {
-        vkDeviceWaitIdle(mvGetLogicalDevice());
+        vkDeviceWaitIdle(GContext->graphics.logicalDevice);
         for (u32 i = 0; i < GContext->graphics.swapChainFramebuffers.size(); i++)
         {
-            vkDestroySampler(mvGetLogicalDevice(), pass.colorTextures[i].imageInfo.sampler, nullptr);
-            vkDestroySampler(mvGetLogicalDevice(), pass.depthTextures[i].imageInfo.sampler, nullptr);
-            vkDestroyImage(mvGetLogicalDevice(), pass.colorTextures[i].textureImage, nullptr);
-            vkDestroyImage(mvGetLogicalDevice(), pass.depthTextures[i].textureImage, nullptr);
-            vkDestroyImageView(mvGetLogicalDevice(), pass.colorTextures[i].imageInfo.imageView, nullptr);
-            vkDestroyImageView(mvGetLogicalDevice(), pass.depthTextures[i].imageInfo.imageView, nullptr);
-            vkDestroyFramebuffer(mvGetLogicalDevice(), pass.frameBuffers[i], nullptr);
-            vkFreeMemory(mvGetLogicalDevice(), pass.colorTextures[i].textureImageMemory, nullptr);
-            vkFreeMemory(mvGetLogicalDevice(), pass.depthTextures[i].textureImageMemory, nullptr);
+            vkDestroySampler(GContext->graphics.logicalDevice, pass.colorTextures[i].imageInfo.sampler, nullptr);
+            vkDestroySampler(GContext->graphics.logicalDevice, pass.depthTextures[i].imageInfo.sampler, nullptr);
+            vkDestroyImage(GContext->graphics.logicalDevice, pass.colorTextures[i].textureImage, nullptr);
+            vkDestroyImage(GContext->graphics.logicalDevice, pass.depthTextures[i].textureImage, nullptr);
+            vkDestroyImageView(GContext->graphics.logicalDevice, pass.colorTextures[i].imageInfo.imageView, nullptr);
+            vkDestroyImageView(GContext->graphics.logicalDevice, pass.depthTextures[i].imageInfo.imageView, nullptr);
+            vkDestroyFramebuffer(GContext->graphics.logicalDevice, pass.frameBuffers[i], nullptr);
+            vkFreeMemory(GContext->graphics.logicalDevice, pass.colorTextures[i].textureImageMemory, nullptr);
+            vkFreeMemory(GContext->graphics.logicalDevice, pass.depthTextures[i].textureImageMemory, nullptr);
 
         }
-        vkDestroyRenderPass(mvGetLogicalDevice(), pass.renderPass, nullptr);
+        vkDestroyRenderPass(GContext->graphics.logicalDevice, pass.renderPass, nullptr);
     }
 
     mvPass
@@ -651,7 +651,7 @@ namespace Renderer {
         renderPassInfo.dependencyCount = 2;
         renderPassInfo.pDependencies = dependencies;
 
-        MV_VULKAN(vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, &pass.renderPass));
+        MV_VULKAN(vkCreateRenderPass(GContext->graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
 
         mvRegisterAsset(&am, specification.name, pass.renderPass);
 
@@ -660,12 +660,12 @@ namespace Renderer {
         pass.frameBuffers.resize(GContext->graphics.swapChainImageViews.size());
         for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
         {
-            pass.colorTextures[i] = mvCreateTexture(
+            pass.colorTextures[i] = create_texture(GContext->graphics,
                 specification.width, specification.height, specification.colorFormat,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT);
 
-            pass.depthTextures[i] = mvCreateTexture(
+            pass.depthTextures[i] = create_texture(GContext->graphics,
                 specification.width, specification.height, specification.depthFormat,
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                 VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -679,7 +679,7 @@ namespace Renderer {
             framebufferInfo.width = specification.width;
             framebufferInfo.height = specification.height;
             framebufferInfo.layers = 1;
-            MV_VULKAN(vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &pass.frameBuffers[i]));
+            MV_VULKAN(vkCreateFramebuffer(GContext->graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
 
 
             mvRegisterAsset(&am, specification.name + std::to_string(i), pass.colorTextures[i]);
@@ -759,7 +759,7 @@ namespace Renderer {
         renderPassInfo.dependencyCount = 2;
         renderPassInfo.pDependencies = dependencies;
 
-        MV_VULKAN(vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, &pass.renderPass));
+        MV_VULKAN(vkCreateRenderPass(GContext->graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
         
         mvRegisterAsset(&am, specification.name, pass.renderPass);
 
@@ -768,7 +768,7 @@ namespace Renderer {
         for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
         {
 
-            pass.depthTextures[i] = mvCreateTexture(
+            pass.depthTextures[i] = create_texture(GContext->graphics,
                 specification.width, specification.height, specification.depthFormat,
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -781,7 +781,7 @@ namespace Renderer {
             framebufferInfo.width = specification.width;
             framebufferInfo.height = specification.height;
             framebufferInfo.layers = 1;
-            MV_VULKAN(vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &pass.frameBuffers[i]));
+            MV_VULKAN(vkCreateFramebuffer(GContext->graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
 
             mvRegisterAsset(&am, specification.name + std::to_string(i), pass.depthTextures[i]);
             mvRegisterAsset(&am, specification.name + std::to_string(i), pass.frameBuffers[i]);

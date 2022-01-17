@@ -8,6 +8,7 @@
 // forward declarations
 struct mvScene;
 struct mvAssetManager;
+struct mvGraphics;
 
 enum mvVertexElementType
 {
@@ -59,5 +60,5 @@ struct mvPipeline
 };
 
 
-mvPipeline     mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec);
-mvVertexLayout mvCreateVertexLayout(std::vector<mvVertexElementType> elements);
+mvPipeline     create_pipeline(mvGraphics& graphics, mvAssetManager& assetManager, mvPipelineSpec& spec);
+mvVertexLayout create_vertex_layout(std::vector<mvVertexElementType> elements);
