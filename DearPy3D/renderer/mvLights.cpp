@@ -1,20 +1,20 @@
 #include "mvLights.h"
-#include "mvContext.h"
+#include "mvGraphics.h"
 #include "mvAssetManager.h"
 
 mvPointLight 
-mvCreatePointLight(mvAssetManager& am, const std::string& name, mvVec3 pos)
+create_point_light(mvGraphics& graphics, mvAssetManager& am, const std::string& name, mvVec3 pos)
 {
 
     mvPointLight light;
     light.info.worldPos = mvVec4{ pos.x, pos.y, pos.z, 1.0f };
 
-    mvMesh lightCube = mvCreateTexturedCube(am, 0.25f);
+    mvMesh lightCube = create_textured_cube(graphics, am, 0.25f);
     auto mat1 = mvMaterialData{};
     mat1.materialColor = { 1.0f, 1.0f, 1.0f, 1.0f };
     mat1.doLighting = false;
     
-    mvMaterial material = mvCreateMaterial(am, mat1, "phong.vert.spv", "phong.frag.spv");
+    mvMaterial material = create_material(graphics, am, mat1, "phong.vert.spv", "phong.frag.spv");
     lightCube.phongMaterialID = mvRegisterAsset(&am, name, material);
 
     mvPipelineSpec spec{};
@@ -32,7 +32,7 @@ mvCreatePointLight(mvAssetManager& am, const std::string& name, mvVec3 pos)
 }
 
 mvDirectionLight
-mvCreateDirectionLight(mvAssetManager& am, const std::string& name, mvVec3 dir)
+create_directional_light(mvAssetManager& am, const std::string& name, mvVec3 dir)
 {
 
     mvDirectionLight light{};
@@ -41,14 +41,14 @@ mvCreateDirectionLight(mvAssetManager& am, const std::string& name, mvVec3 dir)
 }
 
 void
-mvUpdateLightBuffers(mvAssetManager& am, mvPointLight& light, mvAssetID bufferID, mvMat4 viewMatrix, u64 index)
+update_light_buffers(mvGraphics& graphics, mvAssetManager& am, mvPointLight& light, mvAssetID bufferID, mvMat4 viewMatrix, u64 index)
 {
     light.info.viewPos = viewMatrix * light.info.worldPos;
-    partial_buffer_update(GContext->graphics, am.buffers[bufferID].asset, &light.info, index);
+    partial_buffer_update(graphics, am.buffers[bufferID].asset, &light.info, index);
 }
 
 void
-mvUpdateLightBuffers(mvAssetManager& am, mvDirectionLight& light, mvAssetID bufferID, mvMat4 viewMatrix, u64 index)
+update_light_buffers(mvGraphics& graphics, mvAssetManager& am, mvDirectionLight& light, mvAssetID bufferID, mvMat4 viewMatrix, u64 index)
 {
-    partial_buffer_update(GContext->graphics, am.buffers[bufferID].asset, &light.info, index);
+    partial_buffer_update(graphics, am.buffers[bufferID].asset, &light.info, index);
 }

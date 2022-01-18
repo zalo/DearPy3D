@@ -2,14 +2,18 @@
 
 #include "mvTypes.h"
 #include "mvDescriptors.h"
+#include "mvMesh.h"
 
+// forward declarations
 struct mvAssetManager;
+struct mvGraphics;
 
 struct mvSkybox
 {
     mvDescriptorSet descriptorSet;
+    mvMesh          mesh;
 };
 
-mvSkybox mvCreateSkybox          (mvAssetManager& am);
-void    mvUpdateSkyboxDescriptors(mvAssetManager& am, mvSkybox& skybox, mvAssetID texture);
-void    mvBindSkybox             (mvAssetManager& am, mvSkybox& skybox);
+mvSkybox create_skybox            (mvGraphics& graphics, mvAssetManager& am);
+void     update_skybox_descriptors(mvGraphics& graphics, mvAssetManager& am, mvSkybox& skybox, mvAssetID texture);
+void     bind_skybox              (mvGraphics& graphics, mvAssetManager& am, mvSkybox& skybox);

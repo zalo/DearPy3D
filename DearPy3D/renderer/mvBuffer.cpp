@@ -1,6 +1,6 @@
 #include "mvBuffer.h"
 #include <stdexcept>
-#include "mvContext.h"
+#include "mvGraphics.h"
 
 mv_internal mvBuffer 
 i_create_buffer(mvGraphics& graphics, mvBufferSpecification specification)
@@ -84,8 +84,8 @@ create_buffer(mvGraphics& graphics, mvBufferSpecification specification, void* d
         copy_buffer(graphics, stagingBuffer, finalBuffer);
 
         // cleanup staging buffer
-        vkDestroyBuffer(GContext->graphics.logicalDevice, stagingBuffer.buffer, nullptr);
-        vkFreeMemory(GContext->graphics.logicalDevice, stagingBuffer.deviceMemory, nullptr);
+        vkDestroyBuffer(graphics.logicalDevice, stagingBuffer.buffer, nullptr);
+        vkFreeMemory(graphics.logicalDevice, stagingBuffer.deviceMemory, nullptr);
 
         finalBuffer.bufferInfo.buffer = finalBuffer.buffer; // descriptor info
 

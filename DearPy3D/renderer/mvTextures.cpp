@@ -1,9 +1,9 @@
 #include "mvTextures.h"
 #include <stdexcept>
-#include "mvContext.h"
 #include "imgui_impl_vulkan.h"
 #include "mvMath.h"
 #include "mvBuffer.h"
+#include "mvGraphics.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -141,17 +141,17 @@ void transition_image_layout(VkCommandBuffer commandBuffer, VkImage image, VkIma
 }
 
 mv_internal void 
-mvGenerateMipmaps(VkImage image, VkFormat imageFormat, i32 texWidth, i32 texHeight, u32 mipLevels, u32 layers = 1u)
+mvGenerateMipmaps(mvGraphics& graphics, VkImage image, VkFormat imageFormat, i32 texWidth, i32 texHeight, u32 mipLevels, u32 layers = 1u)
 {
     // Check if image format supports linear blitting
     VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(GContext->graphics.physicalDevice, imageFormat, &formatProperties);
+    vkGetPhysicalDeviceFormatProperties(graphics.physicalDevice, imageFormat, &formatProperties);
 
     if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
         throw std::runtime_error("texture image format does not support linear blitting!");
     }
 
-    VkCommandBuffer commandBuffer = begin_command_buffer(GContext->graphics);
+    VkCommandBuffer commandBuffer = begin_command_buffer(graphics);
 
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -227,7 +227,7 @@ mvGenerateMipmaps(VkImage image, VkFormat imageFormat, i32 texWidth, i32 texHeig
         0, nullptr,
         1, &barrier);
 
-    submit_command_buffer(GContext->graphics, commandBuffer);
+    submit_command_buffer(graphics, commandBuffer);
 }
 
 mvTexture
@@ -325,16 +325,16 @@ create_texture_cube(mvGraphics& graphics, const char* path)
     bufferSpec.usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     bufferSpec.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-    mvBuffer stagingBuffer = create_buffer(GContext->graphics, bufferSpec);
+    mvBuffer stagingBuffer = create_buffer(graphics, bufferSpec);
 
     void* mapping;
-    MV_VULKAN(vkMapMemory(GContext->graphics.logicalDevice, stagingBuffer.deviceMemory, 0, stagingBuffer.actualSize, 0, &mapping));
+    MV_VULKAN(vkMapMemory(graphics.logicalDevice, stagingBuffer.deviceMemory, 0, stagingBuffer.actualSize, 0, &mapping));
     for (u32 i = 0; i < 6; ++i)
     {
         char* data = (char*)mapping;
         memcpy(data + layerSize*i, surfaces[i], (size_t)layerSize);
     }
-    vkUnmapMemory(GContext->graphics.logicalDevice, stagingBuffer.deviceMemory);
+    vkUnmapMemory(graphics.logicalDevice, stagingBuffer.deviceMemory);
     mapping = nullptr;
 
     for (u32 i = 0; i < 6; ++i)
@@ -357,17 +357,17 @@ create_texture_cube(mvGraphics& graphics, const char* path)
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-    MV_VULKAN(vkCreateImage(GContext->graphics.logicalDevice, &imageInfo, nullptr, &texture.textureImage));
+    MV_VULKAN(vkCreateImage(graphics.logicalDevice, &imageInfo, nullptr, &texture.textureImage));
 
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(GContext->graphics.logicalDevice, texture.textureImage, &memRequirements);
+    vkGetImageMemoryRequirements(graphics.logicalDevice, texture.textureImage, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = find_memory_type(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    MV_VULKAN(vkAllocateMemory(GContext->graphics.logicalDevice, &allocInfo, nullptr, &texture.textureImageMemory));
-    MV_VULKAN(vkBindImageMemory(GContext->graphics.logicalDevice, texture.textureImage, texture.textureImageMemory, 0));
+    allocInfo.memoryTypeIndex = find_memory_type(graphics.physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    MV_VULKAN(vkAllocateMemory(graphics.logicalDevice, &allocInfo, nullptr, &texture.textureImageMemory));
+    MV_VULKAN(vkBindImageMemory(graphics.logicalDevice, texture.textureImage, texture.textureImageMemory, 0));
 
     //-----------------------------------------------------------------------------
     // final image
@@ -380,19 +380,19 @@ create_texture_cube(mvGraphics& graphics, const char* path)
     subresourceRange.baseArrayLayer = 0;
     subresourceRange.layerCount = 6;
 
-    VkCommandBuffer commandBuffer = begin_command_buffer(GContext->graphics);
+    VkCommandBuffer commandBuffer = begin_command_buffer(graphics);
     transition_image_layout(commandBuffer, texture.textureImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresourceRange);
-    submit_command_buffer(GContext->graphics, commandBuffer);
-    copy_buffer_to_image(GContext->graphics, stagingBuffer, texture.textureImage, (u32)texWidth, (u32)texHeight, 6);
+    submit_command_buffer(graphics, commandBuffer);
+    copy_buffer_to_image(graphics, stagingBuffer, texture.textureImage, (u32)texWidth, (u32)texHeight, 6);
     //mvTransitionImageLayout(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, imageInfo.mipLevels);
 
-    vkDestroyBuffer(GContext->graphics.logicalDevice, stagingBuffer.buffer, nullptr);
-    vkFreeMemory(GContext->graphics.logicalDevice, stagingBuffer.deviceMemory, nullptr);
+    vkDestroyBuffer(graphics.logicalDevice, stagingBuffer.buffer, nullptr);
+    vkFreeMemory(graphics.logicalDevice, stagingBuffer.deviceMemory, nullptr);
 
-    mvGenerateMipmaps(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, texWidth, texHeight, imageInfo.mipLevels, 6);
+    mvGenerateMipmaps(graphics, texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, texWidth, texHeight, imageInfo.mipLevels, 6);
 
     VkPhysicalDeviceProperties properties{};
-    vkGetPhysicalDeviceProperties(GContext->graphics.physicalDevice, &properties);
+    vkGetPhysicalDeviceProperties(graphics.physicalDevice, &properties);
 
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -405,7 +405,7 @@ create_texture_cube(mvGraphics& graphics, const char* path)
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 6;
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    MV_VULKAN(vkCreateImageView(GContext->graphics.logicalDevice, &viewInfo, nullptr, &texture.imageInfo.imageView));
+    MV_VULKAN(vkCreateImageView(graphics.logicalDevice, &viewInfo, nullptr, &texture.imageInfo.imageView));
 
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -425,7 +425,7 @@ create_texture_cube(mvGraphics& graphics, const char* path)
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = (f32)imageInfo.mipLevels;
 
-    MV_VULKAN(vkCreateSampler(GContext->graphics.logicalDevice, &samplerInfo, nullptr, &texture.imageInfo.sampler));
+    MV_VULKAN(vkCreateSampler(graphics.logicalDevice, &samplerInfo, nullptr, &texture.imageInfo.sampler));
     texture.imguiID = ImGui_ImplVulkan_AddTexture(texture.imageInfo.sampler, texture.imageInfo.imageView, texture.imageInfo.imageLayout);
     return texture;
 }
@@ -513,7 +513,7 @@ create_texture(mvGraphics& graphics, const char* file)
     vkDestroyBuffer(graphics.logicalDevice, stagingBuffer.buffer, nullptr);
     vkFreeMemory(graphics.logicalDevice, stagingBuffer.deviceMemory, nullptr);
 
-    mvGenerateMipmaps(texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, texWidth, texHeight, imageInfo.mipLevels);
+    mvGenerateMipmaps(graphics, texture.textureImage, VK_FORMAT_R8G8B8A8_UNORM, texWidth, texHeight, imageInfo.mipLevels);
 
     VkPhysicalDeviceProperties properties{};
     vkGetPhysicalDeviceProperties(graphics.physicalDevice, &properties);

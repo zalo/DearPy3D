@@ -1,32 +1,32 @@
 #pragma once
 
 mvPass 
-create_main_pass(mvAssetManager& am)
+create_main_pass(mvGraphics& graphics, mvAssetManager& am)
 {
     mvPassSpecification mainPassSpec{};
     mainPassSpec.mainPass = true;
 
     mvPass mainPass{
         mainPassSpec,
-        GContext->graphics.renderPass,
-        GContext->graphics.swapChainExtent,
-        GContext->graphics.swapChainFramebuffers
+        graphics.renderPass,
+        graphics.swapChainExtent,
+        graphics.swapChainFramebuffers
     };
 
     mainPass.viewport.x = 0.0f;
-    mainPass.viewport.y = GContext->graphics.swapChainExtent.height;
-    mainPass.viewport.width = GContext->graphics.swapChainExtent.width;
-    mainPass.viewport.height = -(int)GContext->graphics.swapChainExtent.height;
+    mainPass.viewport.y = graphics.swapChainExtent.height;
+    mainPass.viewport.width = graphics.swapChainExtent.width;
+    mainPass.viewport.height = -(int)graphics.swapChainExtent.height;
     mainPass.viewport.minDepth = 0.0f;
     mainPass.viewport.maxDepth = 1.0f;
-    mainPass.extent.width = (u32)GContext->graphics.swapChainExtent.width;
+    mainPass.extent.width = (u32)graphics.swapChainExtent.width;
     mainPass.extent.height = (u32)mainPass.viewport.y;
 
     return mainPass;
 }
 
 mvPass
-create_primary_pass(mvAssetManager& am, f32 width, f32 height)
+create_primary_pass(mvGraphics& graphics, mvAssetManager& am, f32 width, f32 height)
 {
     mvPassSpecification offscreenPassSpec{};
     offscreenPassSpec.name = "primary_pass";
@@ -39,7 +39,7 @@ create_primary_pass(mvAssetManager& am, f32 width, f32 height)
     offscreenPassSpec.hasColor = true;
     offscreenPassSpec.hasDepth = true;
 
-    mvPass offscreenPass = Renderer::mvCreatePrimaryRenderPass(am, offscreenPassSpec);
+    mvPass offscreenPass = Renderer::create_primary_pass(graphics, am, offscreenPassSpec);
     offscreenPass.pipelineSpec.backfaceCulling = true;
     offscreenPass.pipelineSpec.depthTest = true;
     offscreenPass.pipelineSpec.depthWrite = true;
@@ -57,7 +57,7 @@ create_primary_pass(mvAssetManager& am, f32 width, f32 height)
             mvVertexElementType::Texture2D
         });
 
-    offscreenPass.specification.pipeline = mvResetPipeline(&am, "primary_pass", create_pipeline(GContext->graphics, am, offscreenPass.pipelineSpec));
+    offscreenPass.specification.pipeline = mvResetPipeline(graphics, &am, "primary_pass", create_pipeline(graphics, am, offscreenPass.pipelineSpec));
 
     {
         mvPipelineSpec pipelineSpec{};
@@ -72,19 +72,16 @@ create_primary_pass(mvAssetManager& am, f32 width, f32 height)
         pipelineSpec.height = (float)height;
         pipelineSpec.renderPass = offscreenPass.renderPass;
         pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "skybox_pass");
-        pipelineSpec.layout = create_vertex_layout(
-            {
-                mvVertexElementType::Position3D
-            });
+        pipelineSpec.layout = create_vertex_layout({mvVertexElementType::Position3D});
 
-        mvResetPipeline(&am, "skybox_pass", create_pipeline(GContext->graphics, am, pipelineSpec));
+        mvResetPipeline(graphics, &am, "skybox_pass", create_pipeline(graphics, am, pipelineSpec));
     }
 
     return offscreenPass;
 }
 
 mvPass 
-create_offscreen_pass(mvAssetManager& am)
+create_offscreen_pass(mvGraphics& graphics, mvAssetManager& am)
 {
     mvPassSpecification offscreenPassSpec{};
     offscreenPassSpec.name = "secondary_pass";
@@ -97,7 +94,7 @@ create_offscreen_pass(mvAssetManager& am)
     offscreenPassSpec.hasColor = true;
     offscreenPassSpec.hasDepth = true;
 
-    mvPass offscreenPass = Renderer::mvCreateOffscreenRenderPass(am, offscreenPassSpec);
+    mvPass offscreenPass = Renderer::create_offscreen_pass(graphics, am, offscreenPassSpec);
     offscreenPass.pipelineSpec.backfaceCulling = true;
     offscreenPass.pipelineSpec.depthTest = true;
     offscreenPass.pipelineSpec.depthWrite = true;
@@ -115,13 +112,13 @@ create_offscreen_pass(mvAssetManager& am)
             mvVertexElementType::Texture2D
         });
 
-    offscreenPass.specification.pipeline = mvRegisterAsset(&am, "secondary_pass", create_pipeline(GContext->graphics, am, offscreenPass.pipelineSpec));
+    offscreenPass.specification.pipeline = mvRegisterAsset(&am, "secondary_pass", create_pipeline(graphics, am, offscreenPass.pipelineSpec));
 
     return offscreenPass;
 }
 
 mvPass 
-create_shadow_pass(mvAssetManager& am)
+create_shadow_pass(mvGraphics& graphics, mvAssetManager& am)
 {
     mvPassSpecification shadowPassSpec{};
     shadowPassSpec.name = "shadow_pass";
@@ -133,7 +130,7 @@ create_shadow_pass(mvAssetManager& am)
     shadowPassSpec.hasColor = false;
     shadowPassSpec.hasDepth = true;
 
-    mvPass shadowPass = Renderer::mvCreateDepthOnlyRenderPass(am, shadowPassSpec);
+    mvPass shadowPass = Renderer::create_depth_pass(graphics, am, shadowPassSpec);
     shadowPass.pipelineSpec.backfaceCulling = false;
     shadowPass.pipelineSpec.depthTest = true;
     shadowPass.pipelineSpec.depthWrite = true;
@@ -149,13 +146,13 @@ create_shadow_pass(mvAssetManager& am)
             mvVertexElementType::Texture2D
         });
 
-    shadowPass.specification.pipeline = mvRegisterAsset(&am, "shadow_pass", create_pipeline(GContext->graphics, am, shadowPass.pipelineSpec));
+    shadowPass.specification.pipeline = mvRegisterAsset(&am, "shadow_pass", create_pipeline(graphics, am, shadowPass.pipelineSpec));
 
     return shadowPass;
 }
 
 mvPass
-create_omnishadow_pass(mvAssetManager& am)
+create_omnishadow_pass(mvGraphics& graphics, mvAssetManager& am)
 {
     mvPassSpecification offscreenPassSpec{};
     offscreenPassSpec.name = "omnishadow_pass";
@@ -168,7 +165,7 @@ create_omnishadow_pass(mvAssetManager& am)
     offscreenPassSpec.hasColor = true;
     offscreenPassSpec.hasDepth = true;
 
-    mvPass offscreenPass = Renderer::mvCreateOmniShadowRenderPass(am, offscreenPassSpec);
+    mvPass offscreenPass = Renderer::create_omni_shadow_pass(graphics, am, offscreenPassSpec);
     offscreenPass.pipelineSpec.backfaceCulling = false;
     offscreenPass.pipelineSpec.depthTest = true;
     offscreenPass.pipelineSpec.depthWrite = true;
@@ -187,7 +184,7 @@ create_omnishadow_pass(mvAssetManager& am)
             mvVertexElementType::Texture2D
         });
 
-    offscreenPass.specification.pipeline = mvRegisterAsset(&am, "omnishadow_pass", create_pipeline(GContext->graphics, am, offscreenPass.pipelineSpec));
+    offscreenPass.specification.pipeline = mvRegisterAsset(&am, "omnishadow_pass", create_pipeline(graphics, am, offscreenPass.pipelineSpec));
 
     return offscreenPass;
 }

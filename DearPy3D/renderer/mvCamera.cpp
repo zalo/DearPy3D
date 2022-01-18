@@ -1,6 +1,7 @@
 #include "mvCamera.h"
 #include <imgui.h>
-#include "mvContext.h"
+#include <cmath>
+#include "mvViewport.h"
 
 template<typename T>
 mv_local_persist T
@@ -24,19 +25,19 @@ f32 mvClamp(f32 value, f32 minValue, f32 maxValue)
 }
 
 mvMat4 
-mvCreateFPSView(mvCamera& camera)
+create_fps_view(mvCamera& camera)
 {
     return mvFPSViewRH(camera.pos, camera.pitch, camera.yaw);
 }
 
 mvMat4
-mvCreateOrthoView(mvOrthoCamera& camera)
+create_ortho_view(mvOrthoCamera& camera)
 {
     return mvLookAtRH(camera.pos, camera.pos - camera.dir, camera.up);
 }
 
 mvMat4
-mvCreateOrthoProjection(mvOrthoCamera& camera)
+create_ortho_projection(mvOrthoCamera& camera)
 {
     return mvOrthoRH(
         camera.left, 
@@ -48,7 +49,7 @@ mvCreateOrthoProjection(mvOrthoCamera& camera)
 }
 
 mvMat4
-mvCreateLookAtView(mvCamera& camera)
+create_lookat_view(mvCamera& camera)
 {
     mvVec3 direction{};
     direction.x = cos((camera.yaw)) * cos((camera.pitch));
@@ -59,13 +60,13 @@ mvCreateLookAtView(mvCamera& camera)
 }
 
 mvMat4
-mvCreateLookAtProjection(mvCamera& camera)
+create_perspective_projection(mvCamera& camera)
 {
     return mvPerspectiveRH(camera.fieldOfView, camera.aspect, camera.nearZ, camera.farZ);
 }
 
 void
-mvUpdateCameraFPSCamera(mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed)
+update_fps_camera(mvViewport& viewport, mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed)
 {
     // for now, we will just use imgui's input
     if (ImGui::GetIO().KeysDown['W'])
@@ -102,15 +103,15 @@ mvUpdateCameraFPSCamera(mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationS
         camera.pos.y = camera.pos.y - dt * travelSpeed;
     }
 
-    if (!GContext->viewport.cursorEnabled)
+    if (!viewport.cursorEnabled)
     {
-        camera.yaw = wrap_angle(camera.yaw - (float)GContext->viewport.deltaX * rotationSpeed*dt);
-        camera.pitch = mvClamp(camera.pitch -  (float)GContext->viewport.deltaY * rotationSpeed*dt, 0.995f * -MV_PI_2, 0.995f * MV_PI_2);
+        camera.yaw = wrap_angle(camera.yaw - (float)viewport.deltaX * rotationSpeed*dt);
+        camera.pitch = mvClamp(camera.pitch -  (float)viewport.deltaY * rotationSpeed*dt, 0.995f * -MV_PI_2, 0.995f * MV_PI_2);
     }
 }
 
 mv_internal void
-mvTranslateCamera(mvCamera& camera, f32 dx, f32 dy, f32 dz, f32 travelSpeed)
+translate_camera(mvCamera& camera, f32 dx, f32 dy, f32 dz, f32 travelSpeed)
 {
     mvVec3 direction{};
     direction.x = cos((camera.yaw)) * cos((camera.pitch));
@@ -130,19 +131,19 @@ mvTranslateCamera(mvCamera& camera, f32 dx, f32 dy, f32 dz, f32 travelSpeed)
 }
 
 void
-mvUpdateCameraLookAtCamera(mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed)
+update_lookat_camera(mvViewport& viewport, mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed)
 {
 
-    if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_W) == GLFW_PRESS) mvTranslateCamera(camera, 0.0f, 0.0f, dt, travelSpeed);
-    if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_S) == GLFW_PRESS) mvTranslateCamera(camera, 0.0f, 0.0f, -dt, travelSpeed);
-    if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_A) == GLFW_PRESS) mvTranslateCamera(camera, dt, 0.0f, 0.0f, travelSpeed);
-    if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_D) == GLFW_PRESS) mvTranslateCamera(camera, -dt, 0.0f, 0.0f, travelSpeed);
-    if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_R) == GLFW_PRESS) mvTranslateCamera(camera, 0.0f, dt, 0.0f, travelSpeed);
-    if (glfwGetKey(GContext->viewport.handle, GLFW_KEY_F) == GLFW_PRESS) mvTranslateCamera(camera, 0.0f, -dt, 0.0f, travelSpeed);
+    if (glfwGetKey(viewport.handle, GLFW_KEY_W) == GLFW_PRESS) translate_camera(camera, 0.0f, 0.0f, dt, travelSpeed);
+    if (glfwGetKey(viewport.handle, GLFW_KEY_S) == GLFW_PRESS) translate_camera(camera, 0.0f, 0.0f, -dt, travelSpeed);
+    if (glfwGetKey(viewport.handle, GLFW_KEY_A) == GLFW_PRESS) translate_camera(camera, dt, 0.0f, 0.0f, travelSpeed);
+    if (glfwGetKey(viewport.handle, GLFW_KEY_D) == GLFW_PRESS) translate_camera(camera, -dt, 0.0f, 0.0f, travelSpeed);
+    if (glfwGetKey(viewport.handle, GLFW_KEY_R) == GLFW_PRESS) translate_camera(camera, 0.0f, dt, 0.0f, travelSpeed);
+    if (glfwGetKey(viewport.handle, GLFW_KEY_F) == GLFW_PRESS) translate_camera(camera, 0.0f, -dt, 0.0f, travelSpeed);
 
-    if (!GContext->viewport.cursorEnabled)
+    if (!viewport.cursorEnabled)
     {
-        camera.yaw = wrap_angle(camera.yaw + (float)GContext->viewport.deltaX * rotationSpeed);
-        camera.pitch = mvClamp(camera.pitch + (float)GContext->viewport.deltaY * rotationSpeed, 0.995f * -MV_PI_2, 0.995f * MV_PI_2);
+        camera.yaw = wrap_angle(camera.yaw + (float)viewport.deltaX * rotationSpeed);
+        camera.pitch = mvClamp(camera.pitch + (float)viewport.deltaY * rotationSpeed, 0.995f * -MV_PI_2, 0.995f * MV_PI_2);
     }
 }

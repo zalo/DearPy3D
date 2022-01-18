@@ -42,5 +42,5 @@ struct mvMaterial
     std::string           pixelShader;
 };
 
-mvMaterial mvCreateMaterial           (mvAssetManager& am, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
-void       mvUpdateMaterialDescriptors(mvAssetManager& am, mvMaterial& material, mvAssetID colorTexture, mvAssetID normalTexture, mvAssetID specularTexture);
+mvMaterial create_material            (mvGraphics& graphics, mvAssetManager& am, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
+void       update_material_descriptors(mvGraphics& graphics, mvAssetManager& am, mvMaterial& material, mvAssetID colorTexture, mvAssetID normalTexture, mvAssetID specularTexture);

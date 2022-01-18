@@ -1,74 +1,78 @@
 #include "mvViewport.h"
-#include "mvContext.h"
+#include "mvTypes.h"
 
 
 mv_internal void 
-EnableCursor()
+enable_cursor(mvViewport& viewport)
 {
-	GContext->viewport.cursorEnabled = true;
-	glfwSetInputMode(GContext->viewport.handle, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-	glfwSetInputMode(GContext->viewport.handle, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
+	viewport.cursorEnabled = true;
+	glfwSetInputMode(viewport.handle, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	glfwSetInputMode(viewport.handle, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
 }
 
 mv_internal void 
-DisableCursor()
+disable_cursor(mvViewport& viewport)
 {
-	GContext->viewport.cursorEnabled = false;
-	glfwSetInputMode(GContext->viewport.handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	glfwSetInputMode(GContext->viewport.handle, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+	viewport.cursorEnabled = false;
+	glfwSetInputMode(viewport.handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetInputMode(viewport.handle, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 }
 
 mv_internal void 
 key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	mvViewport& viewport = *(mvViewport*)glfwGetWindowUserPointer(window);
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 	{
-		if (GContext->viewport.cursorEnabled)
-			DisableCursor();
+		if (viewport.cursorEnabled)
+			disable_cursor(viewport);
 		else
-			EnableCursor();
+			enable_cursor(viewport);
 	}
 }
 
 mv_internal void 
 mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	float xoffset = xpos - GContext->viewport.lastX;
-	float yoffset = ypos - GContext->viewport.lastY;
-	GContext->viewport.deltaX = xoffset;
-	GContext->viewport.deltaY = yoffset;
-	GContext->viewport.lastX = xpos;
-	GContext->viewport.lastY = ypos;
+	mvViewport& viewport = *(mvViewport*)glfwGetWindowUserPointer(window);
+	float xoffset = xpos - viewport.lastX;
+	float yoffset = ypos - viewport.lastY;
+	viewport.deltaX = xoffset;
+	viewport.deltaY = yoffset;
+	viewport.lastX = xpos;
+	viewport.lastY = ypos;
 }
 
 mv_internal void 
-framebufferResizeCallback(GLFWwindow* window, int width, int height)
+framebuffer_resize(GLFWwindow* window, int width, int height)
 {
-	GContext->viewport.resized = true;
+	mvViewport& viewport = *(mvViewport*)glfwGetWindowUserPointer(window);
+	viewport.resized = true;
 }
 
-void 
-mvInitializeViewport(int width, int height)
+void
+initialize_viewport(mvViewport& viewport, int width, int height)
 {
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	//glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-	GContext->viewport.handle = glfwCreateWindow(width, height, "Dear Py3D", nullptr, nullptr);
-	glfwSetCursorPosCallback(GContext->viewport.handle, mouse_callback);
-	glfwSetKeyCallback(GContext->viewport.handle, key_callback);
-	glfwSetWindowSizeCallback(GContext->viewport.handle, framebufferResizeCallback);
+	viewport.handle = glfwCreateWindow(width, height, "Dear Py3D", nullptr, nullptr);
+	glfwSetCursorPosCallback(viewport.handle, mouse_callback);
+	glfwSetKeyCallback(viewport.handle, key_callback);
+	glfwSetWindowSizeCallback(viewport.handle, framebuffer_resize);
 
-	GContext->viewport.width = width;
-	GContext->viewport.height = height;
-	GContext->viewport.running = true;
+	viewport.width = width;
+	viewport.height = height;
+	viewport.running = true;
+	glfwSetWindowUserPointer(viewport.handle, &viewport);
 }
 
 void 
-mvProcessViewportEvents()
+process_viewport_events(mvViewport& viewport)
 {
-	GContext->viewport.deltaX = 0.0;
-	GContext->viewport.deltaY = 0.0;
-	GContext->viewport.running = !glfwWindowShouldClose(GContext->viewport.handle);
+	viewport.deltaX = 0.0;
+	viewport.deltaY = 0.0;
+	viewport.running = !glfwWindowShouldClose(viewport.handle);
 	glfwPollEvents();
 }

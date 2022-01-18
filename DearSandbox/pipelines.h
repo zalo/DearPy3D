@@ -1,37 +1,37 @@
 #pragma once
 
 void
-preload_descriptorset_layouts(mvAssetManager& am)
+preload_descriptorset_layouts(mvGraphics& graphics, mvAssetManager& am)
 {
 	// create descriptor set layouts
 	VkDescriptorSetLayout descriptorSetLayouts[4];
 
-	mvDescriptorSetLayout globalLayout = mvCreateDescriptorSetLayout(
+	mvDescriptorSetLayout globalLayout = create_descriptor_set_layout(graphics,
 		{
-			mvCreateDynamicUniformBufferDescriptorSpec(0u),
-			mvCreateDynamicUniformBufferDescriptorSpec(1u),
-			mvCreateDynamicUniformBufferDescriptorSpec(2u),
-			mvCreateTextureDescriptorSpec(3u),
-			mvCreateTextureDescriptorSpec(4u)
+			create_dynamic_uniform_descriptor_spec(0u),
+			create_dynamic_uniform_descriptor_spec(1u),
+			create_dynamic_uniform_descriptor_spec(2u),
+			create_texture_descriptor_spec(3u),
+			create_texture_descriptor_spec(4u)
 		});
 
-	mvDescriptorSetLayout materialLayout = mvCreateDescriptorSetLayout(
+	mvDescriptorSetLayout materialLayout = create_descriptor_set_layout(graphics,
 		{
-			mvCreateTextureDescriptorSpec(0u),
-			mvCreateTextureDescriptorSpec(1u),
-			mvCreateTextureDescriptorSpec(2u),
-			mvCreateUniformBufferDescriptorSpec(3u)
+			create_texture_descriptor_spec(0u),
+			create_texture_descriptor_spec(1u),
+			create_texture_descriptor_spec(2u),
+			create_uniform_descriptor_spec(3u)
 		});
 
 
-	mvDescriptorSetLayout perDrawLayout = mvCreateDescriptorSetLayout(
+	mvDescriptorSetLayout perDrawLayout = create_descriptor_set_layout(graphics,
 		{
-			mvCreateDynamicUniformBufferDescriptorSpec(0u)
+			create_dynamic_uniform_descriptor_spec(0u)
 		});
 
-	mvDescriptorSetLayout skyboxLayout = mvCreateDescriptorSetLayout(
+	mvDescriptorSetLayout skyboxLayout = create_descriptor_set_layout(graphics,
 		{
-			mvCreateTextureDescriptorSpec(0u)
+			create_texture_descriptor_spec(0u)
 		});
 
 	descriptorSetLayouts[0] = globalLayout.layout;
@@ -46,7 +46,7 @@ preload_descriptorset_layouts(mvAssetManager& am)
 }
 
 void 
-preload_pipeline_layouts(mvAssetManager& am)
+preload_pipeline_layouts(mvGraphics& graphics, mvAssetManager& am)
 {
 	VkDescriptorSetLayout descriptorSetLayouts[4];
 
@@ -68,7 +68,7 @@ preload_pipeline_layouts(mvAssetManager& am)
 		pipelineLayoutInfo.setLayoutCount = 0;
 		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
 
-		MV_VULKAN(vkCreatePipelineLayout(GContext->graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
+		MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
 		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "main_pass", pipelineLayout);
 	}
@@ -92,13 +92,13 @@ preload_pipeline_layouts(mvAssetManager& am)
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
 
-		MV_VULKAN(vkCreatePipelineLayout(GContext->graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
+		MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
 		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "primary_pass", pipelineLayout);
 
 		mvTransforms* transforms = new mvTransforms[am.maxMeshCount * 3];
-		mvDescriptorSet descriptorSet = mvCreateDescriptorSet(am, descriptorSetLayouts[2], pipelineLayoutID);
-		descriptorSet.descriptors.push_back(mvCreateDynamicUniformBufferDescriptor(am, mvCreateDynamicUniformBufferDescriptorSpec(0u), "transforms", am.maxMeshCount * 3, sizeof(mvTransforms), transforms));
+		mvDescriptorSet descriptorSet = create_descriptor_set(graphics, am, descriptorSetLayouts[2], pipelineLayoutID);
+		descriptorSet.descriptors.push_back(create_dynamic_uniform_descriptor(graphics, am, create_dynamic_uniform_descriptor_spec(0u), "transforms", am.maxMeshCount * 3, sizeof(mvTransforms), transforms));
 		mvRegisterAsset(&am, "perdraw", descriptorSet);
 		delete[] transforms;
 	}
@@ -122,7 +122,7 @@ preload_pipeline_layouts(mvAssetManager& am)
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pSetLayouts = nullptr;
 
-		MV_VULKAN(vkCreatePipelineLayout(GContext->graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
+		MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
 		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "shadow_pass", pipelineLayout);
 	}
@@ -146,7 +146,7 @@ preload_pipeline_layouts(mvAssetManager& am)
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayouts[3];
 
-		MV_VULKAN(vkCreatePipelineLayout(GContext->graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
+		MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
 		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "skybox_pass", pipelineLayout);
 	}
@@ -170,7 +170,7 @@ preload_pipeline_layouts(mvAssetManager& am)
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pSetLayouts = nullptr;
 
-		MV_VULKAN(vkCreatePipelineLayout(GContext->graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
+		MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
 		mvAssetID pipelineLayoutID = mvRegisterAsset(&am, "omnishadow_pass", pipelineLayout);
 	}

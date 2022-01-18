@@ -88,9 +88,9 @@ struct mvAssetManager
 
 // startup/shutdown/resize
 void mvInitializeAssetManager   (mvAssetManager* manager);
-void mvCleanupAssetManager      (mvAssetManager* manager);
+void mvCleanupAssetManager      (mvGraphics& graphics, mvAssetManager* manager);
 void mvShowAssetManager         (mvAssetManager& manager);
-mvAssetID mvResetPipeline(mvAssetManager* manager, const std::string& tag, mvPipeline asset);
+mvAssetID mvResetPipeline(mvGraphics& graphics, mvAssetManager* manager, const std::string& tag, mvPipeline asset);
 
 
 // registering
@@ -114,8 +114,8 @@ mvAssetID mvGetPipelineLayoutAssetID     (mvAssetManager* manager, const std::st
 mvAssetID mvGetDescriptorSetLayoutAssetID(mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetDescriptorSetAssetID      (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetSceneAssetID              (mvAssetManager* manager, const std::string& tag);
-mvAssetID mvGetTextureAssetID            (mvAssetManager* manager, const std::string& tag);
-mvAssetID mvGetTextureAssetID2           (mvAssetManager* manager, const std::string& tag);
+mvAssetID mvGetTextureAssetID            (mvGraphics& graphics, mvAssetManager* manager, const std::string& tag);
+mvAssetID mvGetTextureAssetID2           (mvGraphics& graphics, mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetBufferAssetID             (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetMaterialAssetID           (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetNodeAssetID               (mvAssetManager* manager, const std::string& tag);
@@ -129,7 +129,7 @@ VkPipelineLayout      mvGetRawPipelineLayoutAsset     (mvAssetManager* manager, 
 VkDescriptorSetLayout mvGetRawDescriptorSetLayoutAsset(mvAssetManager* manager, const std::string& tag);
 mvDescriptorSet*      mvGetRawDescriptorSetAsset      (mvAssetManager* manager, const std::string& tag);
 mvScene*              mvGetRawSceneAsset              (mvAssetManager* manager, const std::string& tag);
-mvTexture*            mvGetRawTextureAsset            (mvAssetManager* manager, const std::string& tag);
+mvTexture*            mvGetRawTextureAsset            (mvGraphics& graphics, mvAssetManager* manager, const std::string& tag);
 mvMesh*               mvGetRawMeshAsset               (mvAssetManager* manager, const std::string& tag);
 mvBuffer*             mvGetRawBufferAsset             (mvAssetManager* manager, const std::string& tag);
 mvMaterial*           mvGetRawMaterialAsset           (mvAssetManager* manager, const std::string& tag);

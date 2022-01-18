@@ -1,7 +1,7 @@
 #include "mvPipeline.h"
 #include <stdexcept>
 #include <fstream>
-#include "mvContext.h"
+#include "mvGraphics.h"
 #include "mvScene.h"
 #include "mvMaterials.h"
 #include "mvAssetManager.h"
@@ -26,12 +26,12 @@ ReadFile(const std::string& filename)
 }
 
 mv_internal mvShader
-mvCreateShader(const std::string& file)
+mvCreateShader(mvGraphics& graphics, const std::string& file)
 {
     mvShader shader{};
     shader.file = file;
 
-    auto shaderCode = ReadFile(GContext->IO.shaderDirectory + file);
+    auto shaderCode = ReadFile(graphics.shaderDirectory + file);
 
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -39,7 +39,7 @@ mvCreateShader(const std::string& file)
     createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
     VkShaderModule shaderModule;
-    if (vkCreateShaderModule(GContext->graphics.logicalDevice, &createInfo, nullptr, &shader.shaderModule) != VK_SUCCESS)
+    if (vkCreateShaderModule(graphics.logicalDevice, &createInfo, nullptr, &shader.shaderModule) != VK_SUCCESS)
         throw std::runtime_error("failed to create shader module!");
 
     return shader;
@@ -147,9 +147,9 @@ create_pipeline(mvGraphics& graphics, mvAssetManager& assetManager, mvPipelineSp
     mvPipeline pipeline{};
 
     if(!spec.vertexShader.empty())
-        pipeline.vertexShader = mvCreateShader(spec.vertexShader);
+        pipeline.vertexShader = mvCreateShader(graphics, spec.vertexShader);
     if(!spec.pixelShader.empty())
-        pipeline.fragShader = mvCreateShader(spec.pixelShader);
+        pipeline.fragShader = mvCreateShader(graphics, spec.pixelShader);
     pipeline.specification = spec;
 
     //---------------------------------------------------------------------

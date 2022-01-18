@@ -1,5 +1,6 @@
 #include "mvAssetManager.h"
 #include <imgui.h>
+#include "mvGraphics.h"
 
 void 
 mvInitializeAssetManager(mvAssetManager* manager)
@@ -19,9 +20,9 @@ mvInitializeAssetManager(mvAssetManager* manager)
 }
 
 void 
-mvCleanupAssetManager(mvAssetManager* manager)
+mvCleanupAssetManager(mvGraphics& graphics, mvAssetManager* manager)
 {
-	vkDeviceWaitIdle(GContext->graphics.logicalDevice);
+	vkDeviceWaitIdle(graphics.logicalDevice);
 
 	// cleanup scene
 	for (int i = 0; i < manager->sceneCount; i++)
@@ -41,8 +42,8 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	// buffers
 	for (int i = 0; i < manager->bufferCount; i++)
 	{
-		vkDestroyBuffer(GContext->graphics.logicalDevice, manager->buffers[i].asset.buffer, nullptr);
-		vkFreeMemory(GContext->graphics.logicalDevice, manager->buffers[i].asset.deviceMemory, nullptr);
+		vkDestroyBuffer(graphics.logicalDevice, manager->buffers[i].asset.buffer, nullptr);
+		vkFreeMemory(graphics.logicalDevice, manager->buffers[i].asset.deviceMemory, nullptr);
 
 		manager->buffers[i].asset.buffer = VK_NULL_HANDLE;
 		manager->buffers[i].asset.deviceMemory = VK_NULL_HANDLE;
@@ -53,41 +54,41 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	// textures
 	for (int i = 0; i < manager->textureCount; i++)
 	{
-		vkDestroySampler(GContext->graphics.logicalDevice, manager->textures[i].asset.imageInfo.sampler, nullptr);
-		vkDestroyImageView(GContext->graphics.logicalDevice, manager->textures[i].asset.imageInfo.imageView, nullptr);
-		vkDestroyImage(GContext->graphics.logicalDevice, manager->textures[i].asset.textureImage, nullptr);
-		vkFreeMemory(GContext->graphics.logicalDevice, manager->textures[i].asset.textureImageMemory, nullptr);
+		vkDestroySampler(graphics.logicalDevice, manager->textures[i].asset.imageInfo.sampler, nullptr);
+		vkDestroyImageView(graphics.logicalDevice, manager->textures[i].asset.imageInfo.imageView, nullptr);
+		vkDestroyImage(graphics.logicalDevice, manager->textures[i].asset.textureImage, nullptr);
+		vkFreeMemory(graphics.logicalDevice, manager->textures[i].asset.textureImageMemory, nullptr);
 	}
 
 	// descriptor set layouts
 	for (int i = 0; i < manager->descriptorSetLayoutCount; i++)
 	{
-		vkDestroyDescriptorSetLayout(GContext->graphics.logicalDevice, manager->descriptorSetLayouts[i].asset, nullptr);
+		vkDestroyDescriptorSetLayout(graphics.logicalDevice, manager->descriptorSetLayouts[i].asset, nullptr);
 	}
 
 	// pipeline layouts
 	for (int i = 0; i < manager->pipelineLayoutCount; i++)
 	{
-		vkDestroyPipelineLayout(GContext->graphics.logicalDevice, manager->pipelineLayouts[i].asset, nullptr);
+		vkDestroyPipelineLayout(graphics.logicalDevice, manager->pipelineLayouts[i].asset, nullptr);
 	}
 
 	// cleanup pipelines
 	for (int i = 0; i < manager->pipelineCount; i++)
 	{
-		vkDestroyPipeline(GContext->graphics.logicalDevice, manager->pipelines[i].asset.pipeline, nullptr);
+		vkDestroyPipeline(graphics.logicalDevice, manager->pipelines[i].asset.pipeline, nullptr);
 	}
 	manager->pipelineCount = 0u;
 
 	// frame buffers
 	for (int i = 0; i < manager->frameBufferCount; i++)
 	{
-		vkDestroyFramebuffer(GContext->graphics.logicalDevice, manager->frameBuffers[i].asset, nullptr);
+		vkDestroyFramebuffer(graphics.logicalDevice, manager->frameBuffers[i].asset, nullptr);
 	}
 
 	// frame buffers
 	for (int i = 0; i < manager->renderPassCount; i++)
 	{
-		vkDestroyRenderPass(GContext->graphics.logicalDevice, manager->renderPasses[i].asset, nullptr);
+		vkDestroyRenderPass(graphics.logicalDevice, manager->renderPasses[i].asset, nullptr);
 	}
 
 	delete[] manager->textures;
@@ -131,13 +132,13 @@ mvCleanupAssetManager(mvAssetManager* manager)
 //-----------------------------------------------------------------------------
 
 mvAssetID 
-mvResetPipeline(mvAssetManager* manager, const std::string& tag, mvPipeline asset)
+mvResetPipeline(mvGraphics& graphics, mvAssetManager* manager, const std::string& tag, mvPipeline asset)
 {
 	for (s32 i = 0; i < manager->pipelineCount; i++)
 	{
 		if (manager->pipelines[i].hash == tag)
 		{
-			vkDestroyPipeline(GContext->graphics.logicalDevice, manager->pipelines[i].asset.pipeline, nullptr);
+			vkDestroyPipeline(graphics.logicalDevice, manager->pipelines[i].asset.pipeline, nullptr);
 			manager->pipelines[i].asset = asset;
 			return i;
 		}
@@ -422,7 +423,7 @@ mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvTexture asset
 }
 
 mvAssetID
-mvGetTextureAssetID(mvAssetManager* manager, const std::string& path)
+mvGetTextureAssetID(mvGraphics& graphics, mvAssetManager* manager, const std::string& path)
 {
 	for (s32 i = 0; i < manager->textureCount; i++)
 	{
@@ -431,13 +432,13 @@ mvGetTextureAssetID(mvAssetManager* manager, const std::string& path)
 	}
 
 	manager->textures[manager->textureCount].hash = path;
-	manager->textures[manager->textureCount].asset = create_texture(GContext->graphics, path.c_str());
+	manager->textures[manager->textureCount].asset = create_texture(graphics, path.c_str());
 	manager->textureCount++;
 	return manager->textureCount - 1;
 }
 
 mvAssetID
-mvGetTextureAssetID2(mvAssetManager* manager, const std::string& path)
+mvGetTextureAssetID2(mvGraphics& graphics, mvAssetManager* manager, const std::string& path)
 {
 	for (s32 i = 0; i < manager->textureCount; i++)
 	{
@@ -446,13 +447,13 @@ mvGetTextureAssetID2(mvAssetManager* manager, const std::string& path)
 	}
 
 	manager->textures[manager->textureCount].hash = path;
-	manager->textures[manager->textureCount].asset = create_texture_cube(GContext->graphics, path.c_str());
+	manager->textures[manager->textureCount].asset = create_texture_cube(graphics, path.c_str());
 	manager->textureCount++;
 	return manager->textureCount - 1;
 }
 
 mvTexture*
-mvGetRawTextureAsset(mvAssetManager* manager, const std::string& path)
+mvGetRawTextureAsset(mvGraphics& graphics, mvAssetManager* manager, const std::string& path)
 {
 	for (s32 i = 0; i < manager->textureCount; i++)
 	{
@@ -461,7 +462,7 @@ mvGetRawTextureAsset(mvAssetManager* manager, const std::string& path)
 	}
 
 	manager->textures[manager->textureCount].hash = path;
-	manager->textures[manager->textureCount].asset = create_texture(GContext->graphics, path.c_str());
+	manager->textures[manager->textureCount].asset = create_texture(graphics, path.c_str());
 	manager->textureCount++;
 	return &manager->textures[manager->textureCount - 1].asset;
 }

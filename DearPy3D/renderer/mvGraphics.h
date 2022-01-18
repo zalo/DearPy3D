@@ -3,15 +3,18 @@
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <vector>
+#include <string>
 #include "mvTypes.h"
+
+#define MV_MAX_FRAMES_IN_FLIGHT 2
 
 // forward declarations
 struct mvGraphics;
 struct mvViewport;
 
 // initialization
-void            setup_graphics_context  (mvGraphics& graphics, mvViewport& viewport);
-void            recreate_swapchain      (mvGraphics& graphics);
+void            setup_graphics_context  (mvGraphics& graphics, mvViewport& viewport, std::vector<const char*> validationLayers, std::vector<const char*> deviceExtensions);
+void            recreate_swapchain      (mvGraphics& graphics, mvViewport& viewport);
 void            cleanup_graphics_context(mvGraphics& graphics);
 void            present                 (mvGraphics& graphics);
 VkCommandBuffer begin_command_buffer    (mvGraphics& graphics);                                // single use command buffer (submit with next command)
@@ -26,6 +29,7 @@ size_t          get_required_uniform_buffer_size(mvGraphics& graphics, size_t si
 
 struct mvGraphics
 {
+    std::string                    shaderDirectory;
     VkInstance                     instance;
     VkDescriptorPool               descriptorPool;
     VkPhysicalDevice               physicalDevice = VK_NULL_HANDLE;
@@ -54,8 +58,6 @@ struct mvGraphics
     u32                            currentImageIndex = 0;
     size_t                         currentFrame = 0;
     VkSurfaceKHR                   surface = VK_NULL_HANDLE;
-    std::vector<const char*>       validationLayers;
-    std::vector<const char*>       deviceExtensions;
     b8                             enableValidationLayers = true;
     VkDebugUtilsMessengerEXT       debugMessenger;
 };

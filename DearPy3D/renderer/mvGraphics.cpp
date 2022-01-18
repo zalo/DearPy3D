@@ -6,7 +6,7 @@
 #include <set>
 #include <optional>
 #include <array>
-#include "mvContext.h"
+#include "mvViewport.h"
 
 mv_internal VKAPI_ATTR VkBool32 VKAPI_CALL
 debugCallback(
@@ -122,7 +122,7 @@ find_queue_families(mvGraphics& graphics, VkPhysicalDevice device)
 }
 
 mv_internal void 
-create_swapchain(mvGraphics& graphics)
+create_swapchain(mvGraphics& graphics, mvViewport& viewport)
 {
 
     struct SwapChainSupportDetails
@@ -191,8 +191,8 @@ create_swapchain(mvGraphics& graphics)
     else
     {
         VkExtent2D actualExtent = {
-            (u32)GContext->viewport.width,
-            (u32)GContext->viewport.height
+            (u32)viewport.width,
+            (u32)viewport.height
         };
 
         actualExtent.width = std::max(swapChainSupport.capabilities.minImageExtent.width, std::min(swapChainSupport.capabilities.maxImageExtent.width, actualExtent.width));
@@ -202,8 +202,8 @@ create_swapchain(mvGraphics& graphics)
     }
 
     graphics.minImageCount = swapChainSupport.capabilities.minImageCount + 1;
-    if (swapChainSupport.capabilities.maxImageCount > 0 && GContext->graphics.minImageCount > swapChainSupport.capabilities.maxImageCount)
-        GContext->graphics.minImageCount = swapChainSupport.capabilities.maxImageCount;
+    if (swapChainSupport.capabilities.maxImageCount > 0 && graphics.minImageCount > swapChainSupport.capabilities.maxImageCount)
+        graphics.minImageCount = swapChainSupport.capabilities.maxImageCount;
 
     {
         VkSwapchainCreateInfoKHR createInfo{};
@@ -235,15 +235,15 @@ create_swapchain(mvGraphics& graphics)
 
         createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-        MV_VULKAN(vkCreateSwapchainKHR(graphics.logicalDevice, &createInfo, nullptr, &GContext->graphics.swapChain));
+        MV_VULKAN(vkCreateSwapchainKHR(graphics.logicalDevice, &createInfo, nullptr, &graphics.swapChain));
     }
 
     vkGetSwapchainImagesKHR(graphics.logicalDevice, graphics.swapChain, &graphics.minImageCount, nullptr);
     graphics.swapChainImages.resize(graphics.minImageCount);
     vkGetSwapchainImagesKHR(graphics.logicalDevice, graphics.swapChain, &graphics.minImageCount, graphics.swapChainImages.data());
 
-    GContext->graphics.swapChainImageFormat = surfaceFormat.format;
-    GContext->graphics.swapChainExtent = extent;
+    graphics.swapChainImageFormat = surfaceFormat.format;
+    graphics.swapChainExtent = extent;
 
     // creating image views
     graphics.swapChainImageViews.resize(graphics.swapChainImages.size());
@@ -365,11 +365,11 @@ flush_resources(mvGraphics& graphics)
 VkCommandBuffer  
 get_current_command_buffer(mvGraphics& graphics)
 {
-    return graphics.commandBuffers[GContext->graphics.currentImageIndex];
+    return graphics.commandBuffers[graphics.currentImageIndex];
 }
 
 void
-setup_graphics_context(mvGraphics& graphics, mvViewport& viewport)
+setup_graphics_context(mvGraphics& graphics, mvViewport& viewport, std::vector<const char*> validationLayers, std::vector<const char*> deviceExtensions)
 {
     //-----------------------------------------------------------------------------
     // create vulkan instance
@@ -383,7 +383,7 @@ setup_graphics_context(mvGraphics& graphics, mvViewport& viewport)
             std::vector<VkLayerProperties> availableLayers(layerCount);
             vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-            for (const char* layerName : graphics.validationLayers)
+            for (const char* layerName : validationLayers)
             {
                 bool layerFound = false;
 
@@ -424,8 +424,8 @@ setup_graphics_context(mvGraphics& graphics, mvViewport& viewport)
         VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
         if (graphics.enableValidationLayers)
         {
-            createInfo.enabledLayerCount = (u32)graphics.validationLayers.size();
-            createInfo.ppEnabledLayerNames = graphics.validationLayers.data();
+            createInfo.enabledLayerCount = (u32)validationLayers.size();
+            createInfo.ppEnabledLayerNames = validationLayers.data();
             createInfo.pNext = VK_NULL_HANDLE;
 
             debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -500,7 +500,7 @@ setup_graphics_context(mvGraphics& graphics, mvViewport& viewport)
                 std::vector<VkExtensionProperties> availableExtensions(extensionCount);
                 MV_VULKAN(vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data()));
 
-                std::set<std::string> requiredExtensions(graphics.deviceExtensions.begin(), graphics.deviceExtensions.end());
+                std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
                 for (const auto& extension : availableExtensions)
                     requiredExtensions.erase(extension.extensionName);
@@ -563,13 +563,13 @@ setup_graphics_context(mvGraphics& graphics, mvViewport& viewport)
 
             createInfo.pEnabledFeatures = &deviceFeatures;
 
-            createInfo.enabledExtensionCount = (u32)graphics.deviceExtensions.size();
-            createInfo.ppEnabledExtensionNames = graphics.deviceExtensions.data();
+            createInfo.enabledExtensionCount = (u32)deviceExtensions.size();
+            createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-            if (GContext->graphics.enableValidationLayers)
+            if (graphics.enableValidationLayers)
             {
-                createInfo.enabledLayerCount = (u32)graphics.validationLayers.size();
-                createInfo.ppEnabledLayerNames = graphics.validationLayers.data();
+                createInfo.enabledLayerCount = (u32)validationLayers.size();
+                createInfo.ppEnabledLayerNames = validationLayers.data();
             }
             else
                 createInfo.enabledLayerCount = 0;
@@ -584,7 +584,7 @@ setup_graphics_context(mvGraphics& graphics, mvViewport& viewport)
     //-----------------------------------------------------------------------------
     // create swapchain
     //-----------------------------------------------------------------------------
-    create_swapchain(graphics);
+    create_swapchain(graphics, viewport);
 
     //-----------------------------------------------------------------------------
     // create command pool and command buffers
@@ -596,17 +596,17 @@ setup_graphics_context(mvGraphics& graphics, mvViewport& viewport)
     commandPoolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
     commandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-    MV_VULKAN(vkCreateCommandPool(GContext->graphics.logicalDevice, &commandPoolInfo, nullptr, &graphics.commandPool));
+    MV_VULKAN(vkCreateCommandPool(graphics.logicalDevice, &commandPoolInfo, nullptr, &graphics.commandPool));
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = GContext->graphics.commandPool;
+    allocInfo.commandPool = graphics.commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = (u32)(graphics.swapChainImages.size());
 
-    GContext->graphics.commandBuffers.resize(graphics.swapChainImages.size());
+    graphics.commandBuffers.resize(graphics.swapChainImages.size());
 
-    MV_VULKAN(vkAllocateCommandBuffers(GContext->graphics.logicalDevice, &allocInfo, graphics.commandBuffers.data()));
+    MV_VULKAN(vkAllocateCommandBuffers(graphics.logicalDevice, &allocInfo, graphics.commandBuffers.data()));
 
     //-----------------------------------------------------------------------------
     // create descriptor pool
@@ -632,7 +632,7 @@ setup_graphics_context(mvGraphics& graphics, mvViewport& viewport)
     descPoolInfo.poolSizeCount = 11u;
     descPoolInfo.pPoolSizes = poolSizes;
 
-    MV_VULKAN(vkCreateDescriptorPool(GContext->graphics.logicalDevice, &descPoolInfo, nullptr, &graphics.descriptorPool));
+    MV_VULKAN(vkCreateDescriptorPool(graphics.logicalDevice, &descPoolInfo, nullptr, &graphics.descriptorPool));
     
     //-----------------------------------------------------------------------------
     // create render pass
@@ -719,12 +719,12 @@ cleanup_graphics_context(mvGraphics& graphics)
 {        
     flush_resources(graphics);
 
-    vkFreeCommandBuffers(GContext->graphics.logicalDevice,
+    vkFreeCommandBuffers(graphics.logicalDevice,
         graphics.commandPool,
         (u32)graphics.commandBuffers.size(),
         graphics.commandBuffers.data());
 
-    vkDestroyCommandPool(GContext->graphics.logicalDevice, graphics.commandPool, nullptr);
+    vkDestroyCommandPool(graphics.logicalDevice, graphics.commandPool, nullptr);
     vkDestroyDescriptorPool(graphics.logicalDevice, graphics.descriptorPool, nullptr);
 
     for (u32 i = 0; i < MV_MAX_FRAMES_IN_FLIGHT; i++)
@@ -747,11 +747,11 @@ cleanup_graphics_context(mvGraphics& graphics)
 }
 
 void 
-recreate_swapchain(mvGraphics& graphics)
+recreate_swapchain(mvGraphics& graphics, mvViewport& viewport)
 {
     vkDeviceWaitIdle(graphics.logicalDevice);
     flush_resources(graphics);
-    create_swapchain(graphics);
+    create_swapchain(graphics, viewport);
     create_render_pass(graphics.logicalDevice, graphics.swapChainImageFormat, VK_FORMAT_D32_SFLOAT, &graphics.renderPass);
 
     //-----------------------------------------------------------------------------
@@ -779,7 +779,7 @@ recreate_swapchain(mvGraphics& graphics)
         framebufferInfo.width = graphics.swapChainExtent.width;
         framebufferInfo.height = graphics.swapChainExtent.height;
         framebufferInfo.layers = 1;
-        MV_VULKAN(vkCreateFramebuffer(GContext->graphics.logicalDevice, &framebufferInfo, nullptr, &graphics.swapChainFramebuffers[i]));
+        MV_VULKAN(vkCreateFramebuffer(graphics.logicalDevice, &framebufferInfo, nullptr, &graphics.swapChainFramebuffers[i]));
     }
 
     ImGui_ImplVulkan_SetMinImageCount(graphics.minImageCount);
@@ -789,7 +789,7 @@ size_t
 get_required_uniform_buffer_size(mvGraphics& graphics, size_t size)
 {
     // Calculate required alignment based on minimum device offset alignment
-    size_t minUboAlignment = GContext->graphics.deviceProperties.limits.minUniformBufferOffsetAlignment;
+    size_t minUboAlignment = graphics.deviceProperties.limits.minUniformBufferOffsetAlignment;
     size_t alignedSize = size;
 
     if (minUboAlignment > 0)
@@ -829,7 +829,7 @@ begin_command_buffer(mvGraphics& graphics)
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(GContext->graphics.logicalDevice, &allocInfo, &commandBuffer);
+    vkAllocateCommandBuffers(graphics.logicalDevice, &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -851,7 +851,7 @@ submit_command_buffer(mvGraphics& graphics, VkCommandBuffer commandBuffer)
     submitInfo.pCommandBuffers = &commandBuffer;
 
     vkQueueSubmit(graphics.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkDeviceWaitIdle(GContext->graphics.logicalDevice);
+    vkDeviceWaitIdle(graphics.logicalDevice);
 
-    vkFreeCommandBuffers(GContext->graphics.logicalDevice, graphics.commandPool, 1, &commandBuffer);
+    vkFreeCommandBuffers(graphics.logicalDevice, graphics.commandPool, 1, &commandBuffer);
 }

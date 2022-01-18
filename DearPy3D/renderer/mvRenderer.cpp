@@ -3,22 +3,24 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 #include "mvAssetManager.h"
+#include "mvGraphics.h"
+#include "mvSkybox.h"
 
 namespace Renderer {
 
     void
-    mvBeginFrame()
+    begin_frame(mvGraphics& graphics)
     {
-        MV_VULKAN(vkWaitForFences(GContext->graphics.logicalDevice, 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame], VK_TRUE, UINT64_MAX));
+        MV_VULKAN(vkWaitForFences(graphics.logicalDevice, 1, &graphics.inFlightFences[graphics.currentFrame], VK_TRUE, UINT64_MAX));
 
-        MV_VULKAN(vkAcquireNextImageKHR(GContext->graphics.logicalDevice, GContext->graphics.swapChain, UINT64_MAX, GContext->graphics.imageAvailableSemaphores[GContext->graphics.currentFrame],
-            VK_NULL_HANDLE, &GContext->graphics.currentImageIndex));
+        MV_VULKAN(vkAcquireNextImageKHR(graphics.logicalDevice, graphics.swapChain, UINT64_MAX, graphics.imageAvailableSemaphores[graphics.currentFrame],
+            VK_NULL_HANDLE, &graphics.currentImageIndex));
 
-        if (GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex] != VK_NULL_HANDLE)
-            MV_VULKAN(vkWaitForFences(GContext->graphics.logicalDevice, 1, &GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex], VK_TRUE, UINT64_MAX));
+        if (graphics.imagesInFlight[graphics.currentImageIndex] != VK_NULL_HANDLE)
+            MV_VULKAN(vkWaitForFences(graphics.logicalDevice, 1, &graphics.imagesInFlight[graphics.currentImageIndex], VK_TRUE, UINT64_MAX));
 
         // just in case the acquired image is out of order
-        GContext->graphics.imagesInFlight[GContext->graphics.currentImageIndex] = GContext->graphics.inFlightFences[GContext->graphics.currentFrame];
+        graphics.imagesInFlight[graphics.currentImageIndex] = graphics.inFlightFences[graphics.currentFrame];
 
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -27,17 +29,17 @@ namespace Renderer {
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-        MV_VULKAN(vkBeginCommandBuffer(get_current_command_buffer(GContext->graphics), &beginInfo));
+        MV_VULKAN(vkBeginCommandBuffer(get_current_command_buffer(graphics), &beginInfo));
     }
 
     void
-    mvEndFrame()
+    end_frame(mvGraphics& graphics)
     {
 
-        MV_VULKAN(vkEndCommandBuffer(get_current_command_buffer(GContext->graphics)));
+        MV_VULKAN(vkEndCommandBuffer(get_current_command_buffer(graphics)));
 
-        VkSemaphore waitSemaphores[] = { GContext->graphics.imageAvailableSemaphores[GContext->graphics.currentFrame] };
-        VkSemaphore signalSemaphores[] = { GContext->graphics.renderFinishedSemaphores[GContext->graphics.currentFrame] };
+        VkSemaphore waitSemaphores[] = { graphics.imageAvailableSemaphores[graphics.currentFrame] };
+        VkSemaphore signalSemaphores[] = { graphics.renderFinishedSemaphores[graphics.currentFrame] };
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
         VkSubmitInfo submitInfo{};
@@ -46,36 +48,36 @@ namespace Renderer {
         submitInfo.pWaitSemaphores = waitSemaphores;
         submitInfo.pWaitDstStageMask = waitStages;
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex];
+        submitInfo.pCommandBuffers = &graphics.commandBuffers[graphics.currentImageIndex];
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        MV_VULKAN(vkResetFences(GContext->graphics.logicalDevice, 1, &GContext->graphics.inFlightFences[GContext->graphics.currentFrame]));
-        MV_VULKAN(vkQueueSubmit(GContext->graphics.graphicsQueue, 1, &submitInfo, GContext->graphics.inFlightFences[GContext->graphics.currentFrame]));
+        MV_VULKAN(vkResetFences(graphics.logicalDevice, 1, &graphics.inFlightFences[graphics.currentFrame]));
+        MV_VULKAN(vkQueueSubmit(graphics.graphicsQueue, 1, &submitInfo, graphics.inFlightFences[graphics.currentFrame]));
     }
 
     void 
-    mvUpdateDescriptors(mvAssetManager& am)
+    update_descriptors(mvGraphics& graphics, mvAssetManager& am)
     {
         for (int i = 0; i < am.meshCount; i++)
         {
             mvMesh& mesh = am.meshes[i].asset;
-            mvUpdateMaterialDescriptors(am, am.phongMaterials[mesh.phongMaterialID].asset, mesh.diffuseTexture, mesh.normalTexture, mesh.specularTexture);
+            update_material_descriptors(graphics, am, am.phongMaterials[mesh.phongMaterialID].asset, mesh.diffuseTexture, mesh.normalTexture, mesh.specularTexture);
         }
     }
 
     void
-    mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
+    render_mesh(mvGraphics& graphics, mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
     {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
-        VkCommandBuffer commandBuffer = GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex];
+        VkCommandBuffer commandBuffer = graphics.commandBuffers[graphics.currentImageIndex];
         VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
         VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
 
-        mvBindDescriptorSet(am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSet, 1);
-        vkCmdBindIndexBuffer(get_current_command_buffer(GContext->graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindVertexBuffers(get_current_command_buffer(GContext->graphics), 0, 1, &vertexBuffer, &offsets);
+        bind_descriptor_set(graphics, am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSet, 1);
+        vkCmdBindIndexBuffer(get_current_command_buffer(graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(get_current_command_buffer(graphics), 0, 1, &vertexBuffer, &offsets);
 
         mvTransforms transforms;
         transforms.model = accumulatedTransform;
@@ -85,21 +87,21 @@ namespace Renderer {
         VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "primary_pass");
         vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
-        vkCmdDrawIndexed(get_current_command_buffer(GContext->graphics), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(get_current_command_buffer(graphics), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
     }
 
     void
-    mvRenderMeshOmniShadow(mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection, mvVec4 lightPos)
+    render_mesh_omni_shadow(mvGraphics& graphics, mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection, mvVec4 lightPos)
     {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
-        VkCommandBuffer commandBuffer = GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex];
+        VkCommandBuffer commandBuffer = graphics.commandBuffers[graphics.currentImageIndex];
         VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
         VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
 
         //mvBindDescriptorSet(am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSet, 1);
-        vkCmdBindIndexBuffer(get_current_command_buffer(GContext->graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindVertexBuffers(get_current_command_buffer(GContext->graphics), 0, 1, &vertexBuffer, &offsets);
+        vkCmdBindIndexBuffer(get_current_command_buffer(graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(get_current_command_buffer(graphics), 0, 1, &vertexBuffer, &offsets);
 
         mvTransforms transforms;
         transforms.model = accumulatedTransform;
@@ -116,20 +118,20 @@ namespace Renderer {
         VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "omnishadow_pass");
         vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(tempstruct), &push);
 
-        vkCmdDrawIndexed(get_current_command_buffer(GContext->graphics), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(get_current_command_buffer(graphics), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
     }
 
     void
-    mvRenderMeshShadow(mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
+    render_mesh_shadow(mvGraphics& graphics, mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
     {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
-        VkCommandBuffer commandBuffer = GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex];
+        VkCommandBuffer commandBuffer = graphics.commandBuffers[graphics.currentImageIndex];
         VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
         VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
 
-        vkCmdBindIndexBuffer(get_current_command_buffer(GContext->graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindVertexBuffers(get_current_command_buffer(GContext->graphics), 0, 1, &vertexBuffer, &offsets);
+        vkCmdBindIndexBuffer(get_current_command_buffer(graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(get_current_command_buffer(graphics), 0, 1, &vertexBuffer, &offsets);
 
         mvTransforms transforms;
         transforms.model = accumulatedTransform;
@@ -139,23 +141,21 @@ namespace Renderer {
         VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "shadow_pass");
         vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
 
-        vkCmdDrawIndexed(get_current_command_buffer(GContext->graphics), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(get_current_command_buffer(graphics), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
     }
 
     void 
-    mvRenderSkybox(mvAssetManager& am, mvMat4 cam, mvMat4 proj)
+    render_skybox(mvSkybox& skybox, mvGraphics& graphics, mvAssetManager& am, mvMat4 cam, mvMat4 proj)
     {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
-        mv_local_persist mvMesh mesh = mvCreateSkyboxTexture(am);
-
-        VkCommandBuffer commandBuffer = GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex];
-        VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
-        VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
+        VkCommandBuffer commandBuffer = graphics.commandBuffers[graphics.currentImageIndex];
+        VkBuffer indexBuffer = am.buffers[skybox.mesh.indexBuffer].asset.buffer;
+        VkBuffer vertexBuffer = am.buffers[skybox.mesh.vertexBuffer].asset.buffer;
 
         //mvBindDescriptorSet(am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSet, 1);
-        vkCmdBindIndexBuffer(get_current_command_buffer(GContext->graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindVertexBuffers(get_current_command_buffer(GContext->graphics), 0, 1, &vertexBuffer, &offsets);
+        vkCmdBindIndexBuffer(get_current_command_buffer(graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(get_current_command_buffer(graphics), 0, 1, &vertexBuffer, &offsets);
 
         mvTransforms transforms;
         transforms.model = mvIdentityMat4();
@@ -167,17 +167,17 @@ namespace Renderer {
         VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "skybox_pass");
         vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvMat4), &modelViewProjection);
 
-        vkCmdDrawIndexed(get_current_command_buffer(GContext->graphics), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(get_current_command_buffer(graphics), am.buffers[skybox.mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
     }
 
     void
-    mvBeginPass(mvAssetManager& am, VkCommandBuffer commandBuffer, mvPass& pass)
+    begin_pass(mvGraphics& graphics, mvAssetManager& am, VkCommandBuffer commandBuffer, mvPass& pass)
     {
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = pass.renderPass;
-        renderPassInfo.framebuffer = pass.frameBuffers[GContext->graphics.currentImageIndex];
+        renderPassInfo.framebuffer = pass.frameBuffers[graphics.currentImageIndex];
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = pass.extent;
 
@@ -213,7 +213,7 @@ namespace Renderer {
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
         vkCmdSetDepthBias(
-            get_current_command_buffer(GContext->graphics),
+            get_current_command_buffer(graphics),
             pass.specification.depthBias,
             0.0f,
             pass.specification.slopeDepthBias);
@@ -221,57 +221,57 @@ namespace Renderer {
         if (pass.specification.pipeline != MV_INVALID_ASSET_ID)
         {
             VkPipeline pipeline = am.pipelines[pass.specification.pipeline].asset.pipeline;
-            vkCmdBindPipeline(get_current_command_buffer(GContext->graphics), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+            vkCmdBindPipeline(get_current_command_buffer(graphics), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         }
     }
 
     void
-    mvEndPass(VkCommandBuffer commandBuffer)
+    end_pass(VkCommandBuffer commandBuffer)
     {
         vkCmdEndRenderPass(commandBuffer);
     }
 
     mv_internal void
-    mvRenderNode(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
+    mvRenderNode(mvGraphics& graphics, mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
     {
 
         if (node.mesh > -1)
-            mvRenderMesh(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
+            render_mesh(graphics, am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
 
         for (u32 i = 0; i < node.childCount; i++)
         {
-            mvRenderNode(am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj);
+            mvRenderNode(graphics, am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj);
         }
     }
 
     mv_internal void
-    mvRenderNodeShadow(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
+    mvRenderNodeShadow(mvGraphics& graphics, mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
     {
 
         if (node.mesh > -1)
-            mvRenderMeshShadow(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
+            render_mesh_shadow(graphics, am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
 
         for (u32 i = 0; i < node.childCount; i++)
         {
-            mvRenderNodeShadow(am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj);
+            mvRenderNodeShadow(graphics, am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj);
         }
     }
 
     mv_internal void
-    mvRenderNodeOmniShadow(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj, mvVec4 lightPos)
+    mvRenderNodeOmniShadow(mvGraphics& graphics, mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj, mvVec4 lightPos)
     {
 
         if (node.mesh > -1)
-            mvRenderMeshOmniShadow(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj, lightPos);
+            render_mesh_omni_shadow(graphics, am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj, lightPos);
 
         for (u32 i = 0; i < node.childCount; i++)
         {
-            mvRenderNodeOmniShadow(am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj, lightPos);
+            mvRenderNodeOmniShadow(graphics, am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj, lightPos);
         }
     }
 
     void
-    mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
+    render_scene(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
     {
 
         for (u32 i = 0; i < scene.nodeCount; i++)
@@ -279,17 +279,17 @@ namespace Renderer {
             mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
 
             if (rootNode.mesh > -1)
-                mvRenderMesh(am, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj);
+                render_mesh(graphics, am, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj);
 
             for (u32 j = 0; j < rootNode.childCount; j++)
             {
-                mvRenderNode(am, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj);
+                mvRenderNode(graphics, am, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj);
             }
         }
     }
 
     void
-    mvRenderSceneShadow(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
+    render_scene_shadows(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
     {
 
         for (u32 i = 0; i < scene.nodeCount; i++)
@@ -297,17 +297,17 @@ namespace Renderer {
             mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
 
             if (rootNode.mesh > -1)
-                mvRenderMeshShadow(am, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj);
+                render_mesh_shadow(graphics, am, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj);
 
             for (u32 j = 0; j < rootNode.childCount; j++)
             {
-                mvRenderNodeShadow(am, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj);
+                mvRenderNodeShadow(graphics, am, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj);
             }
         }
     }
 
     void
-    mvRenderSceneOmniShadow(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvVec4 lightPos)
+    render_scene_omni_shadows(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvVec4 lightPos)
     {
 
         for (u32 i = 0; i < scene.nodeCount; i++)
@@ -315,17 +315,17 @@ namespace Renderer {
             mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
 
             if (rootNode.mesh > -1)
-                mvRenderMeshOmniShadow(am, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj, lightPos);
+                render_mesh_omni_shadow(graphics, am, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj, lightPos);
 
             for (u32 j = 0; j < rootNode.childCount; j++)
             {
-                mvRenderNodeOmniShadow(am, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj, lightPos);
+                mvRenderNodeOmniShadow(graphics, am, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj, lightPos);
             }
         }
     }
 
     mvPass
-    mvCreateOmniShadowRenderPass(mvAssetManager& am, mvPassSpecification specification)
+    create_omni_shadow_pass(mvGraphics& graphics, mvAssetManager& am, mvPassSpecification specification)
     {
 
         mvPass pass{};
@@ -372,41 +372,41 @@ namespace Renderer {
         renderPassInfo.subpassCount = 1;
         renderPassInfo.pSubpasses = &subpassDescription;
 
-        MV_VULKAN(vkCreateRenderPass(GContext->graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
+        MV_VULKAN(vkCreateRenderPass(graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
 
         mvRegisterAsset(&am, specification.name, pass.renderPass);
 
-        pass.colorTextures.resize(GContext->graphics.swapChainImageViews.size());
-        pass.depthTextures.resize(GContext->graphics.swapChainImageViews.size());
-        pass.frameBuffers.resize(GContext->graphics.swapChainImageViews.size());
-        for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+        pass.colorTextures.resize(graphics.swapChainImageViews.size());
+        pass.depthTextures.resize(graphics.swapChainImageViews.size());
+        pass.frameBuffers.resize(graphics.swapChainImageViews.size());
+        for (size_t i = 0; i < graphics.swapChainImageViews.size(); i++)
         {
-            pass.colorTextures[i] = create_texture(GContext->graphics,
+            pass.colorTextures[i] = create_texture(graphics,
                 specification.width, specification.height, specification.colorFormat,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT);
 
-            VkCommandBuffer commandBuffer = begin_command_buffer(GContext->graphics);
+            VkCommandBuffer commandBuffer = begin_command_buffer(graphics);
             transition_image_layout(commandBuffer, pass.colorTextures[i].textureImage,
                 VK_IMAGE_ASPECT_COLOR_BIT,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
             );
-            submit_command_buffer(GContext->graphics, commandBuffer);
+            submit_command_buffer(graphics, commandBuffer);
 
-            pass.depthTextures[i] = create_texture(GContext->graphics,
+            pass.depthTextures[i] = create_texture(graphics,
                 specification.width, specification.height, specification.depthFormat,
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                 VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
 
-            VkCommandBuffer commandBuffer2 = begin_command_buffer(GContext->graphics);
+            VkCommandBuffer commandBuffer2 = begin_command_buffer(graphics);
             transition_image_layout(commandBuffer2, pass.depthTextures[i].textureImage,
                 VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
             );
 
-            submit_command_buffer(GContext->graphics, commandBuffer2);
+            submit_command_buffer(graphics, commandBuffer2);
 
             VkImageView imageViews[] = { pass.colorTextures[i].imageInfo.imageView, pass.depthTextures[i].imageInfo.imageView };
             VkFramebufferCreateInfo framebufferInfo{};
@@ -417,7 +417,7 @@ namespace Renderer {
             framebufferInfo.width = specification.width;
             framebufferInfo.height = specification.height;
             framebufferInfo.layers = 1;
-            MV_VULKAN(vkCreateFramebuffer(GContext->graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
+            MV_VULKAN(vkCreateFramebuffer(graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
 
 
             mvRegisterAsset(&am, specification.name + std::to_string(i), pass.colorTextures[i]);
@@ -442,7 +442,7 @@ namespace Renderer {
     }
 
     mvPass
-    mvCreatePrimaryRenderPass(mvAssetManager& am, mvPassSpecification specification)
+    create_primary_pass(mvGraphics& graphics, mvAssetManager& am, mvPassSpecification specification)
     {
 
         mvPass pass{};
@@ -510,21 +510,21 @@ namespace Renderer {
         renderPassInfo.dependencyCount = 2;
         renderPassInfo.pDependencies = dependencies;
 
-        MV_VULKAN(vkCreateRenderPass(GContext->graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
+        MV_VULKAN(vkCreateRenderPass(graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
 
         //mvRegisterAsset(&am, specification.name, pass.renderPass);
 
-        pass.colorTextures.resize(GContext->graphics.swapChainImageViews.size());
-        pass.depthTextures.resize(GContext->graphics.swapChainImageViews.size());
-        pass.frameBuffers.resize(GContext->graphics.swapChainImageViews.size());
-        for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+        pass.colorTextures.resize(graphics.swapChainImageViews.size());
+        pass.depthTextures.resize(graphics.swapChainImageViews.size());
+        pass.frameBuffers.resize(graphics.swapChainImageViews.size());
+        for (size_t i = 0; i < graphics.swapChainImageViews.size(); i++)
         {
-            pass.colorTextures[i] = create_texture(GContext->graphics,
+            pass.colorTextures[i] = create_texture(graphics,
                 specification.width, specification.height, specification.colorFormat,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT);
 
-            pass.depthTextures[i] = create_texture(GContext->graphics,
+            pass.depthTextures[i] = create_texture(graphics,
                 specification.width, specification.height, specification.depthFormat,
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                 VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -538,7 +538,7 @@ namespace Renderer {
             framebufferInfo.width = specification.width;
             framebufferInfo.height = specification.height;
             framebufferInfo.layers = 1;
-            MV_VULKAN(vkCreateFramebuffer(GContext->graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
+            MV_VULKAN(vkCreateFramebuffer(graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
 
 
             //mvRegisterAsset(&am, specification.name + std::to_string(i), pass.colorTextures[i]);
@@ -563,27 +563,27 @@ namespace Renderer {
     }
 
     void 
-    mvCleanupPass(mvPass& pass)
+    cleanup_pass(mvGraphics& graphics, mvPass& pass)
     {
-        vkDeviceWaitIdle(GContext->graphics.logicalDevice);
-        for (u32 i = 0; i < GContext->graphics.swapChainFramebuffers.size(); i++)
+        vkDeviceWaitIdle(graphics.logicalDevice);
+        for (u32 i = 0; i < graphics.swapChainFramebuffers.size(); i++)
         {
-            vkDestroySampler(GContext->graphics.logicalDevice, pass.colorTextures[i].imageInfo.sampler, nullptr);
-            vkDestroySampler(GContext->graphics.logicalDevice, pass.depthTextures[i].imageInfo.sampler, nullptr);
-            vkDestroyImage(GContext->graphics.logicalDevice, pass.colorTextures[i].textureImage, nullptr);
-            vkDestroyImage(GContext->graphics.logicalDevice, pass.depthTextures[i].textureImage, nullptr);
-            vkDestroyImageView(GContext->graphics.logicalDevice, pass.colorTextures[i].imageInfo.imageView, nullptr);
-            vkDestroyImageView(GContext->graphics.logicalDevice, pass.depthTextures[i].imageInfo.imageView, nullptr);
-            vkDestroyFramebuffer(GContext->graphics.logicalDevice, pass.frameBuffers[i], nullptr);
-            vkFreeMemory(GContext->graphics.logicalDevice, pass.colorTextures[i].textureImageMemory, nullptr);
-            vkFreeMemory(GContext->graphics.logicalDevice, pass.depthTextures[i].textureImageMemory, nullptr);
+            vkDestroySampler(graphics.logicalDevice, pass.colorTextures[i].imageInfo.sampler, nullptr);
+            vkDestroySampler(graphics.logicalDevice, pass.depthTextures[i].imageInfo.sampler, nullptr);
+            vkDestroyImage(graphics.logicalDevice, pass.colorTextures[i].textureImage, nullptr);
+            vkDestroyImage(graphics.logicalDevice, pass.depthTextures[i].textureImage, nullptr);
+            vkDestroyImageView(graphics.logicalDevice, pass.colorTextures[i].imageInfo.imageView, nullptr);
+            vkDestroyImageView(graphics.logicalDevice, pass.depthTextures[i].imageInfo.imageView, nullptr);
+            vkDestroyFramebuffer(graphics.logicalDevice, pass.frameBuffers[i], nullptr);
+            vkFreeMemory(graphics.logicalDevice, pass.colorTextures[i].textureImageMemory, nullptr);
+            vkFreeMemory(graphics.logicalDevice, pass.depthTextures[i].textureImageMemory, nullptr);
 
         }
-        vkDestroyRenderPass(GContext->graphics.logicalDevice, pass.renderPass, nullptr);
+        vkDestroyRenderPass(graphics.logicalDevice, pass.renderPass, nullptr);
     }
 
     mvPass
-    mvCreateOffscreenRenderPass(mvAssetManager& am, mvPassSpecification specification)
+    create_offscreen_pass(mvGraphics& graphics, mvAssetManager& am, mvPassSpecification specification)
     {
 
         mvPass pass{};
@@ -651,21 +651,21 @@ namespace Renderer {
         renderPassInfo.dependencyCount = 2;
         renderPassInfo.pDependencies = dependencies;
 
-        MV_VULKAN(vkCreateRenderPass(GContext->graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
+        MV_VULKAN(vkCreateRenderPass(graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
 
         mvRegisterAsset(&am, specification.name, pass.renderPass);
 
-        pass.colorTextures.resize(GContext->graphics.swapChainImageViews.size());
-        pass.depthTextures.resize(GContext->graphics.swapChainImageViews.size());
-        pass.frameBuffers.resize(GContext->graphics.swapChainImageViews.size());
-        for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+        pass.colorTextures.resize(graphics.swapChainImageViews.size());
+        pass.depthTextures.resize(graphics.swapChainImageViews.size());
+        pass.frameBuffers.resize(graphics.swapChainImageViews.size());
+        for (size_t i = 0; i < graphics.swapChainImageViews.size(); i++)
         {
-            pass.colorTextures[i] = create_texture(GContext->graphics,
+            pass.colorTextures[i] = create_texture(graphics,
                 specification.width, specification.height, specification.colorFormat,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT);
 
-            pass.depthTextures[i] = create_texture(GContext->graphics,
+            pass.depthTextures[i] = create_texture(graphics,
                 specification.width, specification.height, specification.depthFormat,
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                 VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -679,7 +679,7 @@ namespace Renderer {
             framebufferInfo.width = specification.width;
             framebufferInfo.height = specification.height;
             framebufferInfo.layers = 1;
-            MV_VULKAN(vkCreateFramebuffer(GContext->graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
+            MV_VULKAN(vkCreateFramebuffer(graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
 
 
             mvRegisterAsset(&am, specification.name + std::to_string(i), pass.colorTextures[i]);
@@ -704,7 +704,7 @@ namespace Renderer {
     }
 
     mvPass
-    mvCreateDepthOnlyRenderPass(mvAssetManager& am, mvPassSpecification specification)
+    create_depth_pass(mvGraphics& graphics, mvAssetManager& am, mvPassSpecification specification)
     {
         mvPass pass{};
         pass.specification = specification;
@@ -759,16 +759,16 @@ namespace Renderer {
         renderPassInfo.dependencyCount = 2;
         renderPassInfo.pDependencies = dependencies;
 
-        MV_VULKAN(vkCreateRenderPass(GContext->graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
+        MV_VULKAN(vkCreateRenderPass(graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
         
         mvRegisterAsset(&am, specification.name, pass.renderPass);
 
-        pass.depthTextures.resize(GContext->graphics.swapChainImageViews.size());
-        pass.frameBuffers.resize(GContext->graphics.swapChainImageViews.size());
-        for (size_t i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+        pass.depthTextures.resize(graphics.swapChainImageViews.size());
+        pass.frameBuffers.resize(graphics.swapChainImageViews.size());
+        for (size_t i = 0; i < graphics.swapChainImageViews.size(); i++)
         {
 
-            pass.depthTextures[i] = create_texture(GContext->graphics,
+            pass.depthTextures[i] = create_texture(graphics,
                 specification.width, specification.height, specification.depthFormat,
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -781,7 +781,7 @@ namespace Renderer {
             framebufferInfo.width = specification.width;
             framebufferInfo.height = specification.height;
             framebufferInfo.layers = 1;
-            MV_VULKAN(vkCreateFramebuffer(GContext->graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
+            MV_VULKAN(vkCreateFramebuffer(graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
 
             mvRegisterAsset(&am, specification.name + std::to_string(i), pass.depthTextures[i]);
             mvRegisterAsset(&am, specification.name + std::to_string(i), pass.frameBuffers[i]);
