@@ -16,8 +16,6 @@ target_sources(dearpy3d
 
 	PRIVATE
 
-		"mvContext.cpp"
-
 		# core
 		"core/mvViewport.cpp"
 		"core/mvTimer.cpp"

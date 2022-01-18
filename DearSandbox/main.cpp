@@ -1,13 +1,14 @@
 #include <imgui.h>
 #include <imgui_impl_vulkan.h>
+#include <imgui_impl_glfw.h>
 #include <array>
-#include "mvContext.h"
 #include "mvMesh.h"
 #include "mvCamera.h"
+#include "mvViewport.h"
+#include "mvGraphics.h"
 #include "mvTimer.h"
 #include "mvLights.h"
 #include "mvMaterials.h"
-#include "mvContext.h"
 #include <iostream>
 #include "mvMath.h"
 #include "mvRenderer.h"
@@ -19,7 +20,6 @@
 
 #include "passes.h"
 #include "pipelines.h"
-//#include <crtdbg.h>
 
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
 mv_internal b8 loadSponza = true;
@@ -27,27 +27,28 @@ mv_internal ImVec2 oldContentRegion = ImVec2(500, 500);
 
 int main() 
 {
-    //_CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_ALLOC_MEM_DF);
-    CreateContext();
     int result = putenv("VK_LAYER_PATH=..\\..\\Dependencies\\vk_sdk_lite\\Bin");
-    mvInitializeViewport(500, 500);
-    GContext->IO.shaderDirectory = "../../DearPy3D/shaders/";
-    GContext->graphics.enableValidationLayers = true;
-    GContext->graphics.validationLayers = { "VK_LAYER_KHRONOS_validation" };
-    GContext->graphics.deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    
+    mvViewport viewport{};
+    initialize_viewport(viewport, 500, 500);
 
-    mvSetupGraphicsContext();
+    mvGraphics graphics{};
+    graphics.shaderDirectory = "../../DearPy3D/shaders/";
+    graphics.enableValidationLayers = true;
+
+
+    setup_graphics_context(graphics, viewport, { "VK_LAYER_KHRONOS_validation" }, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
 
     mvAssetManager am{};
     mvInitializeAssetManager(&am);
-    preload_descriptorset_layouts(am);
-    preload_pipeline_layouts(am);
+    preload_descriptorset_layouts(graphics, am);
+    preload_pipeline_layouts(graphics, am);
 
-    mvAssetID scene = mvRegisterAsset(&am, "test_scene", mvCreateScene(am, {}));
+    mvAssetID scene = mvRegisterAsset(&am, "test_scene", create_scene(graphics, am, {}));
 
-    if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
+    if (loadSponza) load_obj_assets(graphics, am, sponzaPath, "sponza");
 
-    mvSkybox skybox = mvCreateSkybox(am);
+    mvSkybox skybox = create_skybox(graphics, am);
 
     mvSceneData sceneData{};
 
@@ -73,22 +74,22 @@ int main()
     secondaryCamera.nearZ = -121.0f;
     secondaryCamera.farZ = 121.0f;
     
-    mvPointLight light1 = mvCreatePointLight(am, "light1", { 40.0f, 10.0f, 0.0f });
+    mvPointLight light1 = create_point_light(graphics, am, "light1", { 40.0f, 10.0f, 0.0f });
     mvMat4 lightTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 40.0f, 10.0f, 0.0f });
-    mvDirectionLight dlight1 = mvCreateDirectionLight(am, "dlight1", mvVec3{ 0.0, -ycomponent, zcomponent });
+    mvDirectionLight dlight1 = create_directional_light(am, "dlight1", mvVec3{ 0.0, -ycomponent, zcomponent });
 
     mvCamera lightcamera{};
     lightcamera.pos = light1.info.worldPos.xyz();
     lightcamera.fieldOfView = M_PI_2;
    
     // passes
-    mvPass mainPass = create_main_pass(am);
-    mvPass primaryPass = create_primary_pass(am, oldContentRegion.x, oldContentRegion.y);
-    mvPass offscreenPass = create_offscreen_pass(am);
-    mvPass shadowPass = create_shadow_pass(am);
-    mvPass omniShadowPass = create_omnishadow_pass(am);
+    mvPass mainPass = create_main_pass(graphics, am);
+    mvPass primaryPass = create_primary_pass(graphics, am, oldContentRegion.x, oldContentRegion.y);
+    mvPass offscreenPass = create_offscreen_pass(graphics, am);
+    mvPass shadowPass = create_shadow_pass(graphics, am);
+    mvPass omniShadowPass = create_omnishadow_pass(graphics, am);
 
-    mvTexture shadowMapCube = mvCreateCubeTexture(
+    mvTexture shadowMapCube = create_texture_cube(graphics,
         1024, 1024,
         VK_FORMAT_R32_SFLOAT,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
@@ -103,79 +104,79 @@ int main()
     mvTimer timer;
     bool recreatePrimaryRender = false;
 
-    while (GContext->viewport.running)
+    while (viewport.running)
     {
         const auto dt = timer.mark() * 1.0f;
 
-        mvProcessViewportEvents();
+        process_viewport_events(viewport);
 
         //---------------------------------------------------------------------
         // handle window resizing
         //---------------------------------------------------------------------
-        if (GContext->viewport.resized)
+        if (viewport.resized)
         {
 
             int newwidth = 0, newheight = 0;
-            glfwGetFramebufferSize(GContext->viewport.handle, &newwidth, &newheight);
+            glfwGetFramebufferSize(viewport.handle, &newwidth, &newheight);
             while (newwidth == 0 || newheight == 0)
             {
-                glfwGetFramebufferSize(GContext->viewport.handle, &newwidth, &newheight);
+                glfwGetFramebufferSize(viewport.handle, &newwidth, &newheight);
                 glfwWaitEvents();
             }
 
             // cleanup
-            GContext->viewport.width = newwidth;
-            GContext->viewport.height = newheight;
-            mvRecreateSwapChain();
-            mainPass = create_main_pass(am);
-            GContext->viewport.resized = false;
+            viewport.width = newwidth;
+            viewport.height = newheight;
+            recreate_swapchain(graphics, viewport);
+            mainPass = create_main_pass(graphics, am);
+            viewport.resized = false;
         }
 
         if (recreatePrimaryRender)
         {
-            Renderer::mvCleanupPass(primaryPass);
-            primaryPass = create_primary_pass(am, primaryPass.viewport.width, abs(primaryPass.viewport.height));
+            Renderer::cleanup_pass(graphics, primaryPass);
+            primaryPass = create_primary_pass(graphics, am, primaryPass.viewport.width, abs(primaryPass.viewport.height));
             recreatePrimaryRender = false;
         }
 
         //---------------------------------------------------------------------
         // input handling
         //---------------------------------------------------------------------
-        mvUpdateCameraFPSCamera(camera, dt, 12.0f, 1.0f);
+        update_fps_camera(viewport, camera, dt, 12.0f, 1.0f);
 
-        mvMat4 viewMatrix = mvCreateFPSView(camera);
-        mvMat4 projMatrix = mvCreateLookAtProjection(camera);
+        mvMat4 viewMatrix = create_fps_view(camera);
+        mvMat4 projMatrix = create_perspective_projection(camera);
         
-        mvMat4 secondaryViewMatrix = mvCreateOrthoView(secondaryCamera);
-        mvMat4 secondaryProjMatrix = mvCreateOrthoProjection(secondaryCamera);
-        sceneData.pointShadowView = mvCreateLookAtView(lightcamera);
+        mvMat4 secondaryViewMatrix = create_ortho_view(secondaryCamera);
+        mvMat4 secondaryProjMatrix = create_ortho_projection(secondaryCamera);
+        sceneData.pointShadowView = create_lookat_view(lightcamera);
         sceneData.directionalShadowView = secondaryViewMatrix;
         sceneData.directionalShadowProjection = secondaryProjMatrix;
  
         //---------------------------------------------------------------------
         // wait for fences and acquire next image
         //---------------------------------------------------------------------
-        Renderer::mvBeginFrame();
-        mvUpdateSkyboxDescriptors(am, skybox, mvGetTextureAssetID2(&am, "../../Resources/SkyBox"));
-        mvUpdateSceneDescriptors(am, am.scenes[scene].asset,
-            mvGetTextureAssetID(&am, shadowPass.specification.name + std::to_string(GContext->graphics.currentImageIndex)),
+        Renderer::begin_frame(graphics);
+        update_skybox_descriptors(graphics, am, skybox, mvGetTextureAssetID2(graphics, &am, "../../Resources/SkyBox"));
+        update_scene_descriptors(graphics, am, am.scenes[scene].asset,
+            mvGetTextureAssetID(graphics, &am, shadowPass.specification.name + std::to_string(graphics.currentImageIndex)),
             cube
         );
-        Renderer::mvUpdateDescriptors(am);
+        Renderer::update_descriptors(graphics, am);
         
         //mvShowAssetManager(am);
 
         //---------------------------------------------------------------------
         // shadow pass
         //---------------------------------------------------------------------
-        Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), shadowPass);
+        Renderer::begin_pass(graphics, am, get_current_command_buffer(graphics), shadowPass);
 
-        Renderer::mvRenderMeshShadow(am, *light1.mesh, lightTransform, secondaryViewMatrix, secondaryProjMatrix);
+        Renderer::render_mesh_shadow(graphics, am, *light1.mesh, lightTransform, secondaryViewMatrix, secondaryProjMatrix);
 
         for (int i = 0; i < am.sceneCount; i++)
-            Renderer::mvRenderSceneShadow(am, am.scenes[i].asset, secondaryViewMatrix, secondaryProjMatrix);
+            Renderer::render_scene_shadows(graphics, am, am.scenes[i].asset, secondaryViewMatrix, secondaryProjMatrix);
 
-        Renderer::mvEndPass(mvGetCurrentCommandBuffer());
+        Renderer::end_pass(get_current_command_buffer(graphics));
 
         //---------------------------------------------------------------------
         // omni shadow pass
@@ -213,15 +214,15 @@ int main()
                 break;
             }
 
-            Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), omniShadowPass);
+            Renderer::begin_pass(graphics, am, get_current_command_buffer(graphics), omniShadowPass);
 
             for (int i = 0; i < am.sceneCount; i++)
-                Renderer::mvRenderSceneOmniShadow(am, am.scenes[i].asset, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.1f, 400.0f), light1.info.worldPos);
+                Renderer::render_scene_omni_shadows(graphics, am, am.scenes[i].asset, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.1f, 400.0f), light1.info.worldPos);
 
-            Renderer::mvEndPass(mvGetCurrentCommandBuffer());
+            Renderer::end_pass(get_current_command_buffer(graphics));
 
-            mvTransitionImageLayout(mvGetCurrentCommandBuffer(),
-                omniShadowPass.colorTextures[GContext->graphics.currentImageIndex].textureImage,
+            transition_image_layout(get_current_command_buffer(graphics),
+                omniShadowPass.colorTextures[graphics.currentImageIndex].textureImage,
                 VK_IMAGE_ASPECT_COLOR_BIT,
                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -233,7 +234,7 @@ int main()
             cubeFaceSubresourceRange.baseArrayLayer = i;
             cubeFaceSubresourceRange.layerCount = 1;
 
-            mvTransitionImageLayout(mvGetCurrentCommandBuffer(),
+            transition_image_layout(get_current_command_buffer(graphics),
                 shadowMapCube.textureImage,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -261,21 +262,21 @@ int main()
 
             // Put image copy into command buffer
             vkCmdCopyImage(
-                mvGetCurrentCommandBuffer(),
-                omniShadowPass.colorTextures[GContext->graphics.currentImageIndex].textureImage,
+                get_current_command_buffer(graphics),
+                omniShadowPass.colorTextures[graphics.currentImageIndex].textureImage,
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 shadowMapCube.textureImage,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 1,
                 &copyRegion);
 
-            mvTransitionImageLayout(mvGetCurrentCommandBuffer(),
-                omniShadowPass.colorTextures[GContext->graphics.currentImageIndex].textureImage,
+            transition_image_layout(get_current_command_buffer(graphics),
+                omniShadowPass.colorTextures[graphics.currentImageIndex].textureImage,
                 VK_IMAGE_ASPECT_COLOR_BIT,
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-            mvTransitionImageLayout(mvGetCurrentCommandBuffer(),
+            transition_image_layout(get_current_command_buffer(graphics),
                 shadowMapCube.textureImage,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -285,46 +286,46 @@ int main()
         //---------------------------------------------------------------------
         // offscreen pass
         //--------------------------------------------------------------------- 
-        mvUpdateLightBuffers(am, light1, am.scenes[scene].asset.descriptorSet.descriptors[1].bufferID[GContext->graphics.currentImageIndex], secondaryViewMatrix, 0);
-        mvUpdateLightBuffers(am, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].bufferID[GContext->graphics.currentImageIndex], secondaryViewMatrix, 0);
+        update_light_buffers(graphics, am, light1, am.scenes[scene].asset.descriptorSet.descriptors[1].bufferID[graphics.currentImageIndex], secondaryViewMatrix, 0);
+        update_light_buffers(graphics, am, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].bufferID[graphics.currentImageIndex], secondaryViewMatrix, 0);
         sceneData.camPos = secondaryCamera.pos;
-        mvBindScene(am, scene, sceneData, 0);
-        Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), offscreenPass);
+        bind_scene(graphics, am, scene, sceneData, 0);
+        Renderer::begin_pass(graphics, am, get_current_command_buffer(graphics), offscreenPass);
 
-        Renderer::mvRenderMesh(am, *light1.mesh, lightTransform, secondaryViewMatrix, secondaryProjMatrix);
+        Renderer::render_mesh(graphics, am, *light1.mesh, lightTransform, secondaryViewMatrix, secondaryProjMatrix);
 
         for (int i = 0; i < am.sceneCount; i++)
-            Renderer::mvRenderScene(am, am.scenes[i].asset, secondaryViewMatrix, secondaryProjMatrix);
+            Renderer::render_scene(graphics, am, am.scenes[i].asset, secondaryViewMatrix, secondaryProjMatrix);
 
-        Renderer::mvEndPass(mvGetCurrentCommandBuffer());
+        Renderer::end_pass(get_current_command_buffer(graphics));
 
         //---------------------------------------------------------------------
         // primary pass
         //---------------------------------------------------------------------
-        mvUpdateLightBuffers(am, light1, am.scenes[scene].asset.descriptorSet.descriptors[1].bufferID[GContext->graphics.currentImageIndex], viewMatrix, 1);
-        mvUpdateLightBuffers(am, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].bufferID[GContext->graphics.currentImageIndex], viewMatrix, 1);
+        update_light_buffers(graphics, am, light1, am.scenes[scene].asset.descriptorSet.descriptors[1].bufferID[graphics.currentImageIndex], viewMatrix, 1);
+        update_light_buffers(graphics, am, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].bufferID[graphics.currentImageIndex], viewMatrix, 1);
         sceneData.camPos = camera.pos;
-        mvBindScene(am, scene, sceneData, 1);
-        Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), primaryPass);
+        bind_scene(graphics, am, scene, sceneData, 1);
+        Renderer::begin_pass(graphics, am, get_current_command_buffer(graphics), primaryPass);
 
-        Renderer::mvRenderMesh(am, *light1.mesh, lightTransform, viewMatrix, projMatrix);
+        Renderer::render_mesh(graphics, am, *light1.mesh, lightTransform, viewMatrix, projMatrix);
 
         for (int i = 0; i < am.sceneCount; i++)
-            Renderer::mvRenderScene(am, am.scenes[i].asset, viewMatrix, projMatrix);
+            Renderer::render_scene(graphics, am, am.scenes[i].asset, viewMatrix, projMatrix);
 
         if (sceneData.doSkybox)
         {
-            mvBindSkybox(am, skybox);
-            vkCmdBindPipeline(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, mvGetRawPipelineAsset(&am, "skybox_pass")->pipeline);
-            Renderer::mvRenderSkybox(am, viewMatrix, projMatrix);
+            bind_skybox(graphics, am, skybox);
+            vkCmdBindPipeline(get_current_command_buffer(graphics), VK_PIPELINE_BIND_POINT_GRAPHICS, mvGetRawPipelineAsset(&am, "skybox_pass")->pipeline);
+            Renderer::render_skybox(skybox, graphics, am, viewMatrix, projMatrix);
         }
 
-        Renderer::mvEndPass(mvGetCurrentCommandBuffer());
+        Renderer::end_pass(get_current_command_buffer(graphics));
 
         //---------------------------------------------------------------------
         // main pass
         //---------------------------------------------------------------------
-        Renderer::mvBeginPass(am, mvGetCurrentCommandBuffer(), mainPass);
+        Renderer::begin_pass(graphics, am, get_current_command_buffer(graphics), mainPass);
 
         ImGui::SetNextWindowBgAlpha(1.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f); // to prevent main window corners from showing
@@ -333,7 +334,7 @@ int main()
         ImGui::PushStyleColor(ImGuiCol_TableBorderLight, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
         ImGui::PushStyleColor(ImGuiCol_TableBorderStrong, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
-        ImGui::SetNextWindowSize(ImVec2((float)GContext->viewport.width, (float)GContext->viewport.height));
+        ImGui::SetNextWindowSize(ImVec2((float)viewport.width, (float)viewport.height));
 
         static ImGuiWindowFlags windowFlags =
             ImGuiWindowFlags_NoBringToFrontOnFocus |
@@ -389,7 +390,7 @@ int main()
 
             ImVec2 contentSize = ImGui::GetContentRegionAvail();
             
-            ImGui::Image(primaryPass.colorTextures[GContext->graphics.currentImageIndex].imguiID, contentSize);
+            ImGui::Image(primaryPass.colorTextures[graphics.currentImageIndex].imguiID, contentSize);
             if (!(contentSize.x == oldContentRegion.x && contentSize.y == oldContentRegion.y))
             {
                 primaryPass.viewport.width = contentSize.x;
@@ -424,7 +425,7 @@ int main()
                 dlight1.info.viewLightDir = mvVec3{ 0.0, -ycomponent, zcomponent };
             }
 
-            ImGui::Image(offscreenPass.colorTextures[GContext->graphics.currentImageIndex].imguiID, ImVec2(512, 512));
+            ImGui::Image(offscreenPass.colorTextures[graphics.currentImageIndex].imguiID, ImVec2(512, 512));
             ImGui::Unindent(14.0f);
             ImGui::EndTable();
             ImGui::End();
@@ -434,20 +435,26 @@ int main()
         }
 
         ImGui::Render();
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), mvGetCurrentCommandBuffer());
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), get_current_command_buffer(graphics));
 
-        Renderer::mvEndPass(mvGetCurrentCommandBuffer());
+        Renderer::end_pass(get_current_command_buffer(graphics));
 
 
         //---------------------------------------------------------------------
         // submit command buffers & present
         //---------------------------------------------------------------------
-        Renderer::mvEndFrame();
-        mvPresent();
+        Renderer::end_frame(graphics);
+        present(graphics);
     }
 
-    Renderer::mvCleanupPass(primaryPass);
-    mvCleanupAssetManager(&am);
-    mvCleanupGraphicsContext();
-    DestroyContext();
+    Renderer::cleanup_pass(graphics, primaryPass);
+    mvCleanupAssetManager(graphics, &am);
+
+    // cleanup imgui
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    cleanup_graphics_context(graphics);
+    glfwTerminate();
 }

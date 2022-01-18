@@ -1,17 +1,17 @@
 #include "mvBuffer.h"
 #include <stdexcept>
-#include "mvContext.h"
+#include "mvGraphics.h"
 
 mv_internal mvBuffer 
-create_buffer(mvBufferSpecification specification)
+i_create_buffer(mvGraphics& graphics, mvBufferSpecification specification)
 {
     mvBuffer buffer{};
     buffer.specification = specification;
     
     if (specification.aligned)
     {
-        buffer.actualSize = mvGetRequiredUniformBufferSize(specification.size * specification.components) * specification.count;
-        buffer.bufferInfo.range = mvGetRequiredUniformBufferSize(specification.size * specification.components);
+        buffer.actualSize = get_required_uniform_buffer_size(graphics, specification.size * specification.components) * specification.count;
+        buffer.bufferInfo.range = get_required_uniform_buffer_size(graphics, specification.size * specification.components);
     }
     else
         buffer.actualSize = specification.size * specification.count * specification.components;
@@ -23,24 +23,25 @@ create_buffer(mvBufferSpecification specification)
     bufferInfo.usage = specification.usageFlags;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    MV_VULKAN(vkCreateBuffer(mvGetLogicalDevice(), &bufferInfo, nullptr, &buffer.buffer));
+    MV_VULKAN(vkCreateBuffer(graphics.logicalDevice, &bufferInfo, nullptr, &buffer.buffer));
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(mvGetLogicalDevice(), buffer.buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(graphics.logicalDevice, buffer.buffer, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = mvFindMemoryType(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, specification.propertyFlags);
+    allocInfo.memoryTypeIndex = find_memory_type(graphics.physicalDevice, memRequirements.memoryTypeBits, specification.propertyFlags);
 
-    MV_VULKAN(vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &buffer.deviceMemory));
+    MV_VULKAN(vkAllocateMemory(graphics.logicalDevice, &allocInfo, nullptr, &buffer.deviceMemory));
 
-    MV_VULKAN(vkBindBufferMemory(mvGetLogicalDevice(), buffer.buffer, buffer.deviceMemory, 0));
+    MV_VULKAN(vkBindBufferMemory(graphics.logicalDevice, buffer.buffer, buffer.deviceMemory, 0));
 
     return buffer;
 }
 
-mvBuffer mvCreateBuffer(mvBufferSpecification specification, void* data)
+mvBuffer 
+create_buffer(mvGraphics& graphics, mvBufferSpecification specification, void* data)
 {
     if (data)
     {
@@ -49,12 +50,12 @@ mvBuffer mvCreateBuffer(mvBufferSpecification specification, void* data)
         stagingSpec.usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         stagingSpec.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-        mvBuffer stagingBuffer = create_buffer(stagingSpec);
+        mvBuffer stagingBuffer = i_create_buffer(graphics, stagingSpec);
 
         if (specification.aligned) // add spacing
         {
             void* mapping;
-            MV_VULKAN(vkMapMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory, 0, stagingBuffer.actualSize, 0, &mapping));
+            MV_VULKAN(vkMapMemory(graphics.logicalDevice, stagingBuffer.deviceMemory, 0, stagingBuffer.actualSize, 0, &mapping));
             char* mdata = (char*)mapping;
             char* sdata = (char*)data;
 
@@ -66,50 +67,50 @@ mvBuffer mvCreateBuffer(mvBufferSpecification specification, void* data)
             }
 
             //memcpy(mapping, data, (size_t)specification.stride);
-            vkUnmapMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory);
+            vkUnmapMemory(graphics.logicalDevice, stagingBuffer.deviceMemory);
         }
         else
         {
             void* mapping;
-            MV_VULKAN(vkMapMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory, 0, stagingBuffer.actualSize, 0, &mapping));
+            MV_VULKAN(vkMapMemory(graphics.logicalDevice, stagingBuffer.deviceMemory, 0, stagingBuffer.actualSize, 0, &mapping));
             memcpy(mapping, data, specification.size * specification.count * specification.components);
-            vkUnmapMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory);
+            vkUnmapMemory(graphics.logicalDevice, stagingBuffer.deviceMemory);
         }
 
         // create final buffer
         specification.usageFlags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        mvBuffer finalBuffer = create_buffer(specification);
+        mvBuffer finalBuffer = i_create_buffer(graphics, specification);
 
-        mvCopyBuffer(stagingBuffer, finalBuffer);
+        copy_buffer(graphics, stagingBuffer, finalBuffer);
 
         // cleanup staging buffer
-        vkDestroyBuffer(mvGetLogicalDevice(), stagingBuffer.buffer, nullptr);
-        vkFreeMemory(mvGetLogicalDevice(), stagingBuffer.deviceMemory, nullptr);
+        vkDestroyBuffer(graphics.logicalDevice, stagingBuffer.buffer, nullptr);
+        vkFreeMemory(graphics.logicalDevice, stagingBuffer.deviceMemory, nullptr);
 
         finalBuffer.bufferInfo.buffer = finalBuffer.buffer; // descriptor info
 
         return finalBuffer;
 
     }
-    return create_buffer(specification);
+    return i_create_buffer(graphics, specification);
 }
 
 void
-mvCopyBuffer(mvBuffer srcBuffer, mvBuffer dstBuffer)
+copy_buffer(mvGraphics& graphics, mvBuffer srcBuffer, mvBuffer dstBuffer)
 {
-    VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
+    VkCommandBuffer commandBuffer = begin_command_buffer(graphics);
 
     VkBufferCopy copyRegion{};
     copyRegion.size = srcBuffer.actualSize;
     vkCmdCopyBuffer(commandBuffer, srcBuffer.buffer, dstBuffer.buffer, 1, &copyRegion);
 
-    mvEndSingleTimeCommands(commandBuffer);
+    submit_command_buffer(graphics, commandBuffer);
 }
 
 void
-mvCopyBufferToImage(mvBuffer srcBuffer, VkImage dstImage, u32 width, u32 height, u32 layers)
+copy_buffer_to_image(mvGraphics& graphics, mvBuffer srcBuffer, VkImage dstImage, u32 width, u32 height, u32 layers)
 {
-    VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
+    VkCommandBuffer commandBuffer = begin_command_buffer(graphics);
 
     VkBufferImageCopy region{};
     region.bufferOffset = 0;
@@ -137,26 +138,26 @@ mvCopyBufferToImage(mvBuffer srcBuffer, VkImage dstImage, u32 width, u32 height,
         &region
     );
 
-    mvEndSingleTimeCommands(commandBuffer);
+    submit_command_buffer(graphics, commandBuffer);
 }
 
 void 
-mvUpdateBuffer(mvBuffer& buffer, void* data)
+update_buffer(mvGraphics& graphics, mvBuffer& buffer, void* data)
 {
     void* mapping;
-    MV_VULKAN(vkMapMemory(mvGetLogicalDevice(), buffer.deviceMemory, 0, buffer.actualSize, 0, &mapping));
+    MV_VULKAN(vkMapMemory(graphics.logicalDevice, buffer.deviceMemory, 0, buffer.actualSize, 0, &mapping));
     memcpy(mapping, data, (size_t)buffer.actualSize);
-    vkUnmapMemory(mvGetLogicalDevice(), buffer.deviceMemory);
+    vkUnmapMemory(graphics.logicalDevice, buffer.deviceMemory);
 }
 
 void
-mvPartialUpdateBuffer(mvBuffer& buffer, void* data, u64 index)
+partial_buffer_update(mvGraphics& graphics, mvBuffer& buffer, void* data, u64 index)
 {
     u64 individualBlock = buffer.bufferInfo.range;
     u64 offset = index * individualBlock;
     void* mapping;
-    MV_VULKAN(vkMapMemory(mvGetLogicalDevice(), buffer.deviceMemory, 0, buffer.actualSize, 0, &mapping));
+    MV_VULKAN(vkMapMemory(graphics.logicalDevice, buffer.deviceMemory, 0, buffer.actualSize, 0, &mapping));
     char* mdata = (char*)mapping;
     memcpy((void*)&mdata[offset], data, individualBlock);
-    vkUnmapMemory(mvGetLogicalDevice(), buffer.deviceMemory);
+    vkUnmapMemory(graphics.logicalDevice, buffer.deviceMemory);
 }

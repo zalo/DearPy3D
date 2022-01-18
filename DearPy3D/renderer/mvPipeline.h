@@ -6,8 +6,17 @@
 #include "mvTypes.h"
 
 // forward declarations
+enum mvVertexElementType;
 struct mvScene;
 struct mvAssetManager;
+struct mvGraphics;
+struct mvShader;
+struct mvVertexLayout;
+struct mvPipelineSpec;
+struct mvPipeline;
+
+mvPipeline     create_pipeline     (mvGraphics& graphics, mvAssetManager& assetManager, mvPipelineSpec& spec);
+mvVertexLayout create_vertex_layout(std::vector<mvVertexElementType> elements);
 
 enum mvVertexElementType
 {
@@ -57,7 +66,3 @@ struct mvPipeline
 	VkPipelineLayout pipelineLayout;
 	VkPipeline       pipeline = VK_NULL_HANDLE;
 };
-
-
-mvPipeline     mvCreatePipeline(mvAssetManager& assetManager, mvPipelineSpec& spec);
-mvVertexLayout mvCreateVertexLayout(std::vector<mvVertexElementType> elements);

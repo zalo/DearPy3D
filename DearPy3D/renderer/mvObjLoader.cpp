@@ -1,5 +1,4 @@
 #include "mvObjLoader.h"
-#include "mvContext.h"
 #include <fstream>
 #include <sstream>
 #include <assert.h>

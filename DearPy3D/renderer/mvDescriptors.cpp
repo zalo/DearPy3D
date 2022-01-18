@@ -1,9 +1,9 @@
 #include "mvDescriptors.h"
-#include "mvContext.h"
 #include "mvAssetManager.h"
+#include "mvGraphics.h"
 
 mvDescriptorSetLayout
-mvCreateDescriptorSetLayout(std::vector<mvDescriptorSpec> specs)
+create_descriptor_set_layout(mvGraphics& graphics, std::vector<mvDescriptorSpec> specs)
 {
     mvDescriptorSetLayout layout{};
     layout.specs = specs;
@@ -18,13 +18,13 @@ mvCreateDescriptorSetLayout(std::vector<mvDescriptorSpec> specs)
     layoutInfo.bindingCount = specs.size();
     layoutInfo.pBindings = bindings;
 
-    MV_VULKAN(vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &layout.layout));
+    MV_VULKAN(vkCreateDescriptorSetLayout(graphics.logicalDevice, &layoutInfo, nullptr, &layout.layout));
     delete[] bindings;
     return layout;
 }
 
 mvDescriptor
-mvCreateUniformBufferDescriptor(mvAssetManager& am, mvDescriptorSpec spec, const std::string& name, u64 size, void* data)
+create_uniform_descriptor(mvGraphics& graphics, mvAssetManager& am, mvDescriptorSpec spec, const std::string& name, u64 size, void* data)
 {
     mvDescriptor descriptor{};
     descriptor.size = size;
@@ -49,14 +49,14 @@ mvCreateUniformBufferDescriptor(mvAssetManager& am, mvDescriptorSpec spec, const
     bufferSpec.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     bufferSpec.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-    for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        descriptor.bufferID.push_back(mvRegisterAsset(&am, name+std::to_string(i), mvCreateBuffer(bufferSpec, data)));
+    for (size_t i = 0; i < graphics.swapChainImages.size(); i++)
+        descriptor.bufferID.push_back(mvRegisterAsset(&am, name+std::to_string(i), create_buffer(graphics, bufferSpec, data)));
 
     return descriptor;
 }
 
 mvDescriptor
-mvCreateDynamicUniformBufferDescriptor(mvAssetManager& am, mvDescriptorSpec spec, const std::string& name, u64 count, u64 size, void* data)
+create_dynamic_uniform_descriptor(mvGraphics& graphics, mvAssetManager& am, mvDescriptorSpec spec, const std::string& name, u64 count, u64 size, void* data)
 {
     mvDescriptor descriptor{};
     descriptor.size = size;
@@ -81,14 +81,14 @@ mvCreateDynamicUniformBufferDescriptor(mvAssetManager& am, mvDescriptorSpec spec
     bufferSpec.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     bufferSpec.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-    for (size_t i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        descriptor.bufferID.push_back(mvRegisterAsset(&am, name + std::to_string(i), mvCreateBuffer(bufferSpec, data)));
+    for (size_t i = 0; i < graphics.swapChainImages.size(); i++)
+        descriptor.bufferID.push_back(mvRegisterAsset(&am, name + std::to_string(i), create_buffer(graphics, bufferSpec, data)));
 
     return descriptor;
 }
 
 mvDescriptor
-mvCreateTextureDescriptor(mvAssetManager& am, mvDescriptorSpec spec)
+create_texture_descriptor(mvAssetManager& am, mvDescriptorSpec spec)
 {
     mvDescriptor descriptor{};
     descriptor.size = 0u;
@@ -108,29 +108,8 @@ mvCreateTextureDescriptor(mvAssetManager& am, mvDescriptorSpec spec)
     return descriptor;
 }
 
-VkDescriptorSetLayout
-mvCreateDescriptorSetLayout(mvDescriptorSetLayout descriptorSetLayout)
-{
-
-    VkDescriptorSetLayoutBinding* bindings = new VkDescriptorSetLayoutBinding[descriptorSetLayout.specs.size()];
-
-    for(u32 i = 0; i < descriptorSetLayout.specs.size(); i++)
-        bindings[i] = descriptorSetLayout.specs[i].layoutBinding;
-
-    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = descriptorSetLayout.specs.size();
-    layoutInfo.pBindings = bindings;
-
-    MV_VULKAN(vkCreateDescriptorSetLayout(mvGetLogicalDevice(), &layoutInfo, nullptr, &layout));
-    delete[] bindings;
-    return layout;
-}
-
 mvDescriptorSpec
-mvCreateUniformBufferDescriptorSpec(u32 binding)
+create_uniform_descriptor_spec(u32 binding)
 {
     mvDescriptorSpec descriptor{};
     descriptor.layoutBinding.binding = binding;
@@ -142,7 +121,7 @@ mvCreateUniformBufferDescriptorSpec(u32 binding)
 }
 
 mvDescriptorSpec
-mvCreateDynamicUniformBufferDescriptorSpec(u32 binding)
+create_dynamic_uniform_descriptor_spec(u32 binding)
 {
     mvDescriptorSpec descriptor{};
     descriptor.layoutBinding.binding = binding;
@@ -154,7 +133,7 @@ mvCreateDynamicUniformBufferDescriptorSpec(u32 binding)
 }
 
 mvDescriptorSpec
-mvCreateTextureDescriptorSpec(u32 binding)
+create_texture_descriptor_spec(u32 binding)
 {
     mvDescriptorSpec descriptor{};
     descriptor.layoutBinding.binding = binding;
@@ -166,29 +145,29 @@ mvCreateTextureDescriptorSpec(u32 binding)
 }
 
 mvDescriptorSet
-mvCreateDescriptorSet(mvAssetManager& am, VkDescriptorSetLayout layout, mvAssetID pipelineLayout)
+create_descriptor_set(mvGraphics& graphics, mvAssetManager& am, VkDescriptorSetLayout layout, mvAssetID pipelineLayout)
 {
     mvDescriptorSet descriptorSet{};
     descriptorSet.pipelineLayout = pipelineLayout;
-    descriptorSet.descriptorSets = new VkDescriptorSet[GContext->graphics.swapChainImages.size()];
+    descriptorSet.descriptorSets = new VkDescriptorSet[graphics.swapChainImages.size()];
 
     // allocate descriptor sets
-    std::vector<VkDescriptorSetLayout> layouts(GContext->graphics.swapChainImages.size(), layout);
+    std::vector<VkDescriptorSetLayout> layouts(graphics.swapChainImages.size(), layout);
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = GContext->graphics.descriptorPool;
-    allocInfo.descriptorSetCount = GContext->graphics.swapChainImages.size();
+    allocInfo.descriptorPool = graphics.descriptorPool;
+    allocInfo.descriptorSetCount = graphics.swapChainImages.size();
     allocInfo.pSetLayouts = layouts.data();
 
-    MV_VULKAN(vkAllocateDescriptorSets(mvGetLogicalDevice(), &allocInfo, descriptorSet.descriptorSets));
+    MV_VULKAN(vkAllocateDescriptorSets(graphics.logicalDevice, &allocInfo, descriptorSet.descriptorSets));
 
     return descriptorSet;
 }
 
 void
-mvBindDescriptorSet(mvAssetManager& am, mvDescriptorSet& descriptorSet, u32 set, u32 dynamicDescriptorCount, u32* dynamicOffset)
+bind_descriptor_set(mvGraphics& graphics, mvAssetManager& am, mvDescriptorSet& descriptorSet, u32 set, u32 dynamicDescriptorCount, u32* dynamicOffset)
 {
-    VkDescriptorSet rawDescriptorSet = descriptorSet.descriptorSets[GContext->graphics.currentImageIndex];
+    VkDescriptorSet rawDescriptorSet = descriptorSet.descriptorSets[graphics.currentImageIndex];
     VkPipelineLayout layout = am.pipelineLayouts[descriptorSet.pipelineLayout].asset;
-    vkCmdBindDescriptorSets(mvGetCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, layout, set, 1, &rawDescriptorSet, dynamicDescriptorCount, dynamicOffset);
+    vkCmdBindDescriptorSets(get_current_command_buffer(graphics), VK_PIPELINE_BIND_POINT_GRAPHICS, layout, set, 1, &rawDescriptorSet, dynamicDescriptorCount, dynamicOffset);
 }

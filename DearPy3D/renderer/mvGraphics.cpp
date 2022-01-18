@@ -6,7 +6,7 @@
 #include <set>
 #include <optional>
 #include <array>
-#include "mvContext.h"
+#include "mvViewport.h"
 
 mv_internal VKAPI_ATTR VkBool32 VKAPI_CALL
 debugCallback(
@@ -35,7 +35,7 @@ struct QueueFamilyIndices
 };
 
 mv_internal void
-mvCreateImage(u32 width, u32 height, VkFormat format,
+create_image(mvGraphics& graphics, u32 width, u32 height, VkFormat format,
     VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
     VkImage& image, VkDeviceMemory& imageMemory)
 {
@@ -55,22 +55,22 @@ mvCreateImage(u32 width, u32 height, VkFormat format,
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.flags = 0; // Optional
 
-    MV_VULKAN(vkCreateImage(mvGetLogicalDevice(), &imageInfo, nullptr, &image));
+    MV_VULKAN(vkCreateImage(graphics.logicalDevice, &imageInfo, nullptr, &image));
 
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(mvGetLogicalDevice(), image, &memRequirements);
+    vkGetImageMemoryRequirements(graphics.logicalDevice, image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = mvFindMemoryType(GContext->graphics.physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    allocInfo.memoryTypeIndex = find_memory_type(graphics.physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    MV_VULKAN(vkAllocateMemory(mvGetLogicalDevice(), &allocInfo, nullptr, &imageMemory));
-    MV_VULKAN(vkBindImageMemory(mvGetLogicalDevice(), image, imageMemory, 0));
+    MV_VULKAN(vkAllocateMemory(graphics.logicalDevice, &allocInfo, nullptr, &imageMemory));
+    MV_VULKAN(vkBindImageMemory(graphics.logicalDevice, image, imageMemory, 0));
 }
 
 mv_internal VkImageView
-mvCreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
+create_image_view(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
 {
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -84,12 +84,12 @@ mvCreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags
     viewInfo.subresourceRange.aspectMask = aspectFlags;
 
     VkImageView imageView;
-    MV_VULKAN(vkCreateImageView(mvGetLogicalDevice(), &viewInfo, nullptr, &imageView));
+    MV_VULKAN(vkCreateImageView(device, &viewInfo, nullptr, &imageView));
     return imageView;
 }
 
 mv_internal QueueFamilyIndices 
-mvFindQueueFamilies(VkPhysicalDevice device)
+find_queue_families(mvGraphics& graphics, VkPhysicalDevice device)
 {
 
     QueueFamilyIndices indices;
@@ -107,7 +107,7 @@ mvFindQueueFamilies(VkPhysicalDevice device)
             indices.graphicsFamily = i;
 
         VkBool32 presentSupport = false;
-        MV_VULKAN(vkGetPhysicalDeviceSurfaceSupportKHR(device, i, GContext->graphics.surface, &presentSupport));
+        MV_VULKAN(vkGetPhysicalDeviceSurfaceSupportKHR(device, i, graphics.surface, &presentSupport));
 
         if (presentSupport)
             indices.presentFamily = i;
@@ -122,7 +122,7 @@ mvFindQueueFamilies(VkPhysicalDevice device)
 }
 
 mv_internal void 
-mvCreateSwapChain()
+create_swapchain(mvGraphics& graphics, mvViewport& viewport)
 {
 
     struct SwapChainSupportDetails
@@ -137,28 +137,28 @@ mvCreateSwapChain()
     //-----------------------------------------------------------------------------
     SwapChainSupportDetails swapChainSupport;
     {
-        MV_VULKAN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &swapChainSupport.capabilities));
+        MV_VULKAN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(graphics.physicalDevice, graphics.surface, &swapChainSupport.capabilities));
 
         u32 formatCount;
-        MV_VULKAN(vkGetPhysicalDeviceSurfaceFormatsKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &formatCount, nullptr));
+        MV_VULKAN(vkGetPhysicalDeviceSurfaceFormatsKHR(graphics.physicalDevice, graphics.surface, &formatCount, nullptr));
 
         // todo: put in appropriate spot
         VkBool32 presentSupport = false;
-        MV_VULKAN(vkGetPhysicalDeviceSurfaceSupportKHR(GContext->graphics.physicalDevice, 0, GContext->graphics.surface, &presentSupport));
+        MV_VULKAN(vkGetPhysicalDeviceSurfaceSupportKHR(graphics.physicalDevice, 0, graphics.surface, &presentSupport));
 
         if (formatCount != 0) 
         {
             swapChainSupport.formats.resize(formatCount);
-            MV_VULKAN(vkGetPhysicalDeviceSurfaceFormatsKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &formatCount, swapChainSupport.formats.data()));
+            MV_VULKAN(vkGetPhysicalDeviceSurfaceFormatsKHR(graphics.physicalDevice, graphics.surface, &formatCount, swapChainSupport.formats.data()));
         }
 
         u32 presentModeCount;
-        MV_VULKAN(vkGetPhysicalDeviceSurfacePresentModesKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &presentModeCount, nullptr));
+        MV_VULKAN(vkGetPhysicalDeviceSurfacePresentModesKHR(graphics.physicalDevice, graphics.surface, &presentModeCount, nullptr));
 
         if (presentModeCount != 0) 
         {
             swapChainSupport.presentModes.resize(presentModeCount);
-            MV_VULKAN(vkGetPhysicalDeviceSurfacePresentModesKHR(GContext->graphics.physicalDevice, GContext->graphics.surface, &presentModeCount, swapChainSupport.presentModes.data()));
+            MV_VULKAN(vkGetPhysicalDeviceSurfacePresentModesKHR(graphics.physicalDevice, graphics.surface, &presentModeCount, swapChainSupport.presentModes.data()));
         }
     }
 
@@ -191,8 +191,8 @@ mvCreateSwapChain()
     else
     {
         VkExtent2D actualExtent = {
-            (u32)GContext->viewport.width,
-            (u32)GContext->viewport.height
+            (u32)viewport.width,
+            (u32)viewport.height
         };
 
         actualExtent.width = std::max(swapChainSupport.capabilities.minImageExtent.width, std::min(swapChainSupport.capabilities.maxImageExtent.width, actualExtent.width));
@@ -201,22 +201,22 @@ mvCreateSwapChain()
         extent = actualExtent;
     }
 
-    GContext->graphics.minImageCount = swapChainSupport.capabilities.minImageCount + 1;
-    if (swapChainSupport.capabilities.maxImageCount > 0 && GContext->graphics.minImageCount > swapChainSupport.capabilities.maxImageCount)
-        GContext->graphics.minImageCount = swapChainSupport.capabilities.maxImageCount;
+    graphics.minImageCount = swapChainSupport.capabilities.minImageCount + 1;
+    if (swapChainSupport.capabilities.maxImageCount > 0 && graphics.minImageCount > swapChainSupport.capabilities.maxImageCount)
+        graphics.minImageCount = swapChainSupport.capabilities.maxImageCount;
 
     {
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.surface = GContext->graphics.surface;
-        createInfo.minImageCount = GContext->graphics.minImageCount;
+        createInfo.surface = graphics.surface;
+        createInfo.minImageCount = graphics.minImageCount;
         createInfo.imageFormat = surfaceFormat.format;
         createInfo.imageColorSpace = surfaceFormat.colorSpace;
         createInfo.imageExtent = extent;
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        QueueFamilyIndices indices = mvFindQueueFamilies(GContext->graphics.physicalDevice);
+        QueueFamilyIndices indices = find_queue_families(graphics, graphics.physicalDevice);
         u32 queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
         if (indices.graphicsFamily != indices.presentFamily)
@@ -235,24 +235,24 @@ mvCreateSwapChain()
 
         createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-        MV_VULKAN(vkCreateSwapchainKHR(mvGetLogicalDevice(), &createInfo, nullptr, &GContext->graphics.swapChain));
+        MV_VULKAN(vkCreateSwapchainKHR(graphics.logicalDevice, &createInfo, nullptr, &graphics.swapChain));
     }
 
-    vkGetSwapchainImagesKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, &GContext->graphics.minImageCount, nullptr);
-    GContext->graphics.swapChainImages.resize(GContext->graphics.minImageCount);
-    vkGetSwapchainImagesKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, &GContext->graphics.minImageCount, GContext->graphics.swapChainImages.data());
+    vkGetSwapchainImagesKHR(graphics.logicalDevice, graphics.swapChain, &graphics.minImageCount, nullptr);
+    graphics.swapChainImages.resize(graphics.minImageCount);
+    vkGetSwapchainImagesKHR(graphics.logicalDevice, graphics.swapChain, &graphics.minImageCount, graphics.swapChainImages.data());
 
-    GContext->graphics.swapChainImageFormat = surfaceFormat.format;
-    GContext->graphics.swapChainExtent = extent;
+    graphics.swapChainImageFormat = surfaceFormat.format;
+    graphics.swapChainExtent = extent;
 
     // creating image views
-    GContext->graphics.swapChainImageViews.resize(GContext->graphics.swapChainImages.size());
-    for (u32 i = 0; i < GContext->graphics.swapChainImages.size(); i++)
-        GContext->graphics.swapChainImageViews[i] = mvCreateImageView(GContext->graphics.swapChainImages[i], GContext->graphics.swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+    graphics.swapChainImageViews.resize(graphics.swapChainImages.size());
+    for (u32 i = 0; i < graphics.swapChainImages.size(); i++)
+        graphics.swapChainImageViews[i] = create_image_view(graphics.logicalDevice, graphics.swapChainImages[i], graphics.swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 mv_internal void
-mvSetupImGui(GLFWwindow* window)
+setup_imgui(mvGraphics& graphics, GLFWwindow* window)
 {
 
     // Setup Dear ImGui context
@@ -268,32 +268,32 @@ mvSetupImGui(GLFWwindow* window)
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForVulkan(window, true);
     ImGui_ImplVulkan_InitInfo init_info = {};
-    init_info.Instance = GContext->graphics.instance;
-    init_info.PhysicalDevice = GContext->graphics.physicalDevice;
-    init_info.Device = GContext->graphics.logicalDevice;
-    init_info.QueueFamily = GContext->graphics.graphicsQueueFamily;
-    init_info.Queue = GContext->graphics.graphicsQueue;
+    init_info.Instance = graphics.instance;
+    init_info.PhysicalDevice = graphics.physicalDevice;
+    init_info.Device = graphics.logicalDevice;
+    init_info.QueueFamily = graphics.graphicsQueueFamily;
+    init_info.Queue = graphics.graphicsQueue;
     init_info.PipelineCache = nullptr;
-    init_info.DescriptorPool = GContext->graphics.descriptorPool;
+    init_info.DescriptorPool = graphics.descriptorPool;
     init_info.Allocator = nullptr;
-    init_info.MinImageCount = GContext->graphics.minImageCount;
-    init_info.ImageCount = GContext->graphics.minImageCount;
+    init_info.MinImageCount = graphics.minImageCount;
+    init_info.ImageCount = graphics.minImageCount;
     init_info.CheckVkResultFn = nullptr;
-    ImGui_ImplVulkan_Init(&init_info, GContext->graphics.renderPass);
+    ImGui_ImplVulkan_Init(&init_info, graphics.renderPass);
 
     // Upload Fonts
     {
         // Use any command queue
-        VkCommandBuffer command_buffer = mvBeginSingleTimeCommands();
+        VkCommandBuffer command_buffer = begin_command_buffer(graphics);
         ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
-        mvEndSingleTimeCommands(command_buffer);
+        submit_command_buffer(graphics, command_buffer);
         ImGui_ImplVulkan_DestroyFontUploadObjects();
     }
 
 }
 
 mv_internal void 
-mvCreateRenderPass(VkFormat format, VkFormat depthformat, VkRenderPass* renderPass)
+create_render_pass(VkDevice device, VkFormat format, VkFormat depthformat, VkRenderPass* renderPass)
 {
     VkAttachmentDescription attachments[2];
 
@@ -340,48 +340,42 @@ mvCreateRenderPass(VkFormat format, VkFormat depthformat, VkRenderPass* renderPa
     renderPassInfo.dependencyCount = 0;
     renderPassInfo.pDependencies = VK_NULL_HANDLE;
 
-    MV_VULKAN(vkCreateRenderPass(mvGetLogicalDevice(), &renderPassInfo, nullptr, renderPass));
+    MV_VULKAN(vkCreateRenderPass(device, &renderPassInfo, nullptr, renderPass));
 }
 
 mv_internal void
-mvFlushResources()
+flush_resources(mvGraphics& graphics)
 {
-    for (u32 i = 0; i < GContext->graphics.swapChainFramebuffers.size(); i++)
+    for (u32 i = 0; i < graphics.swapChainFramebuffers.size(); i++)
     {
-        vkDestroyImageView(mvGetLogicalDevice(), GContext->graphics.swapChainImageViews[i], nullptr);
-        vkDestroyFramebuffer(mvGetLogicalDevice(), GContext->graphics.swapChainFramebuffers[i], nullptr);
+        vkDestroyImageView(graphics.logicalDevice, graphics.swapChainImageViews[i], nullptr);
+        vkDestroyFramebuffer(graphics.logicalDevice, graphics.swapChainFramebuffers[i], nullptr);
     }
-    vkFreeMemory(mvGetLogicalDevice(), GContext->graphics.depthImageMemory, nullptr);
-    vkDestroyImage(mvGetLogicalDevice(), GContext->graphics.depthImage, nullptr);
-    vkDestroyImageView(mvGetLogicalDevice(), GContext->graphics.depthImageView, nullptr);
-    vkDestroyRenderPass(mvGetLogicalDevice(), GContext->graphics.renderPass, nullptr);
-    vkDestroySwapchainKHR(mvGetLogicalDevice(), GContext->graphics.swapChain, nullptr);
+    vkFreeMemory(graphics.logicalDevice, graphics.depthImageMemory, nullptr);
+    vkDestroyImage(graphics.logicalDevice, graphics.depthImage, nullptr);
+    vkDestroyImageView(graphics.logicalDevice, graphics.depthImageView, nullptr);
+    vkDestroyRenderPass(graphics.logicalDevice, graphics.renderPass, nullptr);
+    vkDestroySwapchainKHR(graphics.logicalDevice, graphics.swapChain, nullptr);
 }
 
 //-----------------------------------------------------------------------------
 // declarations for public API
 //-----------------------------------------------------------------------------
 
-VkDevice 
-mvGetLogicalDevice()
-{
-    return GContext->graphics.logicalDevice;
-}
-
 VkCommandBuffer  
-mvGetCurrentCommandBuffer()
+get_current_command_buffer(mvGraphics& graphics)
 {
-    return GContext->graphics.commandBuffers[GContext->graphics.currentImageIndex];
+    return graphics.commandBuffers[graphics.currentImageIndex];
 }
 
-void 
-mvSetupGraphicsContext()
+void
+setup_graphics_context(mvGraphics& graphics, mvViewport& viewport, std::vector<const char*> validationLayers, std::vector<const char*> deviceExtensions)
 {
     //-----------------------------------------------------------------------------
     // create vulkan instance
     //-----------------------------------------------------------------------------
     {
-        if (GContext->graphics.enableValidationLayers)
+        if (graphics.enableValidationLayers)
         {
             u32 layerCount;
             vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -389,7 +383,7 @@ mvSetupGraphicsContext()
             std::vector<VkLayerProperties> availableLayers(layerCount);
             vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-            for (const char* layerName : GContext->graphics.validationLayers)
+            for (const char* layerName : validationLayers)
             {
                 bool layerFound = false;
 
@@ -420,7 +414,7 @@ mvSetupGraphicsContext()
         const char** glfwExtensions;
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
         std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-        if (GContext->graphics.enableValidationLayers)
+        if (graphics.enableValidationLayers)
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
         createInfo.enabledExtensionCount = (u32)extensions.size();
@@ -428,10 +422,10 @@ mvSetupGraphicsContext()
 
         // Setup debug messenger for vulkan instance
         VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
-        if (GContext->graphics.enableValidationLayers)
+        if (graphics.enableValidationLayers)
         {
-            createInfo.enabledLayerCount = (u32)GContext->graphics.validationLayers.size();
-            createInfo.ppEnabledLayerNames = GContext->graphics.validationLayers.data();
+            createInfo.enabledLayerCount = (u32)validationLayers.size();
+            createInfo.ppEnabledLayerNames = validationLayers.data();
             createInfo.pNext = VK_NULL_HANDLE;
 
             debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -446,13 +440,13 @@ mvSetupGraphicsContext()
             createInfo.pNext = VK_NULL_HANDLE;
         }
 
-        MV_VULKAN(vkCreateInstance(&createInfo, nullptr, &GContext->graphics.instance));
+        MV_VULKAN(vkCreateInstance(&createInfo, nullptr, &graphics.instance));
     }
 
     //-----------------------------------------------------------------------------
     // setup debug messenger
     //-----------------------------------------------------------------------------
-    if (GContext->graphics.enableValidationLayers)
+    if (graphics.enableValidationLayers)
     {
 
         VkDebugUtilsMessengerCreateInfoEXT createInfo = {};
@@ -462,10 +456,10 @@ mvSetupGraphicsContext()
         createInfo.pfnUserCallback = debugCallback;
         createInfo.pNext = VK_NULL_HANDLE;
 
-        auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(GContext->graphics.instance, "vkCreateDebugUtilsMessengerEXT");
+        auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(graphics.instance, "vkCreateDebugUtilsMessengerEXT");
         if (func != nullptr)
         {
-            MV_VULKAN(func(GContext->graphics.instance, &createInfo, nullptr, &GContext->graphics.debugMessenger));
+            MV_VULKAN(func(graphics.instance, &createInfo, nullptr, &graphics.debugMessenger));
         }
         else
             throw std::runtime_error("failed to set up debug messenger!");
@@ -474,14 +468,14 @@ mvSetupGraphicsContext()
     //-----------------------------------------------------------------------------
     // create surface
     //-----------------------------------------------------------------------------
-    MV_VULKAN(glfwCreateWindowSurface(GContext->graphics.instance, GContext->viewport.handle, nullptr, &GContext->graphics.surface));
+    MV_VULKAN(glfwCreateWindowSurface(graphics.instance, viewport.handle, nullptr, &graphics.surface));
 
     //-----------------------------------------------------------------------------
     // create physical device
     //-----------------------------------------------------------------------------
     {
         u32 deviceCount = 0;
-        MV_VULKAN(vkEnumeratePhysicalDevices(GContext->graphics.instance, &deviceCount, nullptr));
+        MV_VULKAN(vkEnumeratePhysicalDevices(graphics.instance, &deviceCount, nullptr));
 
         if (deviceCount == 0)
             throw std::runtime_error("failed to find GPUs with Vulkan support!");
@@ -490,10 +484,10 @@ mvSetupGraphicsContext()
         // check if device is suitable
         //-----------------------------------------------------------------------------
         std::vector<VkPhysicalDevice> devices(deviceCount);
-        MV_VULKAN(vkEnumeratePhysicalDevices(GContext->graphics.instance, &deviceCount, devices.data()));
+        MV_VULKAN(vkEnumeratePhysicalDevices(graphics.instance, &deviceCount, devices.data()));
         for (const auto& device : devices)
         {
-            QueueFamilyIndices indices = mvFindQueueFamilies(device);
+            QueueFamilyIndices indices = find_queue_families(graphics, device);
 
             //-----------------------------------------------------------------------------
             // check if device supports extensions
@@ -506,7 +500,7 @@ mvSetupGraphicsContext()
                 std::vector<VkExtensionProperties> availableExtensions(extensionCount);
                 MV_VULKAN(vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data()));
 
-                std::set<std::string> requiredExtensions(GContext->graphics.deviceExtensions.begin(), GContext->graphics.deviceExtensions.end());
+                std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
                 for (const auto& extension : availableExtensions)
                     requiredExtensions.erase(extension.extensionName);
@@ -523,16 +517,16 @@ mvSetupGraphicsContext()
                 //swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
             }
 
-            vkGetPhysicalDeviceProperties(device, &GContext->graphics.deviceProperties);
+            vkGetPhysicalDeviceProperties(device, &graphics.deviceProperties);
 
-            if (extensionsSupported && swapChainAdequate && GContext->graphics.deviceProperties.limits.maxPushConstantsSize >= 256)
+            if (extensionsSupported && swapChainAdequate && graphics.deviceProperties.limits.maxPushConstantsSize >= 256)
             {
-                GContext->graphics.physicalDevice = device;
+                graphics.physicalDevice = device;
                 // TODO: add logic to pick best device (not the last device)
             }
         }
 
-        if (GContext->graphics.physicalDevice == VK_NULL_HANDLE)
+        if (graphics.physicalDevice == VK_NULL_HANDLE)
             throw std::runtime_error("failed to find a suitable GPU!");
     }
 
@@ -540,9 +534,9 @@ mvSetupGraphicsContext()
     // create logical device
     //-----------------------------------------------------------------------------
     {
-        QueueFamilyIndices indices = mvFindQueueFamilies(GContext->graphics.physicalDevice);
+        QueueFamilyIndices indices = find_queue_families(graphics, graphics.physicalDevice);
 
-        GContext->graphics.graphicsQueueFamily = indices.graphicsFamily.value();
+        graphics.graphicsQueueFamily = indices.graphicsFamily.value();
 
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
         std::set<u32> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
@@ -569,50 +563,50 @@ mvSetupGraphicsContext()
 
             createInfo.pEnabledFeatures = &deviceFeatures;
 
-            createInfo.enabledExtensionCount = (u32)GContext->graphics.deviceExtensions.size();
-            createInfo.ppEnabledExtensionNames = GContext->graphics.deviceExtensions.data();
+            createInfo.enabledExtensionCount = (u32)deviceExtensions.size();
+            createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-            if (GContext->graphics.enableValidationLayers)
+            if (graphics.enableValidationLayers)
             {
-                createInfo.enabledLayerCount = (u32)GContext->graphics.validationLayers.size();
-                createInfo.ppEnabledLayerNames = GContext->graphics.validationLayers.data();
+                createInfo.enabledLayerCount = (u32)validationLayers.size();
+                createInfo.ppEnabledLayerNames = validationLayers.data();
             }
             else
                 createInfo.enabledLayerCount = 0;
 
-            MV_VULKAN(vkCreateDevice(GContext->graphics.physicalDevice, &createInfo, nullptr, &GContext->graphics.logicalDevice));
+            MV_VULKAN(vkCreateDevice(graphics.physicalDevice, &createInfo, nullptr, &graphics.logicalDevice));
         }
 
-        vkGetDeviceQueue(mvGetLogicalDevice(), indices.graphicsFamily.value(), 0, &GContext->graphics.graphicsQueue);
-        vkGetDeviceQueue(mvGetLogicalDevice(), indices.presentFamily.value(), 0, &GContext->graphics.presentQueue);
+        vkGetDeviceQueue(graphics.logicalDevice, indices.graphicsFamily.value(), 0, &graphics.graphicsQueue);
+        vkGetDeviceQueue(graphics.logicalDevice, indices.presentFamily.value(), 0, &graphics.presentQueue);
     }
 
     //-----------------------------------------------------------------------------
     // create swapchain
     //-----------------------------------------------------------------------------
-    mvCreateSwapChain();
+    create_swapchain(graphics, viewport);
 
     //-----------------------------------------------------------------------------
     // create command pool and command buffers
     //-----------------------------------------------------------------------------
-    QueueFamilyIndices queueFamilyIndices = mvFindQueueFamilies(GContext->graphics.physicalDevice);
+    QueueFamilyIndices queueFamilyIndices = find_queue_families(graphics, graphics.physicalDevice);
 
     VkCommandPoolCreateInfo commandPoolInfo{};
     commandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     commandPoolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
     commandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-    MV_VULKAN(vkCreateCommandPool(mvGetLogicalDevice(), &commandPoolInfo, nullptr, &GContext->graphics.commandPool));
+    MV_VULKAN(vkCreateCommandPool(graphics.logicalDevice, &commandPoolInfo, nullptr, &graphics.commandPool));
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = GContext->graphics.commandPool;
+    allocInfo.commandPool = graphics.commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = (u32)(GContext->graphics.swapChainImages.size());
+    allocInfo.commandBufferCount = (u32)(graphics.swapChainImages.size());
 
-    GContext->graphics.commandBuffers.resize(GContext->graphics.swapChainImages.size());
+    graphics.commandBuffers.resize(graphics.swapChainImages.size());
 
-    MV_VULKAN(vkAllocateCommandBuffers(mvGetLogicalDevice(), &allocInfo, GContext->graphics.commandBuffers.data()));
+    MV_VULKAN(vkAllocateCommandBuffers(graphics.logicalDevice, &allocInfo, graphics.commandBuffers.data()));
 
     //-----------------------------------------------------------------------------
     // create descriptor pool
@@ -638,50 +632,50 @@ mvSetupGraphicsContext()
     descPoolInfo.poolSizeCount = 11u;
     descPoolInfo.pPoolSizes = poolSizes;
 
-    MV_VULKAN(vkCreateDescriptorPool(mvGetLogicalDevice(), &descPoolInfo, nullptr, &GContext->graphics.descriptorPool));
+    MV_VULKAN(vkCreateDescriptorPool(graphics.logicalDevice, &descPoolInfo, nullptr, &graphics.descriptorPool));
     
     //-----------------------------------------------------------------------------
     // create render pass
     //-----------------------------------------------------------------------------
-    mvCreateRenderPass(GContext->graphics.swapChainImageFormat, VK_FORMAT_D32_SFLOAT, &GContext->graphics.renderPass);
+    create_render_pass(graphics.logicalDevice, graphics.swapChainImageFormat, VK_FORMAT_D32_SFLOAT, &graphics.renderPass);
    
     //-----------------------------------------------------------------------------
     // create depth resources
     //-----------------------------------------------------------------------------
     VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
 
-    mvCreateImage(GContext->graphics.swapChainExtent.width, GContext->graphics.swapChainExtent.height, depthFormat,
+    create_image(graphics, graphics.swapChainExtent.width, graphics.swapChainExtent.height, depthFormat,
         VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        GContext->graphics.depthImage, GContext->graphics.depthImageMemory);
+        graphics.depthImage, graphics.depthImageMemory);
 
-    GContext->graphics.depthImageView = mvCreateImageView(GContext->graphics.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+    graphics.depthImageView = create_image_view(graphics.logicalDevice, graphics.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
     //-----------------------------------------------------------------------------
     // create frame buffers
     //-----------------------------------------------------------------------------
-    GContext->graphics.swapChainFramebuffers.resize(GContext->graphics.swapChainImageViews.size());
-    for (u32 i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+    graphics.swapChainFramebuffers.resize(graphics.swapChainImageViews.size());
+    for (u32 i = 0; i < graphics.swapChainImageViews.size(); i++)
     {
-        VkImageView imageViews[] = { GContext->graphics.swapChainImageViews[i], GContext->graphics.depthImageView };
+        VkImageView imageViews[] = { graphics.swapChainImageViews[i], graphics.depthImageView };
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = GContext->graphics.renderPass;
+        framebufferInfo.renderPass = graphics.renderPass;
         framebufferInfo.attachmentCount = 2;
         framebufferInfo.pAttachments = imageViews;
-        framebufferInfo.width = GContext->graphics.swapChainExtent.width;
-        framebufferInfo.height = GContext->graphics.swapChainExtent.height;
+        framebufferInfo.width = graphics.swapChainExtent.width;
+        framebufferInfo.height = graphics.swapChainExtent.height;
         framebufferInfo.layers = 1;
-        MV_VULKAN(vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &GContext->graphics.swapChainFramebuffers[i]));
+        MV_VULKAN(vkCreateFramebuffer(graphics.logicalDevice, &framebufferInfo, nullptr, &graphics.swapChainFramebuffers[i]));
     }
 
 
     //-----------------------------------------------------------------------------
     // create syncronization primitives
     //-----------------------------------------------------------------------------
-    GContext->graphics.imageAvailableSemaphores.resize(MV_MAX_FRAMES_IN_FLIGHT);
-    GContext->graphics.renderFinishedSemaphores.resize(MV_MAX_FRAMES_IN_FLIGHT);
-    GContext->graphics.inFlightFences.resize(MV_MAX_FRAMES_IN_FLIGHT);
-    GContext->graphics.imagesInFlight.resize(GContext->graphics.swapChainImages.size(), VK_NULL_HANDLE);
+    graphics.imageAvailableSemaphores.resize(MV_MAX_FRAMES_IN_FLIGHT);
+    graphics.renderFinishedSemaphores.resize(MV_MAX_FRAMES_IN_FLIGHT);
+    graphics.inFlightFences.resize(MV_MAX_FRAMES_IN_FLIGHT);
+    graphics.imagesInFlight.resize(graphics.swapChainImages.size(), VK_NULL_HANDLE);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -692,19 +686,19 @@ mvSetupGraphicsContext()
 
     for (u32 i = 0; i < MV_MAX_FRAMES_IN_FLIGHT; i++)
     {
-        MV_VULKAN(vkCreateSemaphore(mvGetLogicalDevice(), &semaphoreInfo, nullptr, &GContext->graphics.imageAvailableSemaphores[i]));
-        MV_VULKAN(vkCreateSemaphore(mvGetLogicalDevice(), &semaphoreInfo, nullptr, &GContext->graphics.renderFinishedSemaphores[i]));
-        MV_VULKAN(vkCreateFence(mvGetLogicalDevice(), &fenceInfo, nullptr, &GContext->graphics.inFlightFences[i]));
+        MV_VULKAN(vkCreateSemaphore(graphics.logicalDevice, &semaphoreInfo, nullptr, &graphics.imageAvailableSemaphores[i]));
+        MV_VULKAN(vkCreateSemaphore(graphics.logicalDevice, &semaphoreInfo, nullptr, &graphics.renderFinishedSemaphores[i]));
+        MV_VULKAN(vkCreateFence(graphics.logicalDevice, &fenceInfo, nullptr, &graphics.inFlightFences[i]));
     }
 
     //-----------------------------------------------------------------------------
     // Dear ImGui
     //-----------------------------------------------------------------------------
-    mvSetupImGui(GContext->viewport.handle);
+    setup_imgui(graphics, viewport.handle);
 }
 
 u32
-mvFindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
+find_memory_type(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
@@ -721,49 +715,44 @@ mvFindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryP
 }
 
 void 
-mvCleanupGraphicsContext()
-{
-    // cleanup imgui
-    ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-        
-    mvFlushResources();
+cleanup_graphics_context(mvGraphics& graphics)
+{        
+    flush_resources(graphics);
 
-    vkFreeCommandBuffers(mvGetLogicalDevice(),
-        GContext->graphics.commandPool,
-        (u32)GContext->graphics.commandBuffers.size(),
-        GContext->graphics.commandBuffers.data());
+    vkFreeCommandBuffers(graphics.logicalDevice,
+        graphics.commandPool,
+        (u32)graphics.commandBuffers.size(),
+        graphics.commandBuffers.data());
 
-    vkDestroyCommandPool(mvGetLogicalDevice(), GContext->graphics.commandPool, nullptr);
-    vkDestroyDescriptorPool(GContext->graphics.logicalDevice, GContext->graphics.descriptorPool, nullptr);
+    vkDestroyCommandPool(graphics.logicalDevice, graphics.commandPool, nullptr);
+    vkDestroyDescriptorPool(graphics.logicalDevice, graphics.descriptorPool, nullptr);
 
     for (u32 i = 0; i < MV_MAX_FRAMES_IN_FLIGHT; i++)
     {
-        vkDestroySemaphore(GContext->graphics.logicalDevice, GContext->graphics.imageAvailableSemaphores[i], nullptr);
-        vkDestroySemaphore(GContext->graphics.logicalDevice, GContext->graphics.renderFinishedSemaphores[i], nullptr);
-        vkDestroyFence(GContext->graphics.logicalDevice, GContext->graphics.inFlightFences[i], nullptr);
+        vkDestroySemaphore(graphics.logicalDevice, graphics.imageAvailableSemaphores[i], nullptr);
+        vkDestroySemaphore(graphics.logicalDevice, graphics.renderFinishedSemaphores[i], nullptr);
+        vkDestroyFence(graphics.logicalDevice, graphics.inFlightFences[i], nullptr);
     }
 
-    if (GContext->graphics.enableValidationLayers)
+    if (graphics.enableValidationLayers)
     {
-        auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(GContext->graphics.instance, "vkDestroyDebugUtilsMessengerEXT");
+        auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(graphics.instance, "vkDestroyDebugUtilsMessengerEXT");
         if (func != nullptr)
-            func(GContext->graphics.instance, GContext->graphics.debugMessenger, nullptr);
+            func(graphics.instance, graphics.debugMessenger, nullptr);
     }
 
-    vkDestroySurfaceKHR(GContext->graphics.instance, GContext->graphics.surface, nullptr);
-    vkDestroyDevice(GContext->graphics.logicalDevice, nullptr);
-    vkDestroyInstance(GContext->graphics.instance, nullptr);
+    vkDestroySurfaceKHR(graphics.instance, graphics.surface, nullptr);
+    vkDestroyDevice(graphics.logicalDevice, nullptr);
+    vkDestroyInstance(graphics.instance, nullptr);
 }
 
 void 
-mvRecreateSwapChain()
+recreate_swapchain(mvGraphics& graphics, mvViewport& viewport)
 {
-    vkDeviceWaitIdle(mvGetLogicalDevice());
-    mvFlushResources();
-    mvCreateSwapChain();
-    mvCreateRenderPass(GContext->graphics.swapChainImageFormat, VK_FORMAT_D32_SFLOAT, &GContext->graphics.renderPass);
+    vkDeviceWaitIdle(graphics.logicalDevice);
+    flush_resources(graphics);
+    create_swapchain(graphics, viewport);
+    create_render_pass(graphics.logicalDevice, graphics.swapChainImageFormat, VK_FORMAT_D32_SFLOAT, &graphics.renderPass);
 
     //-----------------------------------------------------------------------------
     // create depth resources
@@ -771,36 +760,36 @@ mvRecreateSwapChain()
     {
         VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
 
-        mvCreateImage(GContext->graphics.swapChainExtent.width, GContext->graphics.swapChainExtent.height, depthFormat,
+        create_image(graphics, graphics.swapChainExtent.width, graphics.swapChainExtent.height, depthFormat,
             VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            GContext->graphics.depthImage, GContext->graphics.depthImageMemory);
+            graphics.depthImage, graphics.depthImageMemory);
 
-        GContext->graphics.depthImageView = mvCreateImageView(GContext->graphics.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+        graphics.depthImageView = create_image_view(graphics.logicalDevice, graphics.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
     }
 
-    GContext->graphics.swapChainFramebuffers.resize(GContext->graphics.swapChainImageViews.size());
-    for (u32 i = 0; i < GContext->graphics.swapChainImageViews.size(); i++)
+    graphics.swapChainFramebuffers.resize(graphics.swapChainImageViews.size());
+    for (u32 i = 0; i < graphics.swapChainImageViews.size(); i++)
     {
-        VkImageView imageViews[] = { GContext->graphics.swapChainImageViews[i], GContext->graphics.depthImageView };
+        VkImageView imageViews[] = { graphics.swapChainImageViews[i], graphics.depthImageView };
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = GContext->graphics.renderPass;
+        framebufferInfo.renderPass = graphics.renderPass;
         framebufferInfo.attachmentCount = 2;
         framebufferInfo.pAttachments = imageViews;
-        framebufferInfo.width = GContext->graphics.swapChainExtent.width;
-        framebufferInfo.height = GContext->graphics.swapChainExtent.height;
+        framebufferInfo.width = graphics.swapChainExtent.width;
+        framebufferInfo.height = graphics.swapChainExtent.height;
         framebufferInfo.layers = 1;
-        MV_VULKAN(vkCreateFramebuffer(mvGetLogicalDevice(), &framebufferInfo, nullptr, &GContext->graphics.swapChainFramebuffers[i]));
+        MV_VULKAN(vkCreateFramebuffer(graphics.logicalDevice, &framebufferInfo, nullptr, &graphics.swapChainFramebuffers[i]));
     }
 
-    ImGui_ImplVulkan_SetMinImageCount(GContext->graphics.minImageCount);
+    ImGui_ImplVulkan_SetMinImageCount(graphics.minImageCount);
 }
 
 size_t 
-mvGetRequiredUniformBufferSize(size_t size)
+get_required_uniform_buffer_size(mvGraphics& graphics, size_t size)
 {
     // Calculate required alignment based on minimum device offset alignment
-    size_t minUboAlignment = GContext->graphics.deviceProperties.limits.minUniformBufferOffsetAlignment;
+    size_t minUboAlignment = graphics.deviceProperties.limits.minUniformBufferOffsetAlignment;
     size_t alignedSize = size;
 
     if (minUboAlignment > 0)
@@ -810,37 +799,37 @@ mvGetRequiredUniformBufferSize(size_t size)
 }
 
 void
-mvPresent()
+present(mvGraphics& graphics)
 {
 
-    VkSemaphore signalSemaphores[] = { GContext->graphics.renderFinishedSemaphores[GContext->graphics.currentFrame] };
+    VkSemaphore signalSemaphores[] = { graphics.renderFinishedSemaphores[graphics.currentFrame] };
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
 
-    VkSwapchainKHR swapChains[] = { GContext->graphics.swapChain };
+    VkSwapchainKHR swapChains[] = { graphics.swapChain };
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
-    presentInfo.pImageIndices = &GContext->graphics.currentImageIndex;
+    presentInfo.pImageIndices = &graphics.currentImageIndex;
 
-    VkResult result = vkQueuePresentKHR(GContext->graphics.presentQueue, &presentInfo);
+    VkResult result = vkQueuePresentKHR(graphics.presentQueue, &presentInfo);
 
-    GContext->graphics.currentFrame = (GContext->graphics.currentFrame + 1) % MV_MAX_FRAMES_IN_FLIGHT;
+    graphics.currentFrame = (graphics.currentFrame + 1) % MV_MAX_FRAMES_IN_FLIGHT;
 }
 
 VkCommandBuffer 
-mvBeginSingleTimeCommands()
+begin_command_buffer(mvGraphics& graphics)
 {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = GContext->graphics.commandPool;
+    allocInfo.commandPool = graphics.commandPool;
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(mvGetLogicalDevice(), &allocInfo, &commandBuffer);
+    vkAllocateCommandBuffers(graphics.logicalDevice, &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -852,7 +841,7 @@ mvBeginSingleTimeCommands()
 }
 
 void 
-mvEndSingleTimeCommands(VkCommandBuffer commandBuffer)
+submit_command_buffer(mvGraphics& graphics, VkCommandBuffer commandBuffer)
 {
     vkEndCommandBuffer(commandBuffer);
 
@@ -861,8 +850,8 @@ mvEndSingleTimeCommands(VkCommandBuffer commandBuffer)
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    vkQueueSubmit(GContext->graphics.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkDeviceWaitIdle(mvGetLogicalDevice());
+    vkQueueSubmit(graphics.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkDeviceWaitIdle(graphics.logicalDevice);
 
-    vkFreeCommandBuffers(mvGetLogicalDevice(), GContext->graphics.commandPool, 1, &commandBuffer);
+    vkFreeCommandBuffers(graphics.logicalDevice, graphics.commandPool, 1, &commandBuffer);
 }

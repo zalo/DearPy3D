@@ -1,9 +1,12 @@
 #pragma once
 
-#include "mvContext.h"
 #include "mvMesh.h"
 
+// forward declarations
 struct mvAssetManager;
+struct mvPassSpecification;
+struct mvPass;
+struct mvSkybox;
 
 struct mvPassSpecification
 {
@@ -36,26 +39,26 @@ struct mvPass
 
 namespace Renderer
 {
-	void mvBeginFrame();
-	void mvEndFrame();
-	void mvBeginPass(mvAssetManager& am, VkCommandBuffer commandBuffer, mvPass& pass);
-	void mvEndPass(VkCommandBuffer commandBuffer);
+	void begin_frame(mvGraphics& graphics);
+	void end_frame  (mvGraphics& graphics);
+	void begin_pass (mvGraphics& graphics, mvAssetManager& am, VkCommandBuffer commandBuffer, mvPass& pass);
+	void end_pass   (VkCommandBuffer commandBuffer);
 
-	mvPass mvCreateOmniShadowRenderPass(mvAssetManager& am, mvPassSpecification specification);
-	mvPass mvCreatePrimaryRenderPass(mvAssetManager& am, mvPassSpecification specification);
-	mvPass mvCreateOffscreenRenderPass(mvAssetManager& am, mvPassSpecification specification);
-	mvPass mvCreateDepthOnlyRenderPass(mvAssetManager& am, mvPassSpecification specification);
+	mvPass create_omni_shadow_pass(mvGraphics& graphics, mvAssetManager& am, mvPassSpecification specification);
+	mvPass create_primary_pass(mvGraphics& graphics, mvAssetManager& am, mvPassSpecification specification);
+	mvPass create_offscreen_pass(mvGraphics& graphics, mvAssetManager& am, mvPassSpecification specification);
+	mvPass create_depth_pass(mvGraphics& graphics, mvAssetManager& am, mvPassSpecification specification);
 
-	void mvCleanupPass(mvPass& pass);
+	void cleanup_pass(mvGraphics& graphics, mvPass& pass);
 
-	void mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
-	void mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj);
-	void mvRenderSkybox(mvAssetManager& am, mvMat4 cam, mvMat4 proj);
+	void render_mesh(mvGraphics& graphics, mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
+	void render_scene(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj);
+	void render_skybox(mvSkybox& skybox, mvGraphics& graphics, mvAssetManager& am, mvMat4 cam, mvMat4 proj);
 
-	void mvRenderMeshShadow(mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
-	void mvRenderMeshOmniShadow(mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection, mvVec4 lightPos);
-	void mvRenderSceneShadow(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj);
-	void mvRenderSceneOmniShadow(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvVec4 lightPos);
+	void render_mesh_shadow(mvGraphics& graphics, mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
+	void render_mesh_omni_shadow(mvGraphics& graphics, mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection, mvVec4 lightPos);
+	void render_scene_shadows(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj);
+	void render_scene_omni_shadows(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvVec4 lightPos);
 
-	void mvUpdateDescriptors(mvAssetManager& am);
+	void update_descriptors(mvGraphics& graphics, mvAssetManager& am);
 }

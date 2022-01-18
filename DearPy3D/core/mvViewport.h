@@ -2,8 +2,11 @@
 
 #include <GLFW/glfw3.h>
 
-void mvInitializeViewport(int width, int height);
-void mvProcessViewportEvents();
+// forward declarations
+struct mvViewport;
+
+void initialize_viewport(mvViewport& viewport, int width, int height);
+void process_viewport_events(mvViewport& viewport);
 
 struct mvViewport
 {

@@ -7,9 +7,19 @@
 #include "mvTypes.h"
 #include "mvDescriptors.h"
 
+// forward declarations
+struct mvGraphics;
 struct mvAssetManager;
 struct mvPointLight;
 struct mvDirectionLight;
+struct mvNode;
+struct mvSceneData;
+struct mvScene;
+
+mvScene create_scene(mvGraphics& graphics, mvAssetManager& am, mvSceneData sceneData);
+void    update_scene_descriptors(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvAssetID shadowMap, mvAssetID shadowCubeMap);
+void    bind_scene(mvGraphics& graphics, mvAssetManager& am, mvAssetID scene, mvSceneData data, u32 index);
+void    show_scene_controls(const char* windowName, mvSceneData& sceneData);
 
 struct mvNode
 {
@@ -60,9 +70,3 @@ struct mvScene
     u32             nodeCount = 0u;
     u32             meshOffset = 0u;
 };
-
-mvScene mvCreateScene(mvAssetManager& am, mvSceneData sceneData);
-void    mvUpdateSceneDescriptors(mvAssetManager& am, mvScene& scene, mvAssetID shadowMap, mvAssetID shadowCubeMap);
-void    mvBindScene(mvAssetManager& am, mvAssetID scene, mvSceneData data, u32 index);
-
-void mvShowSceneControls(const char*  windowName, mvSceneData& sceneData);

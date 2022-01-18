@@ -6,8 +6,15 @@
 #include "mvMaterials.h"
 #include "mvTypes.h"
 
+// forward declarations
 struct mvObjMesh;
 struct mvAssetManager;
+struct mvGraphics;
+struct mvMesh;
+
+mvMesh create_textured_cube(mvGraphics& graphics, mvAssetManager& assetManager, float sideLength = 1.0f);
+mvMesh create_textured_quad(mvGraphics& graphics, mvAssetManager& assetManager, float sideLength = 1.0f);
+void   load_obj_assets     (mvGraphics& graphics, mvAssetManager& assetManager, const std::string& root, const std::string& file);
 
 struct mvMesh
 {
@@ -23,8 +30,3 @@ struct mvMesh
     mvAssetID   pbrMaterialID = -1;
     b8          pbr = false;
 };
-
-mvMesh mvCreateTexturedCube(mvAssetManager& assetManager, float sideLength = 1.0f);
-mvMesh mvCreateTexturedQuad(mvAssetManager& assetManager, float sideLength = 1.0f);
-mvMesh mvCreateSkyboxTexture(mvAssetManager& assetManager);
-void mvLoadOBJAssets       (mvAssetManager& assetManager, const std::string& root, const std::string& file);

@@ -2,8 +2,18 @@
 
 #include <stdexcept>
 #include <vulkan/vulkan.h>
-#include "mvContext.h"
 #include "mvTypes.h"
+
+// forward declarations
+struct mvGraphics;
+struct mvBufferSpecification;
+struct mvBuffer;
+
+mvBuffer create_buffer        (mvGraphics& graphics, mvBufferSpecification specification, void* data = nullptr);
+void     copy_buffer          (mvGraphics& graphics, mvBuffer srcBuffer, mvBuffer dstBuffer);
+void     copy_buffer_to_image (mvGraphics& graphics, mvBuffer srcBuffer, VkImage dstImage, u32 width, u32 height, u32 layers = 1u);
+void     update_buffer        (mvGraphics& graphics, mvBuffer& buffer, void* data);
+void     partial_buffer_update(mvGraphics& graphics, mvBuffer& buffer, void* data, u64 index);
 
 struct mvBufferSpecification
 {
@@ -24,9 +34,3 @@ struct mvBuffer
     mvBufferSpecification  specification;
 };
 
-mvBuffer mvCreateBuffer     (mvBufferSpecification specification, void* data = nullptr);
-void     mvCopyBuffer       (mvBuffer srcBuffer, mvBuffer dstBuffer);
-void     mvCopyBufferToImage(mvBuffer srcBuffer, VkImage dstImage, u32 width, u32 height, u32 layers = 1u);
-
-void     mvUpdateBuffer        (mvBuffer& buffer, void* data);
-void     mvPartialUpdateBuffer (mvBuffer& buffer, void* data, u64 index);
