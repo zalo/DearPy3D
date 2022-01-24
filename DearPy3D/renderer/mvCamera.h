@@ -7,15 +7,6 @@ struct mvViewport;
 struct mvCamera;
 struct mvOrthoCamera;
 
-// projections
-mvMat4 create_ortho_projection      (mvOrthoCamera& camera);
-mvMat4 create_perspective_projection(mvCamera& camera);
-
-// views
-mvMat4 create_ortho_view (mvOrthoCamera& camera);
-mvMat4 create_fps_view   (mvCamera& camera);
-mvMat4 create_lookat_view(mvCamera& camera);
-
 // updates
 void update_lookat_camera(mvViewport& viewport, mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed);
 void update_fps_camera(mvViewport& viewport, mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed);

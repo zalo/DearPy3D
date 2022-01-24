@@ -75,11 +75,11 @@ int main()
     secondaryCamera.farZ = 121.0f;
     
     mvPointLight light1 = create_point_light(graphics, am, "light1", { 40.0f, 10.0f, 0.0f });
-    mvMat4 lightTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 40.0f, 10.0f, 0.0f });
+    mvMat4 lightTransform = translate( 40.0f, 10.0f, 0.0f );
     mvDirectionLight dlight1 = create_directional_light(am, "dlight1", mvVec3{ 0.0, -ycomponent, zcomponent });
 
     mvCamera lightcamera{};
-    lightcamera.pos = light1.info.worldPos.xyz();
+    lightcamera.pos = light1.info.worldPos;
     lightcamera.fieldOfView = M_PI_2;
    
     // passes
@@ -144,12 +144,20 @@ int main()
         //---------------------------------------------------------------------
         update_fps_camera(viewport, camera, dt, 12.0f, 1.0f);
 
-        mvMat4 viewMatrix = create_fps_view(camera);
-        mvMat4 projMatrix = create_perspective_projection(camera);
+        mvMat4 viewMatrix = fps_view(camera.pos, camera.pitch, camera.yaw);
+        mvMat4 projMatrix = perspective(camera.fieldOfView, camera.aspect, camera.nearZ, camera.farZ);
         
-        mvMat4 secondaryViewMatrix = create_ortho_view(secondaryCamera);
-        mvMat4 secondaryProjMatrix = create_ortho_projection(secondaryCamera);
-        sceneData.pointShadowView = create_lookat_view(lightcamera);
+        mvMat4 secondaryViewMatrix = look_at(secondaryCamera.pos, secondaryCamera.pos - secondaryCamera.dir, secondaryCamera.up);
+        mvMat4 secondaryProjMatrix = orthographic( secondaryCamera.left, secondaryCamera.right, secondaryCamera.bottom,
+            secondaryCamera.top, secondaryCamera.nearZ, secondaryCamera.farZ);
+        {
+            mvVec3 direction{};
+            direction.x = cos((lightcamera.yaw)) * cos((lightcamera.pitch));
+            direction.y = sin((lightcamera.pitch));
+            direction.z = sin((lightcamera.yaw)) * cos((lightcamera.pitch));
+            direction = normalize(direction);
+            sceneData.pointShadowView = look_at(lightcamera.pos, lightcamera.pos + direction, lightcamera.up);
+        }
         sceneData.directionalShadowView = secondaryViewMatrix;
         sceneData.directionalShadowProjection = secondaryProjMatrix;
  
@@ -184,40 +192,40 @@ int main()
         for (u32 i = 0; i < 6; i++)
         {
 
-            mvMat4 camera_matrix = mvIdentityMat4();
+            mvMat4 camera_matrix(1.0f);
             mvVec3 look_target{};
             switch (i)
             {
             case 0: // POSITIVE_X
-                look_target = light1.info.worldPos.xyz() + mvVec3{ 0.0f, 0.0f, 1.0f };
-                camera_matrix = mvLookAtRH(light1.info.worldPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
+                look_target = light1.info.worldPos + mvVec3{ 0.0f, 0.0f, 1.0f };
+                camera_matrix = look_at(light1.info.worldPos, look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
                 break;
             case 1:	// NEGATIVE_X
-                look_target = light1.info.worldPos.xyz() + mvVec3{ 0.0f, 0.0f, -1.0f };
-                camera_matrix = mvLookAtRH(light1.info.worldPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
+                look_target = light1.info.worldPos + mvVec3{ 0.0f, 0.0f, -1.0f };
+                camera_matrix = look_at(light1.info.worldPos, look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
                 break;
             case 2:	// POSITIVE_Y
-                look_target = light1.info.worldPos.xyz() + mvVec3{ 0.0f, -1.0f, 0.0f };
-                camera_matrix = mvLookAtRH(light1.info.worldPos.xyz(), look_target, mvVec3{ 1.0f, 0.0f, 0.0f });
+                look_target = light1.info.worldPos + mvVec3{ 0.0f, -1.0f, 0.0f };
+                camera_matrix = look_at(light1.info.worldPos, look_target, mvVec3{ 1.0f, 0.0f, 0.0f });
                 break;
             case 3:	// NEGATIVE_Y
-                look_target = light1.info.worldPos.xyz() + mvVec3{ 0.0f, 1.0f, 0.0f };
-                camera_matrix = mvLookAtRH(light1.info.worldPos.xyz(), look_target, mvVec3{ -1.0f, 0.0f, 0.0f });
+                look_target = light1.info.worldPos + mvVec3{ 0.0f, 1.0f, 0.0f };
+                camera_matrix = look_at(light1.info.worldPos, look_target, mvVec3{ -1.0f, 0.0f, 0.0f });
                 break;
             case 4:	// POSITIVE_Z
-                look_target = light1.info.worldPos.xyz() + mvVec3{ 1.0f, 0.0f, 0.0f };
-                camera_matrix = mvLookAtRH(light1.info.worldPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
+                look_target = light1.info.worldPos+ mvVec3{ 1.0f, 0.0f, 0.0f };
+                camera_matrix = look_at(light1.info.worldPos, look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
                 break;
             case 5:	// NEGATIVE_Z
-                look_target = light1.info.worldPos.xyz() + mvVec3{ -1.0f, 0.0f, 0.0f };
-                camera_matrix = mvLookAtRH(light1.info.worldPos.xyz(), look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
+                look_target = light1.info.worldPos+ mvVec3{ -1.0f, 0.0f, 0.0f };
+                camera_matrix = look_at(light1.info.worldPos, look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
                 break;
             }
 
             Renderer::begin_pass(graphics, am, get_current_command_buffer(graphics), omniShadowPass);
 
             for (int i = 0; i < am.sceneCount; i++)
-                Renderer::render_scene_omni_shadows(graphics, am, am.scenes[i].asset, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.1f, 400.0f), light1.info.worldPos);
+                Renderer::render_scene_omni_shadows(graphics, am, am.scenes[i].asset, camera_matrix, perspective(M_PI_2, 1.0f, 0.1f, 400.0f), light1.info.worldPos);
 
             Renderer::end_pass(get_current_command_buffer(graphics));
 
@@ -412,8 +420,8 @@ int main()
             ImGui::SliderFloat("directional slopeDepthBias", &shadowPass.specification.slopeDepthBias, 0.0f, 50.0f);
             if (ImGui::SliderFloat3("Position", &light1.info.worldPos.x, -50.0f, 50.0f))
             {
-                lightTransform = mvTranslate(mvIdentityMat4(), light1.info.worldPos.xyz());
-                lightcamera.pos = light1.info.worldPos.xyz();
+                lightTransform = translate(light1.info.worldPos.x, light1.info.worldPos.y, light1.info.worldPos.z);
+                lightcamera.pos = light1.info.worldPos;
             }
 
             if (ImGui::SliderFloat("Directional Light Angle", &angle, -45.0f, 45.0f))

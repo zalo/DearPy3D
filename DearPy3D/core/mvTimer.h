@@ -1,10 +1,11 @@
 #pragma once
+
 #include <chrono>
 
-class mvTimer
+struct mvTimer
 {
-
-public:
+	std::chrono::steady_clock::time_point start;
+	std::chrono::steady_clock::time_point last;
 
 	mvTimer();
 
@@ -12,8 +13,4 @@ public:
 	float peek() const;
 	float now() const;
 	
-private:
-
-	std::chrono::steady_clock::time_point m_start;
-	std::chrono::steady_clock::time_point m_last;
 };

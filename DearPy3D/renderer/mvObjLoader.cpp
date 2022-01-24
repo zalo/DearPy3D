@@ -309,12 +309,12 @@ PostProcess(std::vector<mvObjMesh*>& meshes)
 			mesh->averticies[i2].bitangent = bitangent - mesh->averticies[i2].normal * (bitangent * mesh->averticies[i2].normal);
 
 			// normalize
-			mesh->averticies[i0].tangent = mvNormalize(mesh->averticies[i0].tangent);
-			mesh->averticies[i1].tangent = mvNormalize(mesh->averticies[i1].tangent);
-			mesh->averticies[i2].tangent = mvNormalize(mesh->averticies[i2].tangent);
-			mesh->averticies[i0].bitangent = mvNormalize(mesh->averticies[i0].bitangent);
-			mesh->averticies[i1].bitangent = mvNormalize(mesh->averticies[i1].bitangent);
-			mesh->averticies[i2].bitangent = mvNormalize(mesh->averticies[i2].bitangent);
+			mesh->averticies[i0].tangent = normalize(mesh->averticies[i0].tangent);
+			mesh->averticies[i1].tangent = normalize(mesh->averticies[i1].tangent);
+			mesh->averticies[i2].tangent = normalize(mesh->averticies[i2].tangent);
+			mesh->averticies[i0].bitangent = normalize(mesh->averticies[i0].bitangent);
+			mesh->averticies[i1].bitangent = normalize(mesh->averticies[i1].bitangent);
+			mesh->averticies[i2].bitangent = normalize(mesh->averticies[i2].bitangent);
 
 
 #if 1

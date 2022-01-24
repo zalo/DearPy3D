@@ -58,7 +58,7 @@ create_textured_cube(mvGraphics& graphics, mvAssetManager& assetManager, float s
         mvVec3 p1 = { v1, vertices[14 * indices[i + 1] + 1], vertices[14 * indices[i + 1] + 2] };
         mvVec3 p2 = { v2, vertices[14 * indices[i + 2] + 1], vertices[14 * indices[i + 2] + 2] };
 
-        mvVec3 n = mvNormalize(mvCross(p1 - p0, p2 - p0));
+        mvVec3 n = normalize(cross(p1 - p0, p2 - p0));
         vertices[14 * indices[i] + 3] = n[0];
         vertices[14 * indices[i] + 4] = n[1];
         vertices[14 * indices[i] + 5] = n[2];
@@ -135,7 +135,7 @@ create_textured_quad(mvGraphics& graphics, mvAssetManager& assetManager, float s
         mvVec3 p1 = { v1, vertices[14 * indices[i + 1] + 1], vertices[14 * indices[i + 1] + 2] };
         mvVec3 p2 = { v2, vertices[14 * indices[i + 2] + 1], vertices[14 * indices[i + 2] + 2] };
 
-        mvVec3 n = mvNormalize(mvCross(p1 - p0, p2 - p0));
+        mvVec3 n = normalize(cross(p1 - p0, p2 - p0));
         vertices[14 * indices[i] + 3] = n[0];
         vertices[14 * indices[i] + 4] = n[1];
         vertices[14 * indices[i] + 5] = n[2];

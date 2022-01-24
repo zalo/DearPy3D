@@ -27,7 +27,7 @@ struct mvNode
     mvAssetID   mesh = -1;
     mvAssetID   children[256];
     u32         childCount = 0u;
-    mvMat4      matrix = mvIdentityMat4();
+    mvMat4      matrix = mvMat4(1.0f);
     mvVec3      translation = { 0.0f, 0.0f, 0.0f };
     mvVec4      rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     mvVec3      scale = { 1.0f, 1.0f, 1.0f };
@@ -51,13 +51,13 @@ struct mvSceneData
     i32 pcfRange = 1;
     //-------------------------- ( 16 bytes )
 
-    mvMat4 pointShadowView = mvIdentityMat4();
+    mvMat4 pointShadowView = mvMat4(1.0f);
     //-------------------------- ( 64 bytes )
 
-    mvMat4 directionalShadowView = mvIdentityMat4();
+    mvMat4 directionalShadowView = mvMat4(1.0f);
     //-------------------------- ( 64 bytes )
 
-    mvMat4 directionalShadowProjection = mvIdentityMat4();
+    mvMat4 directionalShadowProjection = mvMat4(1.0f);
     //-------------------------- ( 64 bytes )
 
     //-------------------------- ( 2 * 16 + 3*64= 224 bytes )

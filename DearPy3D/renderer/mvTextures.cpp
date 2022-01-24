@@ -433,6 +433,8 @@ create_texture_cube(mvGraphics& graphics, const char* path)
 mvTexture 
 create_texture(mvGraphics& graphics, const char* file)
 {
+    using namespace mvMath;
+
     mvTexture texture{};
     texture.file = file;
     texture.imageInfo = VkDescriptorImageInfo{};
@@ -442,7 +444,7 @@ create_texture(mvGraphics& graphics, const char* file)
     stbi_uc* pixels = stbi_load(file, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     VkDeviceSize imageSize = texWidth * texHeight * 4;
 
-    texture.mipLevels = (u32)mvFloor(mvLog2(mvMax(texWidth, texHeight))) + 1u;
+    texture.mipLevels = (u32)get_floor(log2(get_max(texWidth, texHeight))) + 1u;
     //texture.mipLevels = 1u;
 
     if (!pixels)

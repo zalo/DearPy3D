@@ -158,7 +158,7 @@ namespace Renderer {
         vkCmdBindVertexBuffers(get_current_command_buffer(graphics), 0, 1, &vertexBuffer, &offsets);
 
         mvTransforms transforms;
-        transforms.model = mvIdentityMat4();
+        transforms.model = mvMat4(1.0f);
         transforms.modelView = cam * transforms.model;
         transforms.modelViewProjection = proj * transforms.modelView;
 
