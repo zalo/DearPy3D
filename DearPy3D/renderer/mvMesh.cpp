@@ -4,7 +4,7 @@
 #include "mvAssetManager.h"
 
 mvMesh 
-create_textured_cube(mvGraphics& graphics, mvAssetManager& assetManager, float sideLength)
+create_textured_cube(mvGraphics& graphics, mvAssetManager& assetManager, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvMaterialManager& mManager, float sideLength)
 {
 
     auto vertices = std::vector<float>{
@@ -85,25 +85,20 @@ create_textured_cube(mvGraphics& graphics, mvAssetManager& assetManager, float s
 
     mvMesh mesh{};
     mesh.name = "textured cube";
-    mesh.vertexBuffer = mvRegisterAsset(&assetManager, "textured_cube_vertex" + std::to_string(sideLength),
-        create_buffer(graphics, vertexBufferSpec, vertices.data()));
-    if(mvGetBufferAssetID(&assetManager, "textured_cube_index") == MV_INVALID_ASSET_ID)
-        mesh.indexBuffer = mvRegisterAsset(&assetManager, "textured_cube_index",
-            create_buffer(graphics, indexBufferSpec, indices.data()));
-    else
-        mesh.indexBuffer = mvGetBufferAssetID(&assetManager, "textured_cube_index");
+    mesh.vertexBuffer = create_buffer(graphics, vertexBufferSpec, vertices.data());
+    mesh.indexBuffer = create_buffer(graphics, indexBufferSpec, indices.data());
     
     mvMaterialData mat{};
     mat.materialColor = { 0.0f, 1.0f, 0.0f, 1.0f };
     mat.useTextureMap = true;
-    mvMaterial material = create_material(graphics, assetManager, mat, "phong.vert.spv", "phong.frag.spv");
-    mesh.phongMaterialID = mvRegisterAsset(&assetManager, "textured_cube_material", material);
+    mvMaterial material = create_material(graphics, dsManager, pmManager, mat, "phong.vert.spv", "phong.frag.spv");
+    mesh.phongMaterialID = register_material(mManager, "textured_cube_material", material);
     mesh.diffuseTexture = mvGetTextureAssetID(graphics, &assetManager, "../../Resources/brickwall.jpg");
     return mesh;
 }
 
 mvMesh 
-create_textured_quad(mvGraphics& graphics, mvAssetManager& assetManager, float sideLength)
+create_textured_quad(mvGraphics& graphics, mvAssetManager& assetManager, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvMaterialManager& mManager, float sideLength)
 {
 
     // initialize vertices
@@ -162,25 +157,20 @@ create_textured_quad(mvGraphics& graphics, mvAssetManager& assetManager, float s
 
     mvMesh mesh{};
     mesh.name = "textured quad";
-    mesh.vertexBuffer = mvRegisterAsset(&assetManager, "textured_cube_vertex" + std::to_string(sideLength),
-        create_buffer(graphics, vertexBufferSpec, vertices.data()));
-    if (mvGetBufferAssetID(&assetManager, "textured_quad_vertex") == MV_INVALID_ASSET_ID)
-        mesh.indexBuffer = mvRegisterAsset(&assetManager, "textured_quad_index",
-            create_buffer(graphics, indexBufferSpec, indices.data()));
-    else
-        mesh.indexBuffer = mvGetBufferAssetID(&assetManager, "textured_quad_index");
+    mesh.vertexBuffer = create_buffer(graphics, vertexBufferSpec, vertices.data());
+    mesh.indexBuffer = create_buffer(graphics, indexBufferSpec, indices.data());
 
     mvMaterialData mat{};
     mat.materialColor = { 1.0f, 0.0f, 0.0f, 1.0f };
     mat.useTextureMap = true;
-    mvMaterial material = create_material(graphics, assetManager, mat, "phong.vert.spv", "phong.frag.spv");
-    mesh.phongMaterialID = mvRegisterAsset(&assetManager, "textured_cube_material", material);
+    mvMaterial material = create_material(graphics, dsManager, pmManager, mat, "phong.vert.spv", "phong.frag.spv");
+    mesh.phongMaterialID = register_material(mManager, "textured_cube_material", material);
     mesh.diffuseTexture = mvGetTextureAssetID(graphics, &assetManager, "../../Resources/brickwall.jpg");
     return mesh;
 }
 
 void
-load_obj_assets(mvGraphics& graphics, mvAssetManager& assetManager, const std::string& root, const std::string& file)
+load_obj_assets(mvGraphics& graphics, mvAssetManager& assetManager, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvMaterialManager& mManager, const std::string& root, const std::string& file)
 {
     u32 nodeOffset = assetManager.nodeCount;
     u32 meshOffset = assetManager.meshCount;
@@ -199,7 +189,6 @@ load_obj_assets(mvGraphics& graphics, mvAssetManager& assetManager, const std::s
             {
                 mvMesh newMesh{};
                 mvMaterialData materialData{};
-                newMesh.pbr = false;
                 newMesh.name = objModel.meshes[i]->name;
 
                 if (!objMaterials[j].diffuseMap.empty())
@@ -232,11 +221,11 @@ load_obj_assets(mvGraphics& graphics, mvAssetManager& assetManager, const std::s
                 indexBufferSpec.size = sizeof(u32);
                 indexBufferSpec.count = objModel.meshes[i]->indicies.size();
 
-                newMesh.vertexBuffer = mvRegisterAsset(&assetManager, newMesh.name + "_vertex", create_buffer(graphics, vertexBufferSpec, objModel.meshes[i]->averticies.data()));
-                newMesh.indexBuffer = mvRegisterAsset(&assetManager, newMesh.name + "_index", create_buffer(graphics, indexBufferSpec, objModel.meshes[i]->indicies.data()));
+                newMesh.vertexBuffer = create_buffer(graphics, vertexBufferSpec, objModel.meshes[i]->averticies.data());
+                newMesh.indexBuffer = create_buffer(graphics, indexBufferSpec, objModel.meshes[i]->indicies.data());
                 
-                mvMaterial material = create_material(graphics, assetManager, materialData, "phong.vert.spv", "phong.frag.spv");
-                newMesh.phongMaterialID = mvRegisterAsset(&assetManager, newMesh.name + "material", material);
+                mvMaterial material = create_material(graphics, dsManager, pmManager, materialData, "phong.vert.spv", "phong.frag.spv");
+                newMesh.phongMaterialID = register_material(mManager, newMesh.name + "material", material);
 
                 mvRegisterAsset(&assetManager, file + std::to_string(i), newMesh);
             }
@@ -244,7 +233,7 @@ load_obj_assets(mvGraphics& graphics, mvAssetManager& assetManager, const std::s
 
     }
 
-    mvScene newScene = create_scene(graphics, assetManager, {});
+    mvScene newScene = create_scene(graphics, assetManager, dsManager, pmManager, {});
     newScene.nodeCount = objModel.meshes.size();
     for (i32 i = 0; i < newScene.nodeCount; i++)
     {

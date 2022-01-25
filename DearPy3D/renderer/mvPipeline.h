@@ -14,9 +14,19 @@ struct mvShader;
 struct mvVertexLayout;
 struct mvPipelineSpec;
 struct mvPipeline;
+struct mvPipelineManager;
 
-mvPipeline     create_pipeline     (mvGraphics& graphics, mvAssetManager& assetManager, mvPipelineSpec& spec);
-mvVertexLayout create_vertex_layout(std::vector<mvVertexElementType> elements);
+
+mvVertexLayout    create_vertex_layout(std::vector<mvVertexElementType> elements);
+mvPipeline        create_pipeline(mvGraphics& graphics, mvPipelineSpec& spec);
+mvPipelineManager create_pipeline_manager();
+void              cleanup_pipeline_manager(mvGraphics& graphics, mvPipelineManager& manager);
+
+mvAssetID        register_pipeline(mvPipelineManager& manager, const std::string& tag, mvPipeline pipeline);
+mvAssetID        register_pipeline_layout(mvPipelineManager& manager, const std::string& tag, VkPipelineLayout layout);
+VkPipeline       get_pipeline(mvPipelineManager& manager, const std::string& tag);
+VkPipelineLayout get_pipeline_layout(mvPipelineManager& manager, const std::string& tag);
+mvAssetID        reset_pipeline(mvGraphics& graphics, mvPipelineManager& manager, const std::string& tag, mvPipeline& pipeline);
 
 enum mvVertexElementType
 {
@@ -65,4 +75,21 @@ struct mvPipeline
 	mvShader         fragShader;
 	VkPipelineLayout pipelineLayout;
 	VkPipeline       pipeline = VK_NULL_HANDLE;
+};
+
+struct mvPipelineManager
+{
+
+	std::string* pipelineKeys = nullptr;
+	std::string* layoutKeys   = nullptr;
+
+	// pipelines	       	  
+	u32                   maxPipelineCount = 50u;
+	u32                   pipelineCount = 0u;
+	mvPipeline*           pipelines = nullptr;
+
+	// pipeline layouts       	  
+	u32                    maxLayoutCount = 50u;
+	u32                    layoutCount = 0u;
+	VkPipelineLayout*      layouts = nullptr;
 };

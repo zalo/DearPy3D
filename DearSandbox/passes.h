@@ -26,7 +26,7 @@ create_main_pass(mvGraphics& graphics, mvAssetManager& am)
 }
 
 mvPass
-create_primary_pass(mvGraphics& graphics, mvAssetManager& am, f32 width, f32 height)
+create_primary_pass(mvGraphics& graphics, mvAssetManager& am, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, f32 width, f32 height)
 {
     mvPassSpecification offscreenPassSpec{};
     offscreenPassSpec.name = "primary_pass";
@@ -46,7 +46,7 @@ create_primary_pass(mvGraphics& graphics, mvAssetManager& am, f32 width, f32 hei
     offscreenPass.pipelineSpec.wireFrame = false;
     offscreenPass.pipelineSpec.vertexShader = "phong.vert.spv";
     offscreenPass.pipelineSpec.pixelShader = "phong.frag.spv";
-    offscreenPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "primary_pass");
+    offscreenPass.pipelineSpec.pipelineLayout = get_pipeline_layout(pmManager, "primary_pass");
 
     offscreenPass.pipelineSpec.layout = create_vertex_layout(
         {
@@ -57,7 +57,7 @@ create_primary_pass(mvGraphics& graphics, mvAssetManager& am, f32 width, f32 hei
             mvVertexElementType::Texture2D
         });
 
-    offscreenPass.specification.pipeline = mvResetPipeline(graphics, &am, "primary_pass", create_pipeline(graphics, am, offscreenPass.pipelineSpec));
+    offscreenPass.specification.pipeline = reset_pipeline(graphics, pmManager, "primary_pass", create_pipeline(graphics, offscreenPass.pipelineSpec));
 
     {
         mvPipelineSpec pipelineSpec{};
@@ -71,17 +71,17 @@ create_primary_pass(mvGraphics& graphics, mvAssetManager& am, f32 width, f32 hei
         pipelineSpec.width = (float)width;
         pipelineSpec.height = (float)height;
         pipelineSpec.renderPass = offscreenPass.renderPass;
-        pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "skybox_pass");
+        pipelineSpec.pipelineLayout = get_pipeline_layout(pmManager, "skybox_pass");
         pipelineSpec.layout = create_vertex_layout({mvVertexElementType::Position3D});
 
-        mvResetPipeline(graphics, &am, "skybox_pass", create_pipeline(graphics, am, pipelineSpec));
+        reset_pipeline(graphics, pmManager, "skybox_pass", create_pipeline(graphics, pipelineSpec));
     }
 
     return offscreenPass;
 }
 
 mvPass 
-create_offscreen_pass(mvGraphics& graphics, mvAssetManager& am)
+create_offscreen_pass(mvGraphics& graphics, mvAssetManager& am, mvDescriptorManager& dsManager, mvPipelineManager& pmManager)
 {
     mvPassSpecification offscreenPassSpec{};
     offscreenPassSpec.name = "secondary_pass";
@@ -101,7 +101,7 @@ create_offscreen_pass(mvGraphics& graphics, mvAssetManager& am)
     offscreenPass.pipelineSpec.wireFrame = false;
     offscreenPass.pipelineSpec.vertexShader = "phong.vert.spv";
     offscreenPass.pipelineSpec.pixelShader = "phong.frag.spv";
-    offscreenPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "primary_pass");
+    offscreenPass.pipelineSpec.pipelineLayout = get_pipeline_layout(pmManager, "primary_pass");
 
     offscreenPass.pipelineSpec.layout = create_vertex_layout(
         {
@@ -112,13 +112,13 @@ create_offscreen_pass(mvGraphics& graphics, mvAssetManager& am)
             mvVertexElementType::Texture2D
         });
 
-    offscreenPass.specification.pipeline = mvRegisterAsset(&am, "secondary_pass", create_pipeline(graphics, am, offscreenPass.pipelineSpec));
+    offscreenPass.specification.pipeline = register_pipeline(pmManager, "secondary_pass", create_pipeline(graphics, offscreenPass.pipelineSpec));
 
     return offscreenPass;
 }
 
 mvPass 
-create_shadow_pass(mvGraphics& graphics, mvAssetManager& am)
+create_shadow_pass(mvGraphics& graphics, mvAssetManager& am, mvDescriptorManager& dsManager, mvPipelineManager& pmManager)
 {
     mvPassSpecification shadowPassSpec{};
     shadowPassSpec.name = "shadow_pass";
@@ -136,7 +136,7 @@ create_shadow_pass(mvGraphics& graphics, mvAssetManager& am)
     shadowPass.pipelineSpec.depthWrite = true;
     shadowPass.pipelineSpec.wireFrame = false;
     shadowPass.pipelineSpec.vertexShader = "shadow.vert.spv";
-    shadowPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "shadow_pass");
+    shadowPass.pipelineSpec.pipelineLayout = get_pipeline_layout(pmManager, "shadow_pass");
     shadowPass.pipelineSpec.layout = create_vertex_layout(
         {
             mvVertexElementType::Position3D,
@@ -146,13 +146,13 @@ create_shadow_pass(mvGraphics& graphics, mvAssetManager& am)
             mvVertexElementType::Texture2D
         });
 
-    shadowPass.specification.pipeline = mvRegisterAsset(&am, "shadow_pass", create_pipeline(graphics, am, shadowPass.pipelineSpec));
+    shadowPass.specification.pipeline = register_pipeline(pmManager, "shadow_pass", create_pipeline(graphics, shadowPass.pipelineSpec));
 
     return shadowPass;
 }
 
 mvPass
-create_omnishadow_pass(mvGraphics& graphics, mvAssetManager& am)
+create_omnishadow_pass(mvGraphics& graphics, mvAssetManager& am, mvDescriptorManager& dsManager, mvPipelineManager& pmManager)
 {
     mvPassSpecification offscreenPassSpec{};
     offscreenPassSpec.name = "omnishadow_pass";
@@ -173,7 +173,7 @@ create_omnishadow_pass(mvGraphics& graphics, mvAssetManager& am)
     offscreenPass.pipelineSpec.blendEnabled = false;
     offscreenPass.pipelineSpec.vertexShader = "omnishadow.vert.spv";
     offscreenPass.pipelineSpec.pixelShader = "omnishadow.frag.spv";
-    offscreenPass.pipelineSpec.pipelineLayout = mvGetRawPipelineLayoutAsset(&am, "omnishadow_pass");
+    offscreenPass.pipelineSpec.pipelineLayout = get_pipeline_layout(pmManager, "omnishadow_pass");
 
     offscreenPass.pipelineSpec.layout = create_vertex_layout(
         {
@@ -184,7 +184,7 @@ create_omnishadow_pass(mvGraphics& graphics, mvAssetManager& am)
             mvVertexElementType::Texture2D
         });
 
-    offscreenPass.specification.pipeline = mvRegisterAsset(&am, "omnishadow_pass", create_pipeline(graphics, am, offscreenPass.pipelineSpec));
+    offscreenPass.specification.pipeline = register_pipeline(pmManager, "omnishadow_pass", create_pipeline(graphics, offscreenPass.pipelineSpec));
 
     return offscreenPass;
 }

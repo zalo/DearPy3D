@@ -57,51 +57,42 @@ namespace Renderer {
     }
 
     void 
-    update_descriptors(mvGraphics& graphics, mvAssetManager& am)
+    update_descriptors(mvGraphics& graphics, mvAssetManager& am, mvMaterialManager& mManager)
     {
         for (int i = 0; i < am.meshCount; i++)
         {
             mvMesh& mesh = am.meshes[i].asset;
-            update_material_descriptors(graphics, am, am.phongMaterials[mesh.phongMaterialID].asset, mesh.diffuseTexture, mesh.normalTexture, mesh.specularTexture);
+            update_material_descriptors(graphics, am, mManager.materials[mesh.phongMaterialID], mesh.diffuseTexture, mesh.normalTexture, mesh.specularTexture);
         }
     }
 
     void
-    render_mesh(mvGraphics& graphics, mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
+    render_mesh(mvGraphics& graphics, mvDescriptorSet& descriptorSet, VkPipelineLayout pipelineLayout, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
     {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
         VkCommandBuffer commandBuffer = graphics.commandBuffers[graphics.currentImageIndex];
-        VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
-        VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
-
-        bind_descriptor_set(graphics, am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSet, 1);
-        vkCmdBindIndexBuffer(get_current_command_buffer(graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindVertexBuffers(get_current_command_buffer(graphics), 0, 1, &vertexBuffer, &offsets);
+        bind_descriptor_set(graphics, descriptorSet, 1);
+        vkCmdBindIndexBuffer(get_current_command_buffer(graphics), mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(get_current_command_buffer(graphics), 0, 1, &mesh.vertexBuffer.buffer, &offsets);
 
         mvTransforms transforms;
         transforms.model = accumulatedTransform;
         transforms.modelView = camera * transforms.model;
         transforms.modelViewProjection = projection * transforms.modelView;
 
-        VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "primary_pass");
-        vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
-
-        vkCmdDrawIndexed(get_current_command_buffer(graphics), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
+        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
+        vkCmdDrawIndexed(get_current_command_buffer(graphics), mesh.indexBuffer.specification.count, 1, 0, 0, 0);
     }
 
     void
-    render_mesh_omni_shadow(mvGraphics& graphics, mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection, mvVec4 lightPos)
+    render_mesh_omni_shadow(mvGraphics& graphics, VkPipelineLayout pipelineLayout, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection, mvVec4 lightPos)
     {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
         VkCommandBuffer commandBuffer = graphics.commandBuffers[graphics.currentImageIndex];
-        VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
-        VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
-
-        //mvBindDescriptorSet(am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSet, 1);
-        vkCmdBindIndexBuffer(get_current_command_buffer(graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindVertexBuffers(get_current_command_buffer(graphics), 0, 1, &vertexBuffer, &offsets);
+        vkCmdBindIndexBuffer(get_current_command_buffer(graphics), mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(get_current_command_buffer(graphics), 0, 1, &mesh.vertexBuffer.buffer, &offsets);
 
         mvTransforms transforms;
         transforms.model = accumulatedTransform;
@@ -115,47 +106,36 @@ namespace Renderer {
         };
 
         tempstruct push = { transforms.modelViewProjection, lightPos };
-        VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "omnishadow_pass");
-        vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(tempstruct), &push);
-
-        vkCmdDrawIndexed(get_current_command_buffer(graphics), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
+        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(tempstruct), &push);
+        vkCmdDrawIndexed(get_current_command_buffer(graphics), mesh.indexBuffer.specification.count, 1, 0, 0, 0);
     }
 
     void
-    render_mesh_shadow(mvGraphics& graphics, mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
+    render_mesh_shadow(mvGraphics& graphics, VkPipelineLayout pipelineLayout, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection)
     {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
         VkCommandBuffer commandBuffer = graphics.commandBuffers[graphics.currentImageIndex];
-        VkBuffer indexBuffer = am.buffers[mesh.indexBuffer].asset.buffer;
-        VkBuffer vertexBuffer = am.buffers[mesh.vertexBuffer].asset.buffer;
-
-        vkCmdBindIndexBuffer(get_current_command_buffer(graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindVertexBuffers(get_current_command_buffer(graphics), 0, 1, &vertexBuffer, &offsets);
+        vkCmdBindIndexBuffer(get_current_command_buffer(graphics), mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(get_current_command_buffer(graphics), 0, 1, &mesh.vertexBuffer.buffer, &offsets);
 
         mvTransforms transforms;
         transforms.model = accumulatedTransform;
         transforms.modelView = camera * transforms.model;
         transforms.modelViewProjection = projection * transforms.modelView;
 
-        VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "shadow_pass");
-        vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
-
-        vkCmdDrawIndexed(get_current_command_buffer(graphics), am.buffers[mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
+        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvTransforms), &transforms);
+        vkCmdDrawIndexed(get_current_command_buffer(graphics), mesh.indexBuffer.specification.count, 1, 0, 0, 0);
     }
 
-    void 
-    render_skybox(mvSkybox& skybox, mvGraphics& graphics, mvAssetManager& am, mvMat4 cam, mvMat4 proj)
+    void
+    render_skybox(mvSkybox& skybox, mvGraphics& graphics, VkPipelineLayout pipelineLayout, mvMat4 cam, mvMat4 proj)
     {
         mv_local_persist VkDeviceSize offsets = { 0 };
 
         VkCommandBuffer commandBuffer = graphics.commandBuffers[graphics.currentImageIndex];
-        VkBuffer indexBuffer = am.buffers[skybox.mesh.indexBuffer].asset.buffer;
-        VkBuffer vertexBuffer = am.buffers[skybox.mesh.vertexBuffer].asset.buffer;
-
-        //mvBindDescriptorSet(am, am.phongMaterials[mesh.phongMaterialID].asset.descriptorSet, 1);
-        vkCmdBindIndexBuffer(get_current_command_buffer(graphics), indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindVertexBuffers(get_current_command_buffer(graphics), 0, 1, &vertexBuffer, &offsets);
+        vkCmdBindIndexBuffer(get_current_command_buffer(graphics), skybox.mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(get_current_command_buffer(graphics), 0, 1, &skybox.mesh.vertexBuffer.buffer, &offsets);
 
         mvTransforms transforms;
         transforms.model = mvMat4(1.0f);
@@ -164,14 +144,12 @@ namespace Renderer {
 
         mvMat4 modelViewProjection = transforms.modelViewProjection;
 
-        VkPipelineLayout mainPipelineLayout = mvGetRawPipelineLayoutAsset(&am, "skybox_pass");
-        vkCmdPushConstants(commandBuffer, mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvMat4), &modelViewProjection);
-
-        vkCmdDrawIndexed(get_current_command_buffer(graphics), am.buffers[skybox.mesh.indexBuffer].asset.specification.count, 1, 0, 0, 0);
+        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvMat4), &modelViewProjection);
+        vkCmdDrawIndexed(get_current_command_buffer(graphics), skybox.mesh.indexBuffer.specification.count, 1, 0, 0, 0);
     }
 
     void
-    begin_pass(mvGraphics& graphics, mvAssetManager& am, VkCommandBuffer commandBuffer, mvPass& pass)
+    begin_pass(mvGraphics& graphics, mvPipelineManager& pmManager, VkCommandBuffer commandBuffer, mvPass& pass)
     {
 
         VkRenderPassBeginInfo renderPassInfo{};
@@ -220,7 +198,7 @@ namespace Renderer {
 
         if (pass.specification.pipeline != MV_INVALID_ASSET_ID)
         {
-            VkPipeline pipeline = am.pipelines[pass.specification.pipeline].asset.pipeline;
+            VkPipeline pipeline = pmManager.pipelines[pass.specification.pipeline].pipeline;
             vkCmdBindPipeline(get_current_command_buffer(graphics), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         }
     }
@@ -232,46 +210,49 @@ namespace Renderer {
     }
 
     mv_internal void
-    mvRenderNode(mvGraphics& graphics, mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
+    mvRenderNode(mvGraphics& graphics, mvAssetManager& am, mvMaterialManager& mManager, VkPipelineLayout pipelineLayout, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
     {
-
+        
         if (node.mesh > -1)
-            render_mesh(graphics, am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
+        {
+            mvDescriptorSet& descriptorSet = mManager.materials[am.meshes[node.mesh].asset.phongMaterialID].descriptorSet;
+            render_mesh(graphics, descriptorSet, pipelineLayout, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
+        }
 
         for (u32 i = 0; i < node.childCount; i++)
         {
-            mvRenderNode(graphics, am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj);
+            mvRenderNode(graphics, am, mManager, pipelineLayout, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj);
         }
     }
 
     mv_internal void
-    mvRenderNodeShadow(mvGraphics& graphics, mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
+    mvRenderNodeShadow(mvGraphics& graphics, mvAssetManager& am, VkPipelineLayout pipelineLayout, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
     {
 
         if (node.mesh > -1)
-            render_mesh_shadow(graphics, am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
+            render_mesh_shadow(graphics, pipelineLayout, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
 
         for (u32 i = 0; i < node.childCount; i++)
         {
-            mvRenderNodeShadow(graphics, am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj);
+            mvRenderNodeShadow(graphics, am, pipelineLayout, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj);
         }
     }
 
     mv_internal void
-    mvRenderNodeOmniShadow(mvGraphics& graphics, mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj, mvVec4 lightPos)
+    mvRenderNodeOmniShadow(mvGraphics& graphics, mvAssetManager& am, VkPipelineLayout pipelineLayout, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj, mvVec4 lightPos)
     {
 
         if (node.mesh > -1)
-            render_mesh_omni_shadow(graphics, am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj, lightPos);
+            render_mesh_omni_shadow(graphics, pipelineLayout, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj, lightPos);
 
         for (u32 i = 0; i < node.childCount; i++)
         {
-            mvRenderNodeOmniShadow(graphics, am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj, lightPos);
+            mvRenderNodeOmniShadow(graphics, am, pipelineLayout, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj, lightPos);
         }
     }
 
     void
-    render_scene(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
+    render_scene(mvGraphics& graphics, mvAssetManager& am, mvMaterialManager& mManager, VkPipelineLayout pipelineLayout, mvScene& scene, mvMat4 cam, mvMat4 proj)
     {
 
         for (u32 i = 0; i < scene.nodeCount; i++)
@@ -279,17 +260,20 @@ namespace Renderer {
             mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
 
             if (rootNode.mesh > -1)
-                render_mesh(graphics, am, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj);
+            {
+                mvDescriptorSet& descriptorSet = mManager.materials[am.meshes[rootNode.mesh].asset.phongMaterialID].descriptorSet;
+                render_mesh(graphics, descriptorSet, pipelineLayout, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj);
+            }
 
             for (u32 j = 0; j < rootNode.childCount; j++)
             {
-                mvRenderNode(graphics, am, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj);
+                mvRenderNode(graphics, am, mManager, pipelineLayout, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj);
             }
         }
     }
 
     void
-    render_scene_shadows(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
+    render_scene_shadows(mvGraphics& graphics, mvAssetManager& am, VkPipelineLayout pipelineLayout, mvScene& scene, mvMat4 cam, mvMat4 proj)
     {
 
         for (u32 i = 0; i < scene.nodeCount; i++)
@@ -297,17 +281,19 @@ namespace Renderer {
             mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
 
             if (rootNode.mesh > -1)
-                render_mesh_shadow(graphics, am, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj);
+            {
+                render_mesh_shadow(graphics, pipelineLayout, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj);
+            }
 
             for (u32 j = 0; j < rootNode.childCount; j++)
             {
-                mvRenderNodeShadow(graphics, am, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj);
+                mvRenderNodeShadow(graphics, am, pipelineLayout, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj);
             }
         }
     }
 
     void
-    render_scene_omni_shadows(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvVec4 lightPos)
+    render_scene_omni_shadows(mvGraphics& graphics, mvAssetManager& am, VkPipelineLayout pipelineLayout, mvScene& scene, mvMat4 cam, mvMat4 proj, mvVec4 lightPos)
     {
 
         for (u32 i = 0; i < scene.nodeCount; i++)
@@ -315,11 +301,11 @@ namespace Renderer {
             mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
 
             if (rootNode.mesh > -1)
-                render_mesh_omni_shadow(graphics, am, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj, lightPos);
+                render_mesh_omni_shadow(graphics, pipelineLayout, am.meshes[rootNode.mesh].asset, rootNode.matrix, cam, proj, lightPos);
 
             for (u32 j = 0; j < rootNode.childCount; j++)
             {
-                mvRenderNodeOmniShadow(graphics, am, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj, lightPos);
+                mvRenderNodeOmniShadow(graphics, am, pipelineLayout, am.nodes[rootNode.children[j]].asset, rootNode.matrix, cam, proj, lightPos);
             }
         }
     }
@@ -374,8 +360,6 @@ namespace Renderer {
 
         MV_VULKAN(vkCreateRenderPass(graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
 
-        mvRegisterAsset(&am, specification.name, pass.renderPass);
-
         pass.colorTextures.resize(graphics.swapChainImageViews.size());
         pass.depthTextures.resize(graphics.swapChainImageViews.size());
         pass.frameBuffers.resize(graphics.swapChainImageViews.size());
@@ -418,11 +402,6 @@ namespace Renderer {
             framebufferInfo.height = specification.height;
             framebufferInfo.layers = 1;
             MV_VULKAN(vkCreateFramebuffer(graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
-
-
-            mvRegisterAsset(&am, specification.name + std::to_string(i), pass.colorTextures[i]);
-            mvRegisterAsset(&am, specification.name + "d" + std::to_string(i), pass.depthTextures[i]);
-            mvRegisterAsset(&am, specification.name + std::to_string(i), pass.frameBuffers[i]);
         }
 
         pass.pipelineSpec.width = pass.specification.width;
@@ -539,11 +518,6 @@ namespace Renderer {
             framebufferInfo.height = specification.height;
             framebufferInfo.layers = 1;
             MV_VULKAN(vkCreateFramebuffer(graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
-
-
-            //mvRegisterAsset(&am, specification.name + std::to_string(i), pass.colorTextures[i]);
-            //mvRegisterAsset(&am, specification.name + "d" + std::to_string(i), pass.depthTextures[i]);
-            //mvRegisterAsset(&am, specification.name + std::to_string(i), pass.frameBuffers[i]);
         }
 
         pass.pipelineSpec.width = pass.specification.width;
@@ -568,18 +542,29 @@ namespace Renderer {
         vkDeviceWaitIdle(graphics.logicalDevice);
         for (u32 i = 0; i < graphics.swapChainFramebuffers.size(); i++)
         {
-            vkDestroySampler(graphics.logicalDevice, pass.colorTextures[i].imageInfo.sampler, nullptr);
-            vkDestroySampler(graphics.logicalDevice, pass.depthTextures[i].imageInfo.sampler, nullptr);
-            vkDestroyImage(graphics.logicalDevice, pass.colorTextures[i].textureImage, nullptr);
-            vkDestroyImage(graphics.logicalDevice, pass.depthTextures[i].textureImage, nullptr);
-            vkDestroyImageView(graphics.logicalDevice, pass.colorTextures[i].imageInfo.imageView, nullptr);
-            vkDestroyImageView(graphics.logicalDevice, pass.depthTextures[i].imageInfo.imageView, nullptr);
+            if (pass.specification.hasColor)
+            {
+                vkDestroySampler(graphics.logicalDevice, pass.colorTextures[i].imageInfo.sampler, nullptr);
+                vkDestroyImage(graphics.logicalDevice, pass.colorTextures[i].textureImage, nullptr);
+                vkDestroyImageView(graphics.logicalDevice, pass.colorTextures[i].imageInfo.imageView, nullptr);
+                vkFreeMemory(graphics.logicalDevice, pass.colorTextures[i].textureImageMemory, nullptr);
+            }
+
+            if (pass.specification.hasDepth)
+            {
+                vkDestroySampler(graphics.logicalDevice, pass.depthTextures[i].imageInfo.sampler, nullptr);
+                vkDestroyImage(graphics.logicalDevice, pass.depthTextures[i].textureImage, nullptr);
+                vkDestroyImageView(graphics.logicalDevice, pass.depthTextures[i].imageInfo.imageView, nullptr);
+                vkFreeMemory(graphics.logicalDevice, pass.depthTextures[i].textureImageMemory, nullptr);
+            }
+
             vkDestroyFramebuffer(graphics.logicalDevice, pass.frameBuffers[i], nullptr);
-            vkFreeMemory(graphics.logicalDevice, pass.colorTextures[i].textureImageMemory, nullptr);
-            vkFreeMemory(graphics.logicalDevice, pass.depthTextures[i].textureImageMemory, nullptr);
 
         }
+
         vkDestroyRenderPass(graphics.logicalDevice, pass.renderPass, nullptr);
+
+        pass.renderPass = VK_NULL_HANDLE;
     }
 
     mvPass
@@ -653,8 +638,6 @@ namespace Renderer {
 
         MV_VULKAN(vkCreateRenderPass(graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
 
-        mvRegisterAsset(&am, specification.name, pass.renderPass);
-
         pass.colorTextures.resize(graphics.swapChainImageViews.size());
         pass.depthTextures.resize(graphics.swapChainImageViews.size());
         pass.frameBuffers.resize(graphics.swapChainImageViews.size());
@@ -680,11 +663,6 @@ namespace Renderer {
             framebufferInfo.height = specification.height;
             framebufferInfo.layers = 1;
             MV_VULKAN(vkCreateFramebuffer(graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
-
-
-            mvRegisterAsset(&am, specification.name + std::to_string(i), pass.colorTextures[i]);
-            mvRegisterAsset(&am, specification.name + "d" + std::to_string(i), pass.depthTextures[i]);
-            mvRegisterAsset(&am, specification.name + std::to_string(i), pass.frameBuffers[i]);
         }
 
         pass.pipelineSpec.width = pass.specification.width;
@@ -760,8 +738,6 @@ namespace Renderer {
         renderPassInfo.pDependencies = dependencies;
 
         MV_VULKAN(vkCreateRenderPass(graphics.logicalDevice, &renderPassInfo, nullptr, &pass.renderPass));
-        
-        mvRegisterAsset(&am, specification.name, pass.renderPass);
 
         pass.depthTextures.resize(graphics.swapChainImageViews.size());
         pass.frameBuffers.resize(graphics.swapChainImageViews.size());
@@ -782,9 +758,6 @@ namespace Renderer {
             framebufferInfo.height = specification.height;
             framebufferInfo.layers = 1;
             MV_VULKAN(vkCreateFramebuffer(graphics.logicalDevice, &framebufferInfo, nullptr, &pass.frameBuffers[i]));
-
-            mvRegisterAsset(&am, specification.name + std::to_string(i), pass.depthTextures[i]);
-            mvRegisterAsset(&am, specification.name + std::to_string(i), pass.frameBuffers[i]);
         }
 
         pass.pipelineSpec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;

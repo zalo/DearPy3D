@@ -41,7 +41,7 @@ namespace Renderer
 {
 	void begin_frame(mvGraphics& graphics);
 	void end_frame  (mvGraphics& graphics);
-	void begin_pass (mvGraphics& graphics, mvAssetManager& am, VkCommandBuffer commandBuffer, mvPass& pass);
+	void begin_pass (mvGraphics& graphics, mvPipelineManager& pmManager, VkCommandBuffer commandBuffer, mvPass& pass);
 	void end_pass   (VkCommandBuffer commandBuffer);
 
 	mvPass create_omni_shadow_pass(mvGraphics& graphics, mvAssetManager& am, mvPassSpecification specification);
@@ -51,14 +51,14 @@ namespace Renderer
 
 	void cleanup_pass(mvGraphics& graphics, mvPass& pass);
 
-	void render_mesh(mvGraphics& graphics, mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
-	void render_scene(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj);
-	void render_skybox(mvSkybox& skybox, mvGraphics& graphics, mvAssetManager& am, mvMat4 cam, mvMat4 proj);
+	void render_mesh(mvGraphics& graphics, mvDescriptorSet& decriptorSet, VkPipelineLayout pipelineLayout, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
+	void render_scene(mvGraphics& graphics, mvAssetManager& am, mvMaterialManager& mManager, VkPipelineLayout pipelineLayout, mvScene& scene, mvMat4 cam, mvMat4 proj);
+	void render_skybox(mvSkybox& skybox, mvGraphics& graphics, VkPipelineLayout pipelineLayout, mvMat4 cam, mvMat4 proj);
 
-	void render_mesh_shadow(mvGraphics& graphics, mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
-	void render_mesh_omni_shadow(mvGraphics& graphics, mvAssetManager& am, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection, mvVec4 lightPos);
-	void render_scene_shadows(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj);
-	void render_scene_omni_shadows(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvVec4 lightPos);
+	void render_mesh_shadow(mvGraphics& graphics, VkPipelineLayout pipelineLayout, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
+	void render_mesh_omni_shadow(mvGraphics& graphics, VkPipelineLayout pipelineLayout, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection, mvVec4 lightPos);
+	void render_scene_shadows(mvGraphics& graphics, mvAssetManager& am, VkPipelineLayout pipelineLayout, mvScene& scene, mvMat4 cam, mvMat4 proj);
+	void render_scene_omni_shadows(mvGraphics& graphics, mvAssetManager& am, VkPipelineLayout pipelineLayout, mvScene& scene, mvMat4 cam, mvMat4 proj, mvVec4 lightPos);
 
-	void update_descriptors(mvGraphics& graphics, mvAssetManager& am);
+	void update_descriptors(mvGraphics& graphics, mvAssetManager& am, mvMaterialManager& mManager);
 }

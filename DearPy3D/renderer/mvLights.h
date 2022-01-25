@@ -54,7 +54,7 @@ struct mvDirectionLight
     mvDirectionLightInfo   info;
 };
 
-mvPointLight     create_point_light      (mvGraphics& graphics, mvAssetManager& am, const std::string& name, mvVec3 pos = { 0.0f,0.0f,0.5f });
+mvPointLight     create_point_light      (mvGraphics& graphics, mvAssetManager& am, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvMaterialManager& mManager, const std::string& name, mvVec3 pos = { 0.0f,0.0f,0.5f });
 mvDirectionLight create_directional_light(mvAssetManager& am, const std::string& name, mvVec3 dir = { 0.0f,0.0f,0.5f });
-void             update_light_buffers    (mvGraphics& graphics, mvAssetManager& am, mvPointLight& light, mvAssetID bufferID, mvMat4 viewMatrix, u64 index);
-void             update_light_buffers    (mvGraphics& graphics, mvAssetManager& am, mvDirectionLight& light, mvAssetID bufferID, mvMat4 viewMatrix, u64 index);
+void             update_light_buffers    (mvGraphics& graphics, mvPointLight& light, mvBuffer& buffer, mvMat4 viewMatrix, u64 index);
+void             update_light_buffers    (mvGraphics& graphics, mvDirectionLight& light, mvBuffer& buffer, mvMat4 viewMatrix, u64 index);

@@ -15,10 +15,13 @@ struct mvDirectionLight;
 struct mvNode;
 struct mvSceneData;
 struct mvScene;
+struct mvTexture;
+struct mvPipelineManager;
+struct mvDescriptorManager;
 
-mvScene create_scene(mvGraphics& graphics, mvAssetManager& am, mvSceneData sceneData);
-void    update_scene_descriptors(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvAssetID shadowMap, mvAssetID shadowCubeMap);
-void    bind_scene(mvGraphics& graphics, mvAssetManager& am, mvAssetID scene, mvSceneData data, u32 index);
+mvScene create_scene(mvGraphics& graphics, mvAssetManager& am, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvSceneData sceneData);
+void    update_scene_descriptors(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvTexture& shadowMap, mvAssetID shadowCubeMap);
+void    bind_scene(mvGraphics& graphics, mvScene& scene, mvSceneData data, u32 index);
 void    show_scene_controls(const char* windowName, mvSceneData& sceneData);
 
 struct mvNode

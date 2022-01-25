@@ -24,7 +24,7 @@ create_descriptor_set_layout(mvGraphics& graphics, std::vector<mvDescriptorSpec>
 }
 
 mvDescriptor
-create_uniform_descriptor(mvGraphics& graphics, mvAssetManager& am, mvDescriptorSpec spec, const std::string& name, u64 size, void* data)
+create_uniform_descriptor(mvGraphics& graphics, mvDescriptorSpec spec, const std::string& name, u64 size, void* data)
 {
     mvDescriptor descriptor{};
     descriptor.size = size;
@@ -50,13 +50,13 @@ create_uniform_descriptor(mvGraphics& graphics, mvAssetManager& am, mvDescriptor
     bufferSpec.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
     for (size_t i = 0; i < graphics.swapChainImages.size(); i++)
-        descriptor.bufferID.push_back(mvRegisterAsset(&am, name+std::to_string(i), create_buffer(graphics, bufferSpec, data)));
+        descriptor.buffers.push_back(create_buffer(graphics, bufferSpec, data));
 
     return descriptor;
 }
 
 mvDescriptor
-create_dynamic_uniform_descriptor(mvGraphics& graphics, mvAssetManager& am, mvDescriptorSpec spec, const std::string& name, u64 count, u64 size, void* data)
+create_dynamic_uniform_descriptor(mvGraphics& graphics, mvDescriptorSpec spec, const std::string& name, u64 count, u64 size, void* data)
 {
     mvDescriptor descriptor{};
     descriptor.size = size;
@@ -82,13 +82,13 @@ create_dynamic_uniform_descriptor(mvGraphics& graphics, mvAssetManager& am, mvDe
     bufferSpec.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
     for (size_t i = 0; i < graphics.swapChainImages.size(); i++)
-        descriptor.bufferID.push_back(mvRegisterAsset(&am, name + std::to_string(i), create_buffer(graphics, bufferSpec, data)));
+        descriptor.buffers.push_back(create_buffer(graphics, bufferSpec, data));
 
     return descriptor;
 }
 
 mvDescriptor
-create_texture_descriptor(mvAssetManager& am, mvDescriptorSpec spec)
+create_texture_descriptor(mvDescriptorSpec spec)
 {
     mvDescriptor descriptor{};
     descriptor.size = 0u;
@@ -145,7 +145,7 @@ create_texture_descriptor_spec(u32 binding)
 }
 
 mvDescriptorSet
-create_descriptor_set(mvGraphics& graphics, mvAssetManager& am, VkDescriptorSetLayout layout, mvAssetID pipelineLayout)
+create_descriptor_set(mvGraphics& graphics, VkDescriptorSetLayout layout, VkPipelineLayout pipelineLayout)
 {
     mvDescriptorSet descriptorSet{};
     descriptorSet.pipelineLayout = pipelineLayout;
@@ -165,9 +165,113 @@ create_descriptor_set(mvGraphics& graphics, mvAssetManager& am, VkDescriptorSetL
 }
 
 void
-bind_descriptor_set(mvGraphics& graphics, mvAssetManager& am, mvDescriptorSet& descriptorSet, u32 set, u32 dynamicDescriptorCount, u32* dynamicOffset)
+bind_descriptor_set(mvGraphics& graphics, mvDescriptorSet& descriptorSet, u32 set, u32 dynamicDescriptorCount, u32* dynamicOffset)
 {
     VkDescriptorSet rawDescriptorSet = descriptorSet.descriptorSets[graphics.currentImageIndex];
-    VkPipelineLayout layout = am.pipelineLayouts[descriptorSet.pipelineLayout].asset;
-    vkCmdBindDescriptorSets(get_current_command_buffer(graphics), VK_PIPELINE_BIND_POINT_GRAPHICS, layout, set, 1, &rawDescriptorSet, dynamicDescriptorCount, dynamicOffset);
+    vkCmdBindDescriptorSets(get_current_command_buffer(graphics), VK_PIPELINE_BIND_POINT_GRAPHICS, descriptorSet.pipelineLayout, set, 1, &rawDescriptorSet, dynamicDescriptorCount, dynamicOffset);
+}
+
+mvDescriptorManager
+create_descriptor_manager()
+{
+    mvDescriptorManager manager{};
+
+    manager.descriptorSets = new mvDescriptorSet[manager.maxDSCount];
+    manager.descriptorSetKeys = new std::string[manager.maxDSCount];
+    manager.layouts = new VkDescriptorSetLayout[manager.maxLayoutCount];
+    manager.layoutKeys = new std::string[manager.maxLayoutCount];
+
+    for (u32 i = 0; i < manager.maxDSCount; i++)
+    {
+        manager.descriptorSetKeys[i] = "";
+    }
+
+    for (u32 i = 0; i < manager.maxLayoutCount; i++)
+    {
+        manager.layoutKeys[i] = "";
+        manager.layouts[i] = VK_NULL_HANDLE;
+    }
+
+    return manager;
+}
+
+void
+cleanup_descriptor_manager(mvGraphics& graphics, mvDescriptorManager& manager)
+{
+
+    // cleanup descriptor sets
+    for (int i = 0; i < manager.dsCount; i++)
+    {
+        mvDescriptorSet set = manager.descriptorSets[i];
+
+        for (int j = 0; j < set.descriptors.size(); j++)
+        {
+            for (int k = 0; k < set.descriptors[j].buffers.size(); k++)
+            {
+                vkDestroyBuffer(graphics.logicalDevice, set.descriptors[j].buffers[k].buffer, nullptr);
+                vkFreeMemory(graphics.logicalDevice, set.descriptors[j].buffers[k].deviceMemory, nullptr);
+                set.descriptors[j].buffers[k].buffer = VK_NULL_HANDLE;
+                set.descriptors[j].buffers[k].deviceMemory = VK_NULL_HANDLE;
+            }
+        }
+
+        delete[] manager.descriptorSets[i].descriptorSets;
+    }
+    manager.dsCount = 0u;
+
+    // descriptor set layouts
+    for (int i = 0; i < manager.layoutCount; i++)
+    {
+        vkDestroyDescriptorSetLayout(graphics.logicalDevice, manager.layouts[i], nullptr);
+    }
+
+    manager.dsCount = 0u;
+    manager.layoutCount = 0u;
+
+    delete[] manager.descriptorSets;
+    delete[] manager.descriptorSetKeys;
+    delete[] manager.layouts;
+    delete[] manager.layoutKeys;
+}
+
+mvAssetID
+register_descriptor_set(mvDescriptorManager& manager, const std::string& tag, mvDescriptorSet pipeline)
+{
+    assert(manager.dsCount <= manager.maxDSCount);
+    manager.descriptorSets[manager.dsCount] = pipeline;
+    manager.descriptorSetKeys[manager.dsCount] = tag;
+    manager.dsCount++;
+    return manager.dsCount - 1;
+}
+
+mvAssetID
+register_descriptor_set_layout(mvDescriptorManager& manager, const std::string& tag, VkDescriptorSetLayout layout)
+{
+    assert(manager.layoutCount <= manager.maxLayoutCount);
+    manager.layouts[manager.layoutCount] = layout;
+    manager.layoutKeys[manager.layoutCount] = tag;
+    manager.layoutCount++;
+    return manager.layoutCount - 1;
+}
+
+VkDescriptorSet
+get_descriptor_set(mvDescriptorManager& manager, const std::string& tag, u32 index)
+{
+    for (int i = 0; i < manager.dsCount; i++)
+    {
+        if (manager.descriptorSetKeys[i] == tag)
+            return manager.descriptorSets[i].descriptorSets[index];
+    }
+    return VK_NULL_HANDLE;
+}
+
+VkDescriptorSetLayout
+get_descriptor_set_layout(mvDescriptorManager& manager, const std::string& tag)
+{
+    for (int i = 0; i < manager.layoutCount; i++)
+    {
+        if (manager.layoutKeys[i] == tag)
+            return manager.layouts[i];
+    }
+    return VK_NULL_HANDLE;
 }

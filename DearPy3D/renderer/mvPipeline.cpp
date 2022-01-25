@@ -141,7 +141,7 @@ create_vertex_layout(std::vector<mvVertexElementType> elements)
 }
 
 mvPipeline
-create_pipeline(mvGraphics& graphics, mvAssetManager& assetManager, mvPipelineSpec& spec)
+create_pipeline(mvGraphics& graphics, mvPipelineSpec& spec)
 {
 
     mvPipeline pipeline{};
@@ -325,3 +325,110 @@ create_pipeline(mvGraphics& graphics, mvAssetManager& assetManager, mvPipelineSp
     return pipeline;
 }
 
+mvPipelineManager
+create_pipeline_manager()
+{
+    mvPipelineManager pipelineManager{};
+
+    pipelineManager.pipelines = new mvPipeline[pipelineManager.maxPipelineCount];
+    pipelineManager.pipelineKeys = new std::string[pipelineManager.maxPipelineCount];
+    pipelineManager.layouts = new VkPipelineLayout[pipelineManager.maxLayoutCount];
+    pipelineManager.layoutKeys = new std::string[pipelineManager.maxLayoutCount];
+
+    for (u32 i = 0; i < pipelineManager.maxPipelineCount; i++)
+    {
+        pipelineManager.pipelineKeys[i] = "";
+    }
+
+    for (u32 i = 0; i < pipelineManager.maxLayoutCount; i++)
+    {
+        pipelineManager.layoutKeys[i] = "";
+        pipelineManager.layouts[i] = VK_NULL_HANDLE;
+    }
+
+    return pipelineManager;
+}
+
+void
+cleanup_pipeline_manager(mvGraphics& graphics, mvPipelineManager& manager)
+{
+
+    // pipeline layouts
+    for (int i = 0; i < manager.layoutCount; i++)
+    {
+        vkDestroyPipelineLayout(graphics.logicalDevice, manager.layouts[i], nullptr);
+    }
+
+    // cleanup pipelines
+    for (int i = 0; i < manager.pipelineCount; i++)
+    {
+        vkDestroyPipeline(graphics.logicalDevice, manager.pipelines[i].pipeline, nullptr);
+    }
+
+    manager.pipelineCount = 0u;
+    manager.layoutCount = 0u;
+
+    delete[] manager.pipelines;
+    delete[] manager.pipelineKeys;
+    delete[] manager.layouts;
+    delete[] manager.layoutKeys;
+}
+
+mvAssetID
+register_pipeline(mvPipelineManager& manager, const std::string& tag, mvPipeline pipeline)
+{
+    assert(manager.pipelineCount <= manager.maxPipelineCount);
+    manager.pipelines[manager.pipelineCount] = pipeline;
+    manager.pipelineKeys[manager.pipelineCount] = tag;
+    manager.pipelineCount++;
+    return manager.pipelineCount - 1;
+}
+
+mvAssetID
+register_pipeline_layout(mvPipelineManager& manager, const std::string& tag, VkPipelineLayout layout)
+{
+    assert(manager.layoutCount <= manager.maxLayoutCount);
+    manager.layouts[manager.layoutCount] = layout;
+    manager.layoutKeys[manager.layoutCount] = tag;
+    manager.layoutCount++;
+    return manager.layoutCount - 1;
+}
+
+VkPipeline
+get_pipeline(mvPipelineManager& manager, const std::string& tag)
+{
+    for (int i = 0; i < manager.pipelineCount; i++)
+    {
+        if (manager.pipelineKeys[i] == tag)
+            return manager.pipelines[i].pipeline;
+    }
+    return VK_NULL_HANDLE;
+}
+
+VkPipelineLayout
+get_pipeline_layout(mvPipelineManager& manager, const std::string& tag)
+{
+    for (int i = 0; i < manager.layoutCount; i++)
+    {
+        if (manager.layoutKeys[i] == tag)
+            return manager.layouts[i];
+    }
+    return VK_NULL_HANDLE;
+}
+
+mvAssetID
+reset_pipeline(mvGraphics& graphics, mvPipelineManager& manager, const std::string& tag, mvPipeline& pipeline)
+{
+
+    for (int i = 0; i < manager.pipelineCount; i++)
+    {
+        if (manager.pipelineKeys[i] == tag)
+        {
+            vkDestroyPipeline(graphics.logicalDevice, manager.pipelines[i].pipeline, nullptr);
+            manager.pipelines[i] = pipeline;
+            return i;
+        }
+    }
+
+    return register_pipeline(manager, tag, pipeline);
+}

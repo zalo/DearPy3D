@@ -7,7 +7,17 @@
 #include "mvObjLoader.h"
 #include "mvDescriptors.h"
 
+// forward declarations
 struct mvAssetManager;
+struct mvMaterialData;
+struct mvMaterial;
+struct mvMaterialManager;
+
+mvMaterial        create_material            (mvGraphics& graphics, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
+void              update_material_descriptors(mvGraphics& graphics, mvAssetManager& am, mvMaterial& material, mvAssetID colorTexture, mvAssetID normalTexture, mvAssetID specularTexture);
+mvMaterialManager create_material_manager();
+void              cleanup_material_manager   (mvGraphics& graphics, mvMaterialManager& manager);
+mvAssetID         register_material          (mvMaterialManager& manager, const std::string& tag, mvMaterial material);
 
 struct mvMaterialData
 {
@@ -42,5 +52,10 @@ struct mvMaterial
     std::string           pixelShader;
 };
 
-mvMaterial create_material            (mvGraphics& graphics, mvAssetManager& am, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
-void       update_material_descriptors(mvGraphics& graphics, mvAssetManager& am, mvMaterial& material, mvAssetID colorTexture, mvAssetID normalTexture, mvAssetID specularTexture);
+struct mvMaterialManager
+{
+    std::string* materialKeys = nullptr;
+    u32          maxMaterialCount = 500u;
+    u32          materialCount = 0u;
+    mvMaterial*  materials = nullptr;
+};

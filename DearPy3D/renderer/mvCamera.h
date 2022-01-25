@@ -8,7 +8,6 @@ struct mvCamera;
 struct mvOrthoCamera;
 
 // updates
-void update_lookat_camera(mvViewport& viewport, mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed);
 void update_fps_camera(mvViewport& viewport, mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed);
 
 struct mvCamera
