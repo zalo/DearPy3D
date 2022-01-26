@@ -1,12 +1,17 @@
 #pragma once
 
 #include "mvMesh.h"
+#include "mvMaterials.h"
+#include "mvPipeline.h"
+#include "mvDescriptors.h"
+#include "mvTextures.h"
 
 // forward declarations
-struct mvAssetManager;
+struct mvModel;
 struct mvPassSpecification;
 struct mvPass;
 struct mvSkybox;
+struct mvRendererContext;
 
 struct mvPassSpecification
 {
@@ -37,28 +42,42 @@ struct mvPass
 	mvPipelineSpec             pipelineSpec;
 };
 
+struct mvRendererContext
+{
+	mvGraphics*         graphics; // store for convencience
+	mvPipelineManager   pipelineManager;
+	mvDescriptorManager descriptorManager;
+	mvMaterialManager   materialManager;
+	mvTextureManager    textureManager;
+	mvMesh              meshes[256]; // lights, cameras, etc.
+	u32                 meshCount = 0u;
+};
+
 namespace Renderer
 {
-	void begin_frame(mvGraphics& graphics);
-	void end_frame  (mvGraphics& graphics);
-	void begin_pass (mvGraphics& graphics, mvPipelineManager& pmManager, VkCommandBuffer commandBuffer, mvPass& pass);
+
+	mvRendererContext create_renderer_context (mvGraphics& graphics);
+	void              cleanup_renderer_context(mvRendererContext& ctx);
+
+	void begin_frame(mvRendererContext& ctx);
+	void end_frame  (mvRendererContext& ctx);
+	void begin_pass (mvRendererContext& ctx, VkCommandBuffer commandBuffer, mvPass& pass);
 	void end_pass   (VkCommandBuffer commandBuffer);
 
-	mvPass create_omni_shadow_pass(mvGraphics& graphics, mvAssetManager& am, mvPassSpecification specification);
-	mvPass create_primary_pass(mvGraphics& graphics, mvAssetManager& am, mvPassSpecification specification);
-	mvPass create_offscreen_pass(mvGraphics& graphics, mvAssetManager& am, mvPassSpecification specification);
-	mvPass create_depth_pass(mvGraphics& graphics, mvAssetManager& am, mvPassSpecification specification);
-
-	void cleanup_pass(mvGraphics& graphics, mvPass& pass);
+	// pass creation/destruction
+	mvPass create_omni_shadow_pass(mvGraphics& graphics, mvPassSpecification specification);
+	mvPass create_offscreen_pass  (mvGraphics& graphics, mvPassSpecification specification);
+	mvPass create_depth_pass      (mvGraphics& graphics, mvPassSpecification specification);
+	void   cleanup_pass           (mvGraphics& graphics, mvPass& pass);
 
 	void render_mesh(mvGraphics& graphics, mvDescriptorSet& decriptorSet, VkPipelineLayout pipelineLayout, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
-	void render_scene(mvGraphics& graphics, mvAssetManager& am, mvMaterialManager& mManager, VkPipelineLayout pipelineLayout, mvScene& scene, mvMat4 cam, mvMat4 proj);
+	void render_scene(mvGraphics& graphics, mvModel& model, mvMaterialManager& mManager, VkPipelineLayout pipelineLayout, mvScene& scene, mvMat4 cam, mvMat4 proj);
 	void render_skybox(mvSkybox& skybox, mvGraphics& graphics, VkPipelineLayout pipelineLayout, mvMat4 cam, mvMat4 proj);
 
 	void render_mesh_shadow(mvGraphics& graphics, VkPipelineLayout pipelineLayout, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection);
 	void render_mesh_omni_shadow(mvGraphics& graphics, VkPipelineLayout pipelineLayout, mvMesh& mesh, mvMat4 accumulatedTransform, mvMat4 camera, mvMat4 projection, mvVec4 lightPos);
-	void render_scene_shadows(mvGraphics& graphics, mvAssetManager& am, VkPipelineLayout pipelineLayout, mvScene& scene, mvMat4 cam, mvMat4 proj);
-	void render_scene_omni_shadows(mvGraphics& graphics, mvAssetManager& am, VkPipelineLayout pipelineLayout, mvScene& scene, mvMat4 cam, mvMat4 proj, mvVec4 lightPos);
+	void render_scene_shadows(mvGraphics& graphics, mvModel& model, VkPipelineLayout pipelineLayout, mvScene& scene, mvMat4 cam, mvMat4 proj);
+	void render_scene_omni_shadows(mvGraphics& graphics, mvModel& model, VkPipelineLayout pipelineLayout, mvScene& scene, mvMat4 cam, mvMat4 proj, mvVec4 lightPos);
 
-	void update_descriptors(mvGraphics& graphics, mvAssetManager& am, mvMaterialManager& mManager);
+	void update_descriptors(mvGraphics& graphics, mvModel& model, mvRendererContext& rctx);
 }

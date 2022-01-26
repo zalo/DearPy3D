@@ -12,9 +12,10 @@ struct mvAssetManager;
 struct mvMaterialData;
 struct mvMaterial;
 struct mvMaterialManager;
+struct mvRendererContext;
 
-mvMaterial        create_material            (mvGraphics& graphics, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
-void              update_material_descriptors(mvGraphics& graphics, mvAssetManager& am, mvMaterial& material, mvAssetID colorTexture, mvAssetID normalTexture, mvAssetID specularTexture);
+mvMaterial        create_material            (mvGraphics& graphics, mvRendererContext& rctx, mvMaterialData materialData, const char* vertexShader, const char* pixelShader);
+void              update_material_descriptors(mvRendererContext& rctx, mvMaterial& material, mvAssetID colorTexture, mvAssetID normalTexture, mvAssetID specularTexture);
 mvMaterialManager create_material_manager();
 void              cleanup_material_manager   (mvGraphics& graphics, mvMaterialManager& manager);
 mvAssetID         register_material          (mvMaterialManager& manager, const std::string& tag, mvMaterial material);

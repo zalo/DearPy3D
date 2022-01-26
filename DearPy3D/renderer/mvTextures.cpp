@@ -709,3 +709,75 @@ create_texture_cube(mvGraphics& graphics, u32 width, u32 height, VkFormat format
     texture.imguiID = ImGui_ImplVulkan_AddTexture(texture.imageInfo.sampler, texture.imageInfo.imageView, texture.imageInfo.imageLayout);
     return texture;
 }
+
+mvTextureManager
+create_texture_manager()
+{
+    mvTextureManager manager{};
+
+    manager.textures = new mvTexture[manager.maxTextureCount];
+    manager.textureKeys = new std::string[manager.maxTextureCount];
+
+    for (u32 i = 0; i < manager.maxTextureCount; i++)
+    {
+        manager.textureKeys[i] = "";
+    }
+
+    return manager;
+}
+
+void
+cleanup_texture_manager(mvGraphics& graphics, mvTextureManager& manager)
+{
+    for (int i = 0; i < manager.textureCount; i++)
+    {
+        vkDestroySampler(graphics.logicalDevice, manager.textures[i].imageInfo.sampler, nullptr);
+        vkDestroyImageView(graphics.logicalDevice, manager.textures[i].imageInfo.imageView, nullptr);
+        vkDestroyImage(graphics.logicalDevice, manager.textures[i].textureImage, nullptr);
+        vkFreeMemory(graphics.logicalDevice, manager.textures[i].textureImageMemory, nullptr);
+    }
+
+    manager.textureCount = 0u;
+    delete[] manager.textures;
+    delete[] manager.textureKeys;
+}
+
+mvAssetID
+register_texture(mvTextureManager& manager, const std::string& tag, mvTexture texture)
+{
+    assert(manager.textureCount <= manager.maxTextureCount);
+    manager.textures[manager.textureCount] = texture;
+    manager.textureKeys[manager.textureCount] = tag;
+    manager.textureCount++;
+    return manager.textureCount - 1;
+}
+
+mvAssetID
+register_texture_safe_load(mvGraphics& graphics, mvTextureManager& manager, const std::string& tag)
+{
+    assert(manager.textureCount <= manager.maxTextureCount);
+
+    // check if texture is already loaded
+    for (int i = 0; i < manager.textureCount; i++)
+    {
+        if (manager.textureKeys[i] == tag)
+            return i;
+    }
+
+    return register_texture(manager, tag, create_texture(graphics, tag.c_str()));
+}
+
+mvAssetID
+register_texture_cube_safe_load(mvGraphics& graphics, mvTextureManager& manager, const std::string& tag)
+{
+    assert(manager.textureCount <= manager.maxTextureCount);
+
+    // check if texture is already loaded
+    for (int i = 0; i < manager.textureCount; i++)
+    {
+        if (manager.textureKeys[i] == tag)
+            return i;
+    }
+
+    return register_texture(manager, tag, create_texture_cube(graphics, tag.c_str()));
+}

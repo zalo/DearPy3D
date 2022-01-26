@@ -1,20 +1,20 @@
 #include "mvSkybox.h"
-#include "mvAssetManager.h"
 #include "mvGraphics.h"
+#include "mvRenderer.h"
 
 mvSkybox
-create_skybox(mvGraphics& graphics, mvAssetManager& am, mvMaterialManager& mManager, mvDescriptorManager& dsManager, mvPipelineManager& pmManager)
+create_skybox(mvRendererContext& rctx)
 {
     mv_local_persist i32 id = 0u;
     id++;
     std::string hash = "skybox_" + std::to_string(id);
 
     mvSkybox skybox{};
-    VkDescriptorSetLayout dsLayout = get_descriptor_set_layout(dsManager, "skybox_pass");
-    VkPipelineLayout pLayout = get_pipeline_layout(pmManager, "skybox_pass");
-    skybox.descriptorSet = create_descriptor_set(graphics, dsLayout, pLayout);
+    VkDescriptorSetLayout dsLayout = get_descriptor_set_layout(rctx.descriptorManager, "skybox_pass");
+    VkPipelineLayout pLayout = get_pipeline_layout(rctx.pipelineManager, "skybox_pass");
+    skybox.descriptorSet = create_descriptor_set(*rctx.graphics, dsLayout, pLayout);
     skybox.descriptorSet.descriptors.push_back(create_texture_descriptor(create_texture_descriptor_spec(0u)));
-    register_descriptor_set(dsManager, hash, skybox.descriptorSet);
+    register_descriptor_set(rctx.descriptorManager, hash, skybox.descriptorSet);
 
     const float side = 1.0f / 2.0f;
     auto vertices = std::vector<float>{
@@ -52,15 +52,15 @@ create_skybox(mvGraphics& graphics, mvAssetManager& am, mvMaterialManager& mMana
 
     mvMesh mesh{};
     mesh.name = "skybox cube";
-    mesh.vertexBuffer = create_buffer(graphics, vertexBufferSpec, vertices.data());
-    mesh.indexBuffer = create_buffer(graphics, indexBufferSpec, indices.data());
+    mesh.vertexBuffer = create_buffer(*rctx.graphics, vertexBufferSpec, vertices.data());
+    mesh.indexBuffer = create_buffer(*rctx.graphics, indexBufferSpec, indices.data());
 
     mvMaterialData mat{};
     mat.materialColor = { 0.0f, 1.0f, 0.0f, 1.0f };
     mat.useTextureMap = true;
-    mvMaterial material = create_material(graphics, dsManager, pmManager, mat, "skybox.vert.spv", "skybox.frag.spv");
-    mesh.phongMaterialID = register_material(mManager, "skybox_cube_material", material);
-    mesh.diffuseTexture = mvGetTextureAssetID2(graphics, &am, "../../Resources/SkyBox");
+    mvMaterial material = create_material(*rctx.graphics, rctx, mat, "skybox.vert.spv", "skybox.frag.spv");
+    mesh.phongMaterialID = register_material(rctx.materialManager, "skybox_cube_material", material);
+    mesh.diffuseTexture = register_texture_cube_safe_load(*rctx.graphics, rctx.textureManager, "../../Resources/SkyBox");
 
     skybox.mesh = mesh;
 
@@ -68,15 +68,15 @@ create_skybox(mvGraphics& graphics, mvAssetManager& am, mvMaterialManager& mMana
 }
 
 void
-update_skybox_descriptors(mvGraphics& graphics, mvAssetManager& am, mvSkybox& skybox, mvAssetID texture)
+update_skybox_descriptors(mvRendererContext& rctx, mvSkybox& skybox, mvAssetID texture)
 {
     VkWriteDescriptorSet descriptorWrites[1];
-    skybox.descriptorSet.descriptors[0].write.pImageInfo = &am.textures[texture].asset.imageInfo;
+    skybox.descriptorSet.descriptors[0].write.pImageInfo = &rctx.textureManager.textures[texture].imageInfo;
 
-    skybox.descriptorSet.descriptors[0].write.dstSet = skybox.descriptorSet.descriptorSets[graphics.currentImageIndex];
+    skybox.descriptorSet.descriptors[0].write.dstSet = skybox.descriptorSet.descriptorSets[rctx.graphics->currentImageIndex];
     descriptorWrites[0] = skybox.descriptorSet.descriptors[0].write;
 
-    vkUpdateDescriptorSets(graphics.logicalDevice, 1, descriptorWrites, 0, nullptr);
+    vkUpdateDescriptorSets(rctx.graphics->logicalDevice, 1, descriptorWrites, 0, nullptr);
 }
 
 void

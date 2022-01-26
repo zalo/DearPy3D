@@ -1,21 +1,22 @@
 #include "mvLights.h"
 #include "mvGraphics.h"
-#include "mvAssetManager.h"
+#include "mvRenderer.h"
+#include "mvAssetLoader.h"
 
 mvPointLight 
-create_point_light(mvGraphics& graphics, mvAssetManager& am, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvMaterialManager& mManager, const std::string& name, mvVec3 pos)
+create_point_light(mvRendererContext& rctx, const std::string& name, mvVec3 pos)
 {
 
     mvPointLight light;
     light.info.worldPos = mvVec4{ pos.x, pos.y, pos.z, 1.0f };
 
-    mvMesh lightCube = create_textured_cube(graphics, am, dsManager, pmManager, mManager, 0.25f);
+    rctx.meshes[rctx.meshCount] = create_textured_cube(*rctx.graphics, rctx, 0.25f);
     auto mat1 = mvMaterialData{};
     mat1.materialColor = { 1.0f, 1.0f, 1.0f, 1.0f };
     mat1.doLighting = false;
     
-    mvMaterial material = create_material(graphics, dsManager, pmManager, mat1, "phong.vert.spv", "phong.frag.spv");
-    lightCube.phongMaterialID = register_material(mManager, name, material);
+    mvMaterial material = create_material(*rctx.graphics, rctx, mat1, "phong.vert.spv", "phong.frag.spv");
+    rctx.meshes[rctx.meshCount].phongMaterialID = register_material(rctx.materialManager, name, material);
 
     mvPipelineSpec spec{};
     spec.backfaceCulling = true;
@@ -25,14 +26,13 @@ create_point_light(mvGraphics& graphics, mvAssetManager& am, mvDescriptorManager
     spec.pixelShader = "phong.frag.spv";
     spec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-    mvRegisterAsset(&am, name, lightCube);
-
-    light.mesh = mvGetRawMeshAsset(&am, name);
+    light.mesh = &rctx.meshes[rctx.meshCount];
+    rctx.meshCount++;
     return light;
 }
 
 mvDirectionLight
-create_directional_light(mvAssetManager& am, const std::string& name, mvVec3 dir)
+create_directional_light(const std::string& name, mvVec3 dir)
 {
 
     mvDirectionLight light{};

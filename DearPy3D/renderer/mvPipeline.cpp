@@ -4,7 +4,6 @@
 #include "mvGraphics.h"
 #include "mvScene.h"
 #include "mvMaterials.h"
-#include "mvAssetManager.h"
 
 mv_internal std::vector<char>
 ReadFile(const std::string& filename)

@@ -9,7 +9,6 @@
 
 // forward declarations
 struct mvGraphics;
-struct mvAssetManager;
 struct mvPointLight;
 struct mvDirectionLight;
 struct mvNode;
@@ -18,11 +17,15 @@ struct mvScene;
 struct mvTexture;
 struct mvPipelineManager;
 struct mvDescriptorManager;
+struct mvRendererContext;
+struct mvModel;
+struct mvMesh;
 
-mvScene create_scene(mvGraphics& graphics, mvAssetManager& am, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvSceneData sceneData);
-void    update_scene_descriptors(mvGraphics& graphics, mvAssetManager& am, mvScene& scene, mvTexture& shadowMap, mvAssetID shadowCubeMap);
+mvScene create_scene(mvRendererContext& rctx, mvSceneData sceneData);
+void    update_scene_descriptors(mvRendererContext& rctx, mvScene& scene, mvTexture& shadowMap, mvAssetID shadowCubeMap);
 void    bind_scene(mvGraphics& graphics, mvScene& scene, mvSceneData data, u32 index);
 void    show_scene_controls(const char* windowName, mvSceneData& sceneData);
+void    cleanup_model(mvGraphics& graphics, mvModel& model);
 
 struct mvNode
 {
@@ -72,4 +75,19 @@ struct mvScene
     mvAssetID       nodes[256];
     u32             nodeCount = 0u;
     u32             meshOffset = 0u;
+};
+
+struct mvModel
+{
+    // scenes
+    u32      sceneCount = 0u;
+    mvScene* scenes = nullptr;
+
+    // meshes	       	  
+    u32      meshCount = 0u;
+    mvMesh*  meshes = nullptr;
+
+    // nodes	       	  
+    u32     nodeCount = 0u;
+    mvNode* nodes = nullptr;
 };

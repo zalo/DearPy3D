@@ -11,10 +11,10 @@ struct mvObjMesh;
 struct mvAssetManager;
 struct mvGraphics;
 struct mvMesh;
+struct mvRendererContext;
 
-mvMesh create_textured_cube(mvGraphics& graphics, mvAssetManager& assetManager, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvMaterialManager& mManager, float sideLength = 1.0f);
-mvMesh create_textured_quad(mvGraphics& graphics, mvAssetManager& assetManager, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvMaterialManager& mManager, float sideLength = 1.0f);
-void   load_obj_assets     (mvGraphics& graphics, mvAssetManager& assetManager, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvMaterialManager& mManager, const std::string& root, const std::string& file);
+mvMesh create_textured_cube(mvGraphics& graphics, mvRendererContext& rctx, float sideLength = 1.0f);
+mvMesh create_textured_quad(mvGraphics& graphics, mvRendererContext& rctx, float sideLength = 1.0f);
 
 struct mvMesh
 {

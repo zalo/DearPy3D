@@ -7,6 +7,7 @@
 // forward declarations
 struct mvAssetManager;
 struct mvGraphics;
+struct mvRendererContext;
 
 struct mvSkybox
 {
@@ -14,6 +15,6 @@ struct mvSkybox
     mvMesh          mesh;
 };
 
-mvSkybox create_skybox            (mvGraphics& graphics, mvAssetManager& am, mvMaterialManager& mManager, mvDescriptorManager& dsManager, mvPipelineManager& pmManager);
-void     update_skybox_descriptors(mvGraphics& graphics, mvAssetManager& am, mvSkybox& skybox, mvAssetID texture);
+mvSkybox create_skybox            (mvRendererContext& rctx);
+void     update_skybox_descriptors(mvRendererContext& rctx, mvSkybox& skybox, mvAssetID texture);
 void     bind_skybox              (mvGraphics& graphics, mvSkybox& skybox);

@@ -2,10 +2,10 @@
 #include <stdexcept>
 #include "mvGraphics.h"
 #include "mvTextures.h"
-#include "mvAssetManager.h"
+#include "mvRenderer.h"
 
 mvMaterial 
-create_material(mvGraphics& graphics, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvMaterialData materialData, const char* vertexShader, const char* pixelShader)
+create_material(mvGraphics& graphics, mvRendererContext& rctx, mvMaterialData materialData, const char* vertexShader, const char* pixelShader)
 {
     mvMaterial material{};
     material.vertexShader = vertexShader;
@@ -25,17 +25,17 @@ create_material(mvGraphics& graphics, mvDescriptorManager& dsManager, mvPipeline
     //i++;
     hash.append(std::to_string(i));
 
-    material.descriptorSet = create_descriptor_set(graphics, get_descriptor_set_layout(dsManager, "phong"), get_pipeline_layout(pmManager, "primary_pass"));
+    material.descriptorSet = create_descriptor_set(graphics, get_descriptor_set_layout(rctx.descriptorManager, "phong"), get_pipeline_layout(rctx.pipelineManager, "primary_pass"));
     material.descriptorSet.descriptors.push_back(create_texture_descriptor(create_texture_descriptor_spec(0u)));
     material.descriptorSet.descriptors.push_back(create_texture_descriptor(create_texture_descriptor_spec(1u)));
     material.descriptorSet.descriptors.push_back(create_texture_descriptor(create_texture_descriptor_spec(2u)));
     material.descriptorSet.descriptors.push_back(create_uniform_descriptor(graphics, create_uniform_descriptor_spec(3u), hash, sizeof(mvMaterialData), &materialData));
-    register_descriptor_set(dsManager, hash, material.descriptorSet);
+    register_descriptor_set(rctx.descriptorManager, hash, material.descriptorSet);
     return material;
 }
 
 void
-update_material_descriptors(mvGraphics& graphics, mvAssetManager& am, mvMaterial& material, mvAssetID colorTexture, mvAssetID normalTexture, mvAssetID specularTexture)
+update_material_descriptors(mvRendererContext& rctx, mvMaterial& material, mvAssetID colorTexture, mvAssetID normalTexture, mvAssetID specularTexture)
 {
     
     VkWriteDescriptorSet descriptorWrites[4];
@@ -45,19 +45,19 @@ update_material_descriptors(mvGraphics& graphics, mvAssetManager& am, mvMaterial
     if (normalTexture   == MV_INVALID_ASSET_ID) normalTexture = 0;
     if (specularTexture == MV_INVALID_ASSET_ID) specularTexture = 0;
 
-    material.descriptorSet.descriptors[0].write.pImageInfo = &am.textures[colorTexture].asset.imageInfo;
-    material.descriptorSet.descriptors[1].write.pImageInfo = &am.textures[normalTexture].asset.imageInfo;
-    material.descriptorSet.descriptors[2].write.pImageInfo = &am.textures[specularTexture].asset.imageInfo;
-    material.descriptorSet.descriptors[3].write.pBufferInfo = &material.descriptorSet.descriptors[3].buffers[graphics.currentImageIndex].bufferInfo;
+    material.descriptorSet.descriptors[0].write.pImageInfo = &rctx.textureManager.textures[colorTexture].imageInfo;
+    material.descriptorSet.descriptors[1].write.pImageInfo = &rctx.textureManager.textures[normalTexture].imageInfo;
+    material.descriptorSet.descriptors[2].write.pImageInfo = &rctx.textureManager.textures[specularTexture].imageInfo;
+    material.descriptorSet.descriptors[3].write.pBufferInfo = &material.descriptorSet.descriptors[3].buffers[rctx.graphics->currentImageIndex].bufferInfo;
     
     // set descriptor sets
     for (u32 i = 0; i < material.descriptorSet.descriptors.size(); i++)
     {
-        material.descriptorSet.descriptors[i].write.dstSet = material.descriptorSet.descriptorSets[graphics.currentImageIndex];
+        material.descriptorSet.descriptors[i].write.dstSet = material.descriptorSet.descriptorSets[rctx.graphics->currentImageIndex];
         descriptorWrites[i] = material.descriptorSet.descriptors[i].write;
     }
 
-    vkUpdateDescriptorSets(graphics.logicalDevice, 4, descriptorWrites, 0, nullptr);
+    vkUpdateDescriptorSets(rctx.graphics->logicalDevice, 4, descriptorWrites, 0, nullptr);
 }
 
 mvMaterialManager
@@ -79,7 +79,7 @@ create_material_manager()
 void
 cleanup_material_manager(mvGraphics& graphics, mvMaterialManager& manager)
 {
-    manager.maxMaterialCount = 0u;
+    manager.materialCount = 0u;
     delete[] manager.materials;
     delete[] manager.materialKeys;
 }

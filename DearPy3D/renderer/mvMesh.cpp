@@ -1,10 +1,9 @@
 #include "mvMesh.h"
 #include "mvGraphics.h"
-#include "mvObjLoader.h"
-#include "mvAssetManager.h"
+#include "mvRenderer.h"
 
 mvMesh 
-create_textured_cube(mvGraphics& graphics, mvAssetManager& assetManager, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvMaterialManager& mManager, float sideLength)
+create_textured_cube(mvGraphics& graphics, mvRendererContext& rctx, float sideLength)
 {
 
     auto vertices = std::vector<float>{
@@ -91,14 +90,14 @@ create_textured_cube(mvGraphics& graphics, mvAssetManager& assetManager, mvDescr
     mvMaterialData mat{};
     mat.materialColor = { 0.0f, 1.0f, 0.0f, 1.0f };
     mat.useTextureMap = true;
-    mvMaterial material = create_material(graphics, dsManager, pmManager, mat, "phong.vert.spv", "phong.frag.spv");
-    mesh.phongMaterialID = register_material(mManager, "textured_cube_material", material);
-    mesh.diffuseTexture = mvGetTextureAssetID(graphics, &assetManager, "../../Resources/brickwall.jpg");
+    mvMaterial material = create_material(graphics, rctx, mat, "phong.vert.spv", "phong.frag.spv");
+    mesh.phongMaterialID = register_material(rctx.materialManager, "textured_cube_material", material);
+    mesh.diffuseTexture = register_texture_safe_load(*rctx.graphics, rctx.textureManager, "../../Resources/brickwall.jpg");
     return mesh;
 }
 
 mvMesh 
-create_textured_quad(mvGraphics& graphics, mvAssetManager& assetManager, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvMaterialManager& mManager, float sideLength)
+create_textured_quad(mvGraphics& graphics, mvRendererContext& rctx, float sideLength)
 {
 
     // initialize vertices
@@ -163,92 +162,8 @@ create_textured_quad(mvGraphics& graphics, mvAssetManager& assetManager, mvDescr
     mvMaterialData mat{};
     mat.materialColor = { 1.0f, 0.0f, 0.0f, 1.0f };
     mat.useTextureMap = true;
-    mvMaterial material = create_material(graphics, dsManager, pmManager, mat, "phong.vert.spv", "phong.frag.spv");
-    mesh.phongMaterialID = register_material(mManager, "textured_cube_material", material);
-    mesh.diffuseTexture = mvGetTextureAssetID(graphics, &assetManager, "../../Resources/brickwall.jpg");
+    mvMaterial material = create_material(graphics, rctx, mat, "phong.vert.spv", "phong.frag.spv");
+    mesh.phongMaterialID = register_material(rctx.materialManager, "textured_cube_material", material);
+    mesh.diffuseTexture = register_texture_safe_load(*rctx.graphics, rctx.textureManager, "../../Resources/brickwall.jpg");
     return mesh;
-}
-
-void
-load_obj_assets(mvGraphics& graphics, mvAssetManager& assetManager, mvDescriptorManager& dsManager, mvPipelineManager& pmManager, mvMaterialManager& mManager, const std::string& root, const std::string& file)
-{
-    u32 nodeOffset = assetManager.nodeCount;
-    u32 meshOffset = assetManager.meshCount;
-
-    std::vector<mvAssetID> diffuseTextureMaps;
-    std::vector<mvAssetID> normalTextureMaps;
-    std::vector<mvAssetID> specularTextureMaps;
-    std::vector<mvObjMaterial> objMaterials = mvLoadObjMaterials(root + file + ".mtl");
-    mvObjModel objModel = mvLoadObjModel(root + file + ".obj");
-
-    for (size_t i = 0; i < objModel.meshes.size(); i++)
-    {
-        for (size_t j = 0; j < objMaterials.size(); j++)
-        {
-            if (objMaterials[j].name == objModel.meshes[i]->material)
-            {
-                mvMesh newMesh{};
-                mvMaterialData materialData{};
-                newMesh.name = objModel.meshes[i]->name;
-
-                if (!objMaterials[j].diffuseMap.empty())
-                {
-                    newMesh.diffuseTexture = mvGetTextureAssetID(graphics, &assetManager, root + objMaterials[j].diffuseMap);
-                    materialData.useTextureMap = true;
-                    materialData.hasAlpha = true;
-                }
-                if (!objMaterials[j].normalMap.empty())
-                {
-                    newMesh.normalTexture = mvGetTextureAssetID(graphics, &assetManager, root + objMaterials[j].normalMap);
-                    materialData.useNormalMap = true;
-                }
-                if (!objMaterials[j].specularMap.empty())
-                {
-                    newMesh.specularTexture = mvGetTextureAssetID(graphics, &assetManager, root + objMaterials[j].specularMap);
-                    materialData.useSpecularMap = true;
-                }
-
-                mvBufferSpecification vertexBufferSpec{};
-                vertexBufferSpec.usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-                vertexBufferSpec.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-                vertexBufferSpec.size = sizeof(f32);
-                vertexBufferSpec.components = 14;
-                vertexBufferSpec.count = objModel.meshes[i]->averticies.size();
-
-                mvBufferSpecification indexBufferSpec{};
-                indexBufferSpec.usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-                indexBufferSpec.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-                indexBufferSpec.size = sizeof(u32);
-                indexBufferSpec.count = objModel.meshes[i]->indicies.size();
-
-                newMesh.vertexBuffer = create_buffer(graphics, vertexBufferSpec, objModel.meshes[i]->averticies.data());
-                newMesh.indexBuffer = create_buffer(graphics, indexBufferSpec, objModel.meshes[i]->indicies.data());
-                
-                mvMaterial material = create_material(graphics, dsManager, pmManager, materialData, "phong.vert.spv", "phong.frag.spv");
-                newMesh.phongMaterialID = register_material(mManager, newMesh.name + "material", material);
-
-                mvRegisterAsset(&assetManager, file + std::to_string(i), newMesh);
-            }
-        }
-
-    }
-
-    mvScene newScene = create_scene(graphics, assetManager, dsManager, pmManager, {});
-    newScene.nodeCount = objModel.meshes.size();
-    for (i32 i = 0; i < newScene.nodeCount; i++)
-    {
-        newScene.nodes[i] = i + nodeOffset;
-    }
-    mvRegisterAsset(&assetManager, file, newScene);
-
-    for (u32 currentNode = 0u; currentNode < objModel.meshes.size(); currentNode++)
-    {
-        mvNode newNode{};
-        newNode.name = objModel.meshes[currentNode]->name;
-        newNode.mesh = newScene.nodes[currentNode] - nodeOffset + meshOffset;
-        newNode.childCount = 0;
-        mvRegisterAsset(&assetManager, file + std::to_string(currentNode), newNode);
-    }
-
-
 }

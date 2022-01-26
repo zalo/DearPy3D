@@ -13,11 +13,10 @@
 #include "mvMath.h"
 #include "mvRenderer.h"
 #include "mvObjLoader.h"
-#include "mvAssetManager.h"
 #include "mvScene.h"
 #include "mvSkybox.h"
 #include <stdlib.h>
-
+#include "mvAssetLoader.h"
 #include "passes.h"
 
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
@@ -38,13 +37,9 @@ int main()
 
     setup_graphics_context(graphics, viewport, { "VK_LAYER_KHRONOS_validation" }, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
 
-    mvAssetManager am{};
-    mvInitializeAssetManager(&am);
+    mvRendererContext rctx = Renderer::create_renderer_context(graphics);
 
-    mvPipelineManager pipelineManager = create_pipeline_manager();
-    mvDescriptorManager descriptorManager = create_descriptor_manager();
-    mvMaterialManager materialManager = create_material_manager();
-
+   
     //---------------------------------------------------------------------
     // load common descriptor sets
     //---------------------------------------------------------------------
@@ -84,10 +79,10 @@ int main()
         descriptorSetLayouts[2] = perDrawLayout.layout;
         descriptorSetLayouts[3] = skyboxLayout.layout;
 
-        register_descriptor_set_layout(descriptorManager, "scene", descriptorSetLayouts[0]);
-        register_descriptor_set_layout(descriptorManager, "phong", descriptorSetLayouts[1]);
-        register_descriptor_set_layout(descriptorManager, "perdraw", descriptorSetLayouts[2]);
-        register_descriptor_set_layout(descriptorManager, "skybox_pass", descriptorSetLayouts[3]);
+        register_descriptor_set_layout(rctx.descriptorManager, "scene", descriptorSetLayouts[0]);
+        register_descriptor_set_layout(rctx.descriptorManager, "phong", descriptorSetLayouts[1]);
+        register_descriptor_set_layout(rctx.descriptorManager, "perdraw", descriptorSetLayouts[2]);
+        register_descriptor_set_layout(rctx.descriptorManager, "skybox_pass", descriptorSetLayouts[3]);
     }
 
     //---------------------------------------------------------------------
@@ -110,7 +105,7 @@ int main()
 
         MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
-        register_pipeline_layout(pipelineManager, "main_pass", pipelineLayout);
+        register_pipeline_layout(rctx.pipelineManager, "main_pass", pipelineLayout);
     }
 
     { // primary pass
@@ -135,12 +130,12 @@ int main()
 
         MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
-        mvAssetID pipelineLayoutID = register_pipeline_layout(pipelineManager, "primary_pass", pipelineLayout);
+        mvAssetID pipelineLayoutID = register_pipeline_layout(rctx.pipelineManager, "primary_pass", pipelineLayout);
 
-        mvTransforms* transforms = new mvTransforms[am.maxMeshCount * 3];
+        mvTransforms* transforms = new mvTransforms[256 * 3 + rctx.meshCount];
         mvDescriptorSet descriptorSet = create_descriptor_set(graphics, descriptorSetLayouts[2], pipelineLayout);
-        descriptorSet.descriptors.push_back(create_dynamic_uniform_descriptor(graphics, create_dynamic_uniform_descriptor_spec(0u), "transforms", am.maxMeshCount * 3, sizeof(mvTransforms), transforms));
-        register_descriptor_set(descriptorManager, "perdraw", descriptorSet);
+        descriptorSet.descriptors.push_back(create_dynamic_uniform_descriptor(graphics, create_dynamic_uniform_descriptor_spec(0u), "transforms", 256 * 3 + rctx.meshCount, sizeof(mvTransforms), transforms));
+        register_descriptor_set(rctx.descriptorManager, "perdraw", descriptorSet);
         delete[] transforms;
     }
 
@@ -166,7 +161,7 @@ int main()
 
         MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
-        register_pipeline_layout(pipelineManager, "shadow_pass", pipelineLayout);
+        register_pipeline_layout(rctx.pipelineManager, "shadow_pass", pipelineLayout);
     }
 
     { // skybox pass
@@ -191,7 +186,7 @@ int main()
 
         MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
-        register_pipeline_layout(pipelineManager, "skybox_pass", pipelineLayout);
+        register_pipeline_layout(rctx.pipelineManager, "skybox_pass", pipelineLayout);
     }
 
     { // omni shadow pass
@@ -216,14 +211,12 @@ int main()
 
         MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
-        register_pipeline_layout(pipelineManager, "omnishadow_pass", pipelineLayout);
+        register_pipeline_layout(rctx.pipelineManager, "omnishadow_pass", pipelineLayout);
     }
 
-    mvAssetID scene = mvRegisterAsset(&am, "test_scene", create_scene(graphics, am, descriptorManager, pipelineManager, {}));
+    mvModel model = load_obj_model(rctx, sponzaPath, "sponza");
 
-    if (loadSponza) load_obj_assets(graphics, am, descriptorManager, pipelineManager, materialManager, sponzaPath, "sponza");
-
-    mvSkybox skybox = create_skybox(graphics, am, materialManager, descriptorManager, pipelineManager);
+    mvSkybox skybox = create_skybox(rctx);
 
     mvSceneData sceneData{};
 
@@ -249,20 +242,20 @@ int main()
     secondaryCamera.nearZ = -121.0f;
     secondaryCamera.farZ = 121.0f;
     
-    mvPointLight light1 = create_point_light(graphics, am, descriptorManager, pipelineManager, materialManager, "light1", { 40.0f, 10.0f, 0.0f });
+    mvPointLight light1 = create_point_light(rctx, "light1", { 40.0f, 10.0f, 0.0f });
     mvMat4 lightTransform = translate( 40.0f, 10.0f, 0.0f );
-    mvDirectionLight dlight1 = create_directional_light(am, "dlight1", mvVec3{ 0.0, -ycomponent, zcomponent });
+    mvDirectionLight dlight1 = create_directional_light("dlight1", mvVec3{ 0.0, -ycomponent, zcomponent });
 
     mvCamera lightcamera{};
     lightcamera.pos = light1.info.worldPos;
     lightcamera.fieldOfView = M_PI_2;
    
     // passes
-    mvPass mainPass = create_main_pass(graphics, am);
-    mvPass primaryPass = create_primary_pass(graphics, am, descriptorManager, pipelineManager, oldContentRegion.x, oldContentRegion.y);
-    mvPass offscreenPass = create_offscreen_pass(graphics, am, descriptorManager, pipelineManager);
-    mvPass shadowPass = create_shadow_pass(graphics, am, descriptorManager, pipelineManager);
-    mvPass omniShadowPass = create_omnishadow_pass(graphics, am, descriptorManager, pipelineManager);
+    mvPass mainPass = create_main_pass(graphics);
+    mvPass primaryPass = create_primary_pass(graphics, rctx.descriptorManager, rctx.pipelineManager, oldContentRegion.x, oldContentRegion.y);
+    mvPass offscreenPass = create_primary_pass(graphics, rctx.descriptorManager, rctx.pipelineManager, 2048.0f, 2048.0f);
+    mvPass shadowPass = create_shadow_pass(graphics, rctx.descriptorManager, rctx.pipelineManager);
+    mvPass omniShadowPass = create_omnishadow_pass(graphics, rctx.descriptorManager, rctx.pipelineManager);
 
     mvTexture shadowMapCube = create_texture_cube(graphics,
         1024, 1024,
@@ -270,7 +263,7 @@ int main()
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
         VK_IMAGE_ASPECT_COLOR_BIT);
 
-    mvAssetID cube = mvRegisterAsset(&am, "cubeshadowmap", shadowMapCube);
+    mvAssetID cube = register_texture(rctx.textureManager, "cubeshadowmap", shadowMapCube);
 
 
     //---------------------------------------------------------------------
@@ -279,9 +272,9 @@ int main()
     mvTimer timer;
     bool recreatePrimaryRender = false;
 
-    VkPipelineLayout primaryLayout = get_pipeline_layout(pipelineManager, "primary_pass");
-    VkPipelineLayout shadowPLayout = get_pipeline_layout(pipelineManager, "shadow_pass");
-    VkPipelineLayout skyboxLayout = get_pipeline_layout(pipelineManager, "skybox_pass");
+    VkPipelineLayout primaryLayout = get_pipeline_layout(rctx.pipelineManager, "primary_pass");
+    VkPipelineLayout shadowPLayout = get_pipeline_layout(rctx.pipelineManager, "shadow_pass");
+    VkPipelineLayout skyboxLayout = get_pipeline_layout(rctx.pipelineManager, "skybox_pass");
 
     while (viewport.running)
     {
@@ -307,16 +300,16 @@ int main()
             viewport.width = newwidth;
             viewport.height = newheight;
             recreate_swapchain(graphics, viewport);
-            mainPass = create_main_pass(graphics, am);
+            mainPass = create_main_pass(graphics);
             viewport.resized = false;
         }
 
         if (recreatePrimaryRender)
         {
             Renderer::cleanup_pass(graphics, primaryPass);
-            primaryPass = create_primary_pass(graphics, am, descriptorManager, pipelineManager, primaryPass.viewport.width, abs(primaryPass.viewport.height));
+            primaryPass = create_primary_pass(graphics, rctx.descriptorManager, rctx.pipelineManager, primaryPass.viewport.width, abs(primaryPass.viewport.height));
             recreatePrimaryRender = false;
-            primaryLayout = get_pipeline_layout(pipelineManager, "primary_pass");
+            primaryLayout = get_pipeline_layout(rctx.pipelineManager, "primary_pass");
         }
 
         //---------------------------------------------------------------------
@@ -344,22 +337,21 @@ int main()
         //---------------------------------------------------------------------
         // wait for fences and acquire next image
         //---------------------------------------------------------------------
-        Renderer::begin_frame(graphics);
-        update_skybox_descriptors(graphics, am, skybox, mvGetTextureAssetID2(graphics, &am, "../../Resources/SkyBox"));
-        update_scene_descriptors(graphics, am, am.scenes[scene].asset,
-            shadowPass.depthTextures[graphics.currentImageIndex],cube);
-        Renderer::update_descriptors(graphics, am, materialManager);
+        Renderer::begin_frame(rctx);
+        update_skybox_descriptors(rctx, skybox, skybox.mesh.diffuseTexture);
+        update_scene_descriptors(rctx, model.scenes[0], shadowPass.depthTextures[graphics.currentImageIndex],cube);
+        Renderer::update_descriptors(graphics, model, rctx);
         
         //---------------------------------------------------------------------
         // shadow pass
         //---------------------------------------------------------------------
-        Renderer::begin_pass(graphics, pipelineManager, get_current_command_buffer(graphics), shadowPass);
+        Renderer::begin_pass(rctx, get_current_command_buffer(graphics), shadowPass);
 
         
         Renderer::render_mesh_shadow(graphics, shadowPLayout ,*light1.mesh, lightTransform, secondaryViewMatrix, secondaryProjMatrix);
 
-        for (int i = 0; i < am.sceneCount; i++)
-            Renderer::render_scene_shadows(graphics, am, shadowPLayout, am.scenes[i].asset, secondaryViewMatrix, secondaryProjMatrix);
+        for (int i = 0; i < model.sceneCount; i++)
+            Renderer::render_scene_shadows(graphics, model, shadowPLayout, model.scenes[i], secondaryViewMatrix, secondaryProjMatrix);
 
         Renderer::end_pass(get_current_command_buffer(graphics));
 
@@ -399,10 +391,10 @@ int main()
                 break;
             }
 
-            Renderer::begin_pass(graphics, pipelineManager, get_current_command_buffer(graphics), omniShadowPass);
+            Renderer::begin_pass(rctx, get_current_command_buffer(graphics), omniShadowPass);
 
-            for (int i = 0; i < am.sceneCount; i++)
-                Renderer::render_scene_omni_shadows(graphics, am, shadowPLayout, am.scenes[i].asset, camera_matrix, perspective(M_PI_2, 1.0f, 0.1f, 400.0f), light1.info.worldPos);
+            for (int i = 0; i < model.sceneCount; i++)
+                Renderer::render_scene_omni_shadows(graphics, model, shadowPLayout, model.scenes[i], camera_matrix, perspective(M_PI_2, 1.0f, 0.1f, 400.0f), light1.info.worldPos);
 
             Renderer::end_pass(get_current_command_buffer(graphics));
 
@@ -471,38 +463,38 @@ int main()
         //---------------------------------------------------------------------
         // offscreen pass
         //--------------------------------------------------------------------- 
-        update_light_buffers(graphics, light1, am.scenes[scene].asset.descriptorSet.descriptors[1].buffers[graphics.currentImageIndex], secondaryViewMatrix, 0);
-        update_light_buffers(graphics, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].buffers[graphics.currentImageIndex], secondaryViewMatrix, 0);
+        update_light_buffers(graphics, light1, model.scenes[0].descriptorSet.descriptors[1].buffers[graphics.currentImageIndex], secondaryViewMatrix, 0);
+        update_light_buffers(graphics, dlight1, model.scenes[0].descriptorSet.descriptors[2].buffers[graphics.currentImageIndex], secondaryViewMatrix, 0);
         sceneData.camPos = secondaryCamera.pos;
-        bind_scene(graphics, am.scenes[scene].asset, sceneData, 0);
+        bind_scene(graphics, model.scenes[0], sceneData, 0);
         
-        Renderer::begin_pass(graphics, pipelineManager, get_current_command_buffer(graphics), offscreenPass);
+        Renderer::begin_pass(rctx, get_current_command_buffer(graphics), offscreenPass);
 
-        Renderer::render_mesh(graphics, materialManager.materials[light1.mesh->phongMaterialID].descriptorSet, primaryLayout, *light1.mesh, lightTransform, secondaryViewMatrix, secondaryProjMatrix);
+        Renderer::render_mesh(graphics, rctx.materialManager.materials[light1.mesh->phongMaterialID].descriptorSet, primaryLayout, *light1.mesh, lightTransform, secondaryViewMatrix, secondaryProjMatrix);
 
-        for (int i = 0; i < am.sceneCount; i++)
-            Renderer::render_scene(graphics, am, materialManager, primaryLayout, am.scenes[i].asset, secondaryViewMatrix, secondaryProjMatrix);
+        for (int i = 0; i < model.sceneCount; i++)
+            Renderer::render_scene(graphics, model, rctx.materialManager, primaryLayout, model.scenes[i], secondaryViewMatrix, secondaryProjMatrix);
 
         Renderer::end_pass(get_current_command_buffer(graphics));
 
         //---------------------------------------------------------------------
         // primary pass
         //---------------------------------------------------------------------
-        update_light_buffers(graphics, light1, am.scenes[scene].asset.descriptorSet.descriptors[1].buffers[graphics.currentImageIndex], viewMatrix, 1);
-        update_light_buffers(graphics, dlight1, am.scenes[scene].asset.descriptorSet.descriptors[2].buffers[graphics.currentImageIndex], viewMatrix, 1);
+        update_light_buffers(graphics, light1, model.scenes[0].descriptorSet.descriptors[1].buffers[graphics.currentImageIndex], viewMatrix, 1);
+        update_light_buffers(graphics, dlight1, model.scenes[0].descriptorSet.descriptors[2].buffers[graphics.currentImageIndex], viewMatrix, 1);
         sceneData.camPos = camera.pos;
-        bind_scene(graphics, am.scenes[scene].asset, sceneData, 1);
-        Renderer::begin_pass(graphics, pipelineManager, get_current_command_buffer(graphics), primaryPass);
+        bind_scene(graphics, model.scenes[0], sceneData, 1);
+        Renderer::begin_pass(rctx, get_current_command_buffer(graphics), primaryPass);
 
-        Renderer::render_mesh(graphics, materialManager.materials[light1.mesh->phongMaterialID].descriptorSet, primaryLayout, *light1.mesh, lightTransform, viewMatrix, projMatrix);
+        Renderer::render_mesh(graphics, rctx.materialManager.materials[light1.mesh->phongMaterialID].descriptorSet, primaryLayout, *light1.mesh, lightTransform, viewMatrix, projMatrix);
 
-        for (int i = 0; i < am.sceneCount; i++)
-            Renderer::render_scene(graphics, am, materialManager, primaryLayout, am.scenes[i].asset, viewMatrix, projMatrix);
+        for (int i = 0; i < model.sceneCount; i++)
+            Renderer::render_scene(graphics, model, rctx.materialManager, primaryLayout, model.scenes[i], viewMatrix, projMatrix);
 
         if (sceneData.doSkybox)
         {
             bind_skybox(graphics, skybox);
-            vkCmdBindPipeline(get_current_command_buffer(graphics), VK_PIPELINE_BIND_POINT_GRAPHICS, get_pipeline(pipelineManager, "skybox_pass"));
+            vkCmdBindPipeline(get_current_command_buffer(graphics), VK_PIPELINE_BIND_POINT_GRAPHICS, get_pipeline(rctx.pipelineManager, "skybox_pass"));
             Renderer::render_skybox(skybox, graphics, skyboxLayout, viewMatrix, projMatrix);
         }
 
@@ -511,7 +503,7 @@ int main()
         //---------------------------------------------------------------------
         // main pass
         //---------------------------------------------------------------------
-        Renderer::begin_pass(graphics, pipelineManager, get_current_command_buffer(graphics), mainPass);
+        Renderer::begin_pass(rctx, get_current_command_buffer(graphics), mainPass);
 
         ImGui::SetNextWindowBgAlpha(1.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f); // to prevent main window corners from showing
@@ -629,7 +621,7 @@ int main()
         //---------------------------------------------------------------------
         // submit command buffers & present
         //---------------------------------------------------------------------
-        Renderer::end_frame(graphics);
+        Renderer::end_frame(rctx);
         present(graphics);
     }
 
@@ -637,9 +629,7 @@ int main()
     Renderer::cleanup_pass(graphics, offscreenPass);
     Renderer::cleanup_pass(graphics, omniShadowPass);
     Renderer::cleanup_pass(graphics, shadowPass);
-    cleanup_descriptor_manager(graphics, descriptorManager);
-    cleanup_pipeline_manager(graphics, pipelineManager);
-    cleanup_material_manager(graphics, materialManager);
+    Renderer::cleanup_renderer_context(rctx);
 
     vkDestroyBuffer(graphics.logicalDevice, skybox.mesh.indexBuffer.buffer, nullptr);
     vkDestroyBuffer(graphics.logicalDevice, skybox.mesh.vertexBuffer.buffer, nullptr);
@@ -654,7 +644,7 @@ int main()
     skybox.mesh.vertexBuffer.specification.count = 0u;
     skybox.mesh.vertexBuffer.specification.aligned = false;
 
-    mvCleanupAssetManager(graphics, &am);
+    cleanup_model(graphics, model);
 
     // cleanup imgui
     ImGui_ImplVulkan_Shutdown();
