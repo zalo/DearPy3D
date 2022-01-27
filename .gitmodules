@@ -1,6 +1,3 @@
-[submodule "Dependencies/glfw"]
-	path = Dependencies/glfw
-	url = https://github.com/glfw/glfw
 [submodule "Dependencies/vk_sdk_lite"]
 	path = Dependencies/vk_sdk_lite
 	url = https://github.com/hoffstadt/vk_sdk_lite
