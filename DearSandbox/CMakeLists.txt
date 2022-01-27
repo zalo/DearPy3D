@@ -56,7 +56,6 @@ target_include_directories(dearpy3dsandbox
 		"../DearPy3D/vendor/imgui/backends/"
 
 		"../Dependencies/vk_sdk_lite/Include/"
-		"../Dependencies/glfw/include/"
 		"../Dependencies/stb/"
 		"../Dependencies/VulkanMemoryAllocator/"
 )
@@ -76,7 +75,6 @@ target_link_libraries(dearpy3dsandbox
 		$<$<PLATFORM_ID:Linux>:vulkan>
 		$<$<PLATFORM_ID:Windows>:vulkan-1>
 		dearpy3d
-		glfw
 )
 
 set_target_properties(dearpy3dsandbox

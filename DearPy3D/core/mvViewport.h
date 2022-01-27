@@ -1,18 +1,21 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
+#include "mvWindows.h"
 
 // forward declarations
 struct mvViewport;
 
-void initialize_viewport(mvViewport& viewport, int width, int height);
+void initialize_viewport    (mvViewport& viewport, int width, int height);
+void cleanup_viewport       (mvViewport& viewport);
 void process_viewport_events(mvViewport& viewport);
 
 struct mvViewport
 {
 	int         width         = 500;
 	int         height        = 500;
-	GLFWwindow* handle        = nullptr;
+	HWND        handle        = nullptr;
+	WNDCLASSEX  wc;
+	HINSTANCE   hinstance     = nullptr;
 	bool        running       = false;
 	bool        cursorEnabled = true;
 	double      lastX         = 0.0;

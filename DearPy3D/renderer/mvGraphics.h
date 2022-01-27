@@ -1,7 +1,10 @@
 #pragma once
 
+#if defined(_WIN32)
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif
+
 #include <vulkan/vulkan.h>
-#include <GLFW/glfw3.h>
 #include <vector>
 #include <string>
 #include "mvTypes.h"
@@ -13,7 +16,7 @@ struct mvGraphics;
 struct mvViewport;
 
 // initialization
-void            setup_graphics_context  (mvGraphics& graphics, mvViewport& viewport, std::vector<const char*> validationLayers, std::vector<const char*> deviceExtensions);
+void            setup_graphics_context  (mvGraphics& graphics, mvViewport& viewport, std::vector<const char*> validationLayers);
 void            recreate_swapchain      (mvGraphics& graphics, mvViewport& viewport);
 void            cleanup_graphics_context(mvGraphics& graphics);
 void            present                 (mvGraphics& graphics);

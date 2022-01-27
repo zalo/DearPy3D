@@ -1,6 +1,6 @@
 #include "mvRenderer.h"
 #include <stdexcept>
-#include <imgui_impl_glfw.h>
+#include <imgui_impl_win32.h>
 #include <imgui_impl_vulkan.h>
 #include "mvGraphics.h"
 #include "mvSkybox.h"
@@ -65,7 +65,7 @@ namespace Renderer {
         graphics.imagesInFlight[graphics.currentImageIndex] = graphics.inFlightFences[graphics.currentFrame];
 
         ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
+        ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();;
 
         VkCommandBufferBeginInfo beginInfo{};

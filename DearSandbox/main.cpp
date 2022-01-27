@@ -1,6 +1,6 @@
 #include <imgui.h>
 #include <imgui_impl_vulkan.h>
-#include <imgui_impl_glfw.h>
+#include <imgui_impl_win32.h>
 #include <array>
 #include "mvMesh.h"
 #include "mvCamera.h"
@@ -35,7 +35,7 @@ int main()
     graphics.enableValidationLayers = true;
 
 
-    setup_graphics_context(graphics, viewport, { "VK_LAYER_KHRONOS_validation" }, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
+    setup_graphics_context(graphics, viewport, { "VK_LAYER_KHRONOS_validation" });
 
     mvRendererContext rctx = Renderer::create_renderer_context(graphics);
 
@@ -287,18 +287,9 @@ int main()
         //---------------------------------------------------------------------
         if (viewport.resized)
         {
-
-            int newwidth = 0, newheight = 0;
-            glfwGetFramebufferSize(viewport.handle, &newwidth, &newheight);
-            while (newwidth == 0 || newheight == 0)
-            {
-                glfwGetFramebufferSize(viewport.handle, &newwidth, &newheight);
-                glfwWaitEvents();
-            }
-
             // cleanup
-            viewport.width = newwidth;
-            viewport.height = newheight;
+            viewport.width = viewport.width;
+            viewport.height = viewport.height;
             recreate_swapchain(graphics, viewport);
             mainPass = create_main_pass(graphics);
             viewport.resized = false;
@@ -648,9 +639,9 @@ int main()
 
     // cleanup imgui
     ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
+    ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
     cleanup_graphics_context(graphics);
-    glfwTerminate();
+    cleanup_viewport(viewport);
 }
