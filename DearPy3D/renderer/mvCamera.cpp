@@ -1,7 +1,7 @@
 #include "mvCamera.h"
 #include <imgui.h>
 #include <cmath>
-#include "mvViewport.h"
+#include "sSemper.h"
 #include "mvMath.h"
 
 template<typename T>
@@ -18,8 +18,9 @@ wrap_angle(T theta) noexcept
 }
 
 void
-update_fps_camera(mvViewport& viewport, mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed)
+update_fps_camera(sWindow& viewport, mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed)
 {
+
     // for now, we will just use imgui's input
     if (ImGui::GetIO().KeysDown['W'])
     {
@@ -55,9 +56,17 @@ update_fps_camera(mvViewport& viewport, mvCamera& camera, f32 dt, f32 travelSpee
         camera.pos.y = camera.pos.y - dt * travelSpeed;
     }
 
+    static bool justEnabled = true;
     if (!viewport.cursorEnabled)
     {
-        camera.yaw = wrap_angle(camera.yaw - (float)viewport.deltaX * rotationSpeed*dt);
-        camera.pitch = mvMath::clamp(camera.pitch -  (float)viewport.deltaY * rotationSpeed*dt, 0.995f * -MV_PI_2, 0.995f * MV_PI_2);
+        if (!justEnabled)
+        {
+            ImGuiIO& io = ImGui::GetIO();
+            camera.yaw = wrap_angle(camera.yaw - (float)io.MouseDelta.x * rotationSpeed * dt);
+            camera.pitch = mvMath::clamp(camera.pitch - (float)io.MouseDelta.y * rotationSpeed * dt, 0.995f * -MV_PI_2, 0.995f * MV_PI_2);
+        }
+        justEnabled = false;
     }
+    else
+        justEnabled = true;
 }

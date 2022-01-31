@@ -5,19 +5,8 @@ project ("DearPy3D")
 set(MV_NO_SHADERS ${MV_NO_SHADERS})
 
 # various settings for third party libs
-set(GLFW_BUILD_DOCS OFF)
-set(GLFW_BUILD_EXAMPLES OFF)
-set(GLFW_BUILD_TESTS OFF)
-set(GLFW_INSTALL OFF)
-set(BUILD_SHARED_LIBS OFF)
+add_definitions(-DSEMPER_INCLUDE_IMGUI)
 add_definitions(-D_USE_MATH_DEFINES)
 
-add_subdirectory ("Dependencies/glfw")
 add_subdirectory ("DearPy3D")
 add_subdirectory ("DearSandbox")
-
-if(WIN32)	
-elseif(APPLE)
-else() # linux
-	add_definitions(-DGLFW_EXPOSE_NATIVE_X11)
-endif()

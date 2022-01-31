@@ -1,12 +1,18 @@
 #include "mvGraphics.h"
-#include <imgui_impl_glfw.h>
+#include <imgui_impl_win32.h>
 #include <imgui_impl_vulkan.h>
 #include <stdexcept>
 #include <iostream>
 #include <set>
 #include <optional>
 #include <array>
-#include "mvViewport.h"
+#include "mvMath.h"
+
+#if defined(_WIN32)
+#include <Windows.h>
+#endif
+
+#include "sSemper.h"
 
 mv_internal VKAPI_ATTR VkBool32 VKAPI_CALL
 debugCallback(
@@ -122,7 +128,7 @@ find_queue_families(mvGraphics& graphics, VkPhysicalDevice device)
 }
 
 mv_internal void 
-create_swapchain(mvGraphics& graphics, mvViewport& viewport)
+create_swapchain(mvGraphics& graphics, sWindow& viewport)
 {
 
     struct SwapChainSupportDetails
@@ -195,8 +201,8 @@ create_swapchain(mvGraphics& graphics, mvViewport& viewport)
             (u32)viewport.height
         };
 
-        actualExtent.width = std::max(swapChainSupport.capabilities.minImageExtent.width, std::min(swapChainSupport.capabilities.maxImageExtent.width, actualExtent.width));
-        actualExtent.height = std::max(swapChainSupport.capabilities.minImageExtent.height, std::min(swapChainSupport.capabilities.maxImageExtent.height, actualExtent.height));
+        actualExtent.width = mvMath::get_max(swapChainSupport.capabilities.minImageExtent.width, mvMath::get_min(swapChainSupport.capabilities.maxImageExtent.width, actualExtent.width));
+        actualExtent.height = mvMath::get_max(swapChainSupport.capabilities.minImageExtent.height, mvMath::get_min(swapChainSupport.capabilities.maxImageExtent.height, actualExtent.height));
 
         extent = actualExtent;
     }
@@ -252,7 +258,7 @@ create_swapchain(mvGraphics& graphics, mvViewport& viewport)
 }
 
 mv_internal void
-setup_imgui(mvGraphics& graphics, GLFWwindow* window)
+setup_imgui(mvGraphics& graphics, HWND window)
 {
 
     // Setup Dear ImGui context
@@ -266,7 +272,7 @@ setup_imgui(mvGraphics& graphics, GLFWwindow* window)
     ImGui::StyleColorsDark();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForVulkan(window, true);
+    ImGui_ImplWin32_Init(window);
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = graphics.instance;
     init_info.PhysicalDevice = graphics.physicalDevice;
@@ -369,11 +375,15 @@ get_current_command_buffer(mvGraphics& graphics)
 }
 
 void
-setup_graphics_context(mvGraphics& graphics, mvViewport& viewport, std::vector<const char*> validationLayers, std::vector<const char*> deviceExtensions)
+setup_graphics_context(mvGraphics& graphics, sWindow& viewport, std::vector<const char*> validationLayers)
 {
+
+    std::vector<const char*> extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
     //-----------------------------------------------------------------------------
     // create vulkan instance
     //-----------------------------------------------------------------------------
+    
     {
         if (graphics.enableValidationLayers)
         {
@@ -409,16 +419,21 @@ setup_graphics_context(mvGraphics& graphics, mvViewport& viewport, std::vector<c
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         createInfo.pApplicationInfo = &appInfo;
 
-        // get extensions required to load glfw
-        u32 glfwExtensionCount = 0;
-        const char** glfwExtensions;
-        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-        std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-        if (graphics.enableValidationLayers)
-            extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        std::vector<const char*> enabledExtensions = { VK_KHR_SURFACE_EXTENSION_NAME };
 
-        createInfo.enabledExtensionCount = (u32)extensions.size();
-        createInfo.ppEnabledExtensionNames = extensions.data();
+        #if defined(_WIN32)
+        enabledExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+        #elif defined(__ANDROID__)
+        enabledExtensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+        #elif defined(__linux__)
+        enabledExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+        #endif
+
+        if (graphics.enableValidationLayers)
+            enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+        createInfo.enabledExtensionCount = (u32)enabledExtensions.size();
+        createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
         // Setup debug messenger for vulkan instance
         VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
@@ -468,7 +483,16 @@ setup_graphics_context(mvGraphics& graphics, mvViewport& viewport, std::vector<c
     //-----------------------------------------------------------------------------
     // create surface
     //-----------------------------------------------------------------------------
-    MV_VULKAN(glfwCreateWindowSurface(graphics.instance, viewport.handle, nullptr, &graphics.surface));
+    {
+        VkWin32SurfaceCreateInfoKHR surfaceCreateInfo{};
+        surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+        surfaceCreateInfo.pNext = NULL;
+        surfaceCreateInfo.flags = 0;
+        surfaceCreateInfo.hinstance = ::GetModuleHandle(NULL);
+        surfaceCreateInfo.hwnd = viewport.platform.handle;
+
+        MV_VULKAN(vkCreateWin32SurfaceKHR(graphics.instance, &surfaceCreateInfo, nullptr, &graphics.surface));
+    }
 
     //-----------------------------------------------------------------------------
     // create physical device
@@ -500,7 +524,7 @@ setup_graphics_context(mvGraphics& graphics, mvViewport& viewport, std::vector<c
                 std::vector<VkExtensionProperties> availableExtensions(extensionCount);
                 MV_VULKAN(vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data()));
 
-                std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+                std::set<std::string> requiredExtensions(extensions.begin(), extensions.end());
 
                 for (const auto& extension : availableExtensions)
                     requiredExtensions.erase(extension.extensionName);
@@ -563,8 +587,8 @@ setup_graphics_context(mvGraphics& graphics, mvViewport& viewport, std::vector<c
 
             createInfo.pEnabledFeatures = &deviceFeatures;
 
-            createInfo.enabledExtensionCount = (u32)deviceExtensions.size();
-            createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+            createInfo.enabledExtensionCount = (u32)extensions.size();
+            createInfo.ppEnabledExtensionNames = extensions.data();
 
             if (graphics.enableValidationLayers)
             {
@@ -694,7 +718,7 @@ setup_graphics_context(mvGraphics& graphics, mvViewport& viewport, std::vector<c
     //-----------------------------------------------------------------------------
     // Dear ImGui
     //-----------------------------------------------------------------------------
-    setup_imgui(graphics, viewport.handle);
+    setup_imgui(graphics, viewport.platform.handle);
 }
 
 u32
@@ -747,7 +771,7 @@ cleanup_graphics_context(mvGraphics& graphics)
 }
 
 void 
-recreate_swapchain(mvGraphics& graphics, mvViewport& viewport)
+recreate_swapchain(mvGraphics& graphics, sWindow& viewport)
 {
     vkDeviceWaitIdle(graphics.logicalDevice);
     flush_resources(graphics);

@@ -1,10 +1,9 @@
 #include <imgui.h>
 #include <imgui_impl_vulkan.h>
-#include <imgui_impl_glfw.h>
+#include <imgui_impl_win32.h>
 #include <array>
 #include "mvMesh.h"
 #include "mvCamera.h"
-#include "mvViewport.h"
 #include "mvGraphics.h"
 #include "mvTimer.h"
 #include "mvLights.h"
@@ -19,6 +18,8 @@
 #include "mvAssetLoader.h"
 #include "passes.h"
 
+#include "sSemper.h"
+
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
 mv_internal b8 loadSponza = true;
 mv_internal ImVec2 oldContentRegion = ImVec2(500, 500);
@@ -26,16 +27,16 @@ mv_internal ImVec2 oldContentRegion = ImVec2(500, 500);
 int main() 
 {
     int result = putenv("VK_LAYER_PATH=..\\..\\Dependencies\\vk_sdk_lite\\Bin");
-    
-    mvViewport viewport{};
-    initialize_viewport(viewport, 500, 500);
+
+    Semper::create_context();
+    sWindow* viewport = Semper::create_window(500, 500);
 
     mvGraphics graphics{};
     graphics.shaderDirectory = "../../DearPy3D/shaders/";
     graphics.enableValidationLayers = true;
 
 
-    setup_graphics_context(graphics, viewport, { "VK_LAYER_KHRONOS_validation" }, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
+    setup_graphics_context(graphics, *viewport, { "VK_LAYER_KHRONOS_validation" });
 
     mvRendererContext rctx = Renderer::create_renderer_context(graphics);
 
@@ -276,32 +277,35 @@ int main()
     VkPipelineLayout shadowPLayout = get_pipeline_layout(rctx.pipelineManager, "shadow_pass");
     VkPipelineLayout skyboxLayout = get_pipeline_layout(rctx.pipelineManager, "skybox_pass");
 
-    while (viewport.running)
+    while (viewport->running)
     {
         const auto dt = timer.mark() * 1.0f;
 
-        process_viewport_events(viewport);
+        //---------------------------------------------------------------------
+        // input handling
+        //---------------------------------------------------------------------
+        update_fps_camera(*viewport, camera, dt, 12.0f, 1.0f);
+        if (ImGui::IsKeyPressed(VK_ESCAPE))
+        {
+            if (viewport->cursorEnabled) Semper::disable_cursor(*viewport);
+            else Semper::enable_cursor(*viewport);
+        }
+       
+        Semper::process_window_events(*viewport);
+        Semper::new_frame();
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
 
         //---------------------------------------------------------------------
         // handle window resizing
         //---------------------------------------------------------------------
-        if (viewport.resized)
+        if (viewport->sizeChanged)
         {
-
-            int newwidth = 0, newheight = 0;
-            glfwGetFramebufferSize(viewport.handle, &newwidth, &newheight);
-            while (newwidth == 0 || newheight == 0)
-            {
-                glfwGetFramebufferSize(viewport.handle, &newwidth, &newheight);
-                glfwWaitEvents();
-            }
-
             // cleanup
-            viewport.width = newwidth;
-            viewport.height = newheight;
-            recreate_swapchain(graphics, viewport);
+            recreate_swapchain(graphics, *viewport);
             mainPass = create_main_pass(graphics);
-            viewport.resized = false;
+            viewport->sizeChanged = false;
         }
 
         if (recreatePrimaryRender)
@@ -312,10 +316,6 @@ int main()
             primaryLayout = get_pipeline_layout(rctx.pipelineManager, "primary_pass");
         }
 
-        //---------------------------------------------------------------------
-        // input handling
-        //---------------------------------------------------------------------
-        update_fps_camera(viewport, camera, dt, 12.0f, 1.0f);
 
         mvMat4 viewMatrix = fps_view(camera.pos, camera.pitch, camera.yaw);
         mvMat4 projMatrix = perspective(camera.fieldOfView, camera.aspect, camera.nearZ, camera.farZ);
@@ -341,7 +341,7 @@ int main()
         update_skybox_descriptors(rctx, skybox, skybox.mesh.diffuseTexture);
         update_scene_descriptors(rctx, model.scenes[0], shadowPass.depthTextures[graphics.currentImageIndex],cube);
         Renderer::update_descriptors(graphics, model, rctx);
-        
+
         //---------------------------------------------------------------------
         // shadow pass
         //---------------------------------------------------------------------
@@ -512,7 +512,7 @@ int main()
         ImGui::PushStyleColor(ImGuiCol_TableBorderLight, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
         ImGui::PushStyleColor(ImGuiCol_TableBorderStrong, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
-        ImGui::SetNextWindowSize(ImVec2((float)viewport.width, (float)viewport.height));
+        ImGui::SetNextWindowSize(ImVec2((float)viewport->width, (float)viewport->height));
 
         static ImGuiWindowFlags windowFlags =
             ImGuiWindowFlags_NoBringToFrontOnFocus |
@@ -623,6 +623,8 @@ int main()
         //---------------------------------------------------------------------
         Renderer::end_frame(rctx);
         present(graphics);
+
+        Semper::end_frame();
     }
 
     Renderer::cleanup_pass(graphics, primaryPass);
@@ -648,9 +650,9 @@ int main()
 
     // cleanup imgui
     ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
+    ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
     cleanup_graphics_context(graphics);
-    glfwTerminate();
+    Semper::cleanup_window(viewport);
 }

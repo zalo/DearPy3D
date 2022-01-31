@@ -17,7 +17,6 @@ target_sources(dearpy3d
 	PRIVATE
 
 		# core
-		"core/mvViewport.cpp"
 		"core/mvTimer.cpp"
 		"core/mvMath.cpp"
 
@@ -37,6 +36,10 @@ target_sources(dearpy3d
 		"renderer/mvScene.cpp"
 		"renderer/mvSkybox.cpp"
 
+		# Semper
+		"vendor/Semper/sSemper.cpp"
+		"$<$<PLATFORM_ID:Windows>:vendor/Semper/sSemper_win32.cpp>"
+
 		# Vulkan Memory Allocator
 		"../Dependencies/VulkanMemoryAllocator/vk_mem_alloc.cpp"
 
@@ -47,7 +50,8 @@ target_sources(dearpy3d
 		"vendor/imgui/imgui_draw.cpp"
 		"vendor/imgui/imgui_widgets.cpp"
 		"vendor/imgui/imgui_tables.cpp"
-		"vendor/imgui/backends/imgui_impl_glfw.cpp"
+		#"vendor/imgui/backends/imgui_impl_glfw.cpp"
+		"vendor/imgui/backends/imgui_impl_win32.cpp"
 		"vendor/imgui/backends/imgui_impl_vulkan.cpp"
 )
 
@@ -59,11 +63,11 @@ target_include_directories(dearpy3d
 		"core/"
 		"renderer/"
 		"renderer/drawables/"
+		"vendor/Semper/"
 		"vendor/imgui/"
 		"vendor/imgui/backends/"
 
 		"../Dependencies/vk_sdk_lite/Include/"
-		"../Dependencies/glfw/include/"
 		"../Dependencies/stb/"
 		"../Dependencies/VulkanMemoryAllocator/"
 )
@@ -82,5 +86,4 @@ target_link_libraries(dearpy3d
 
 		$<$<PLATFORM_ID:Linux>:vulkan>
 		$<$<PLATFORM_ID:Windows>:vulkan-1>
-		glfw
 )
