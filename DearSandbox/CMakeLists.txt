@@ -52,6 +52,7 @@ target_include_directories(dearpy3dsandbox
 		"../DearPy3D/"
 		"../DearPy3D/core/"
 		"../DearPy3D/renderer/"
+		"../DearPy3D/vendor/Semper/"
 		"../DearPy3D/vendor/imgui/"
 		"../DearPy3D/vendor/imgui/backends/"
 

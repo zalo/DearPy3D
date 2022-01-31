@@ -13,11 +13,11 @@
 
 // forward declarations
 struct mvGraphics;
-struct mvViewport;
+struct sWindow;
 
 // initialization
-void            setup_graphics_context  (mvGraphics& graphics, mvViewport& viewport, std::vector<const char*> validationLayers);
-void            recreate_swapchain      (mvGraphics& graphics, mvViewport& viewport);
+void            setup_graphics_context  (mvGraphics& graphics, sWindow& viewport, std::vector<const char*> validationLayers);
+void            recreate_swapchain      (mvGraphics& graphics, sWindow& viewport);
 void            cleanup_graphics_context(mvGraphics& graphics);
 void            present                 (mvGraphics& graphics);
 VkCommandBuffer begin_command_buffer    (mvGraphics& graphics);                                // single use command buffer (submit with next command)

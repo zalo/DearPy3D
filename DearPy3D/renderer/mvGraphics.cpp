@@ -6,12 +6,13 @@
 #include <set>
 #include <optional>
 #include <array>
-#include "mvViewport.h"
 #include "mvMath.h"
 
 #if defined(_WIN32)
 #include <Windows.h>
 #endif
+
+#include "sSemper.h"
 
 mv_internal VKAPI_ATTR VkBool32 VKAPI_CALL
 debugCallback(
@@ -127,7 +128,7 @@ find_queue_families(mvGraphics& graphics, VkPhysicalDevice device)
 }
 
 mv_internal void 
-create_swapchain(mvGraphics& graphics, mvViewport& viewport)
+create_swapchain(mvGraphics& graphics, sWindow& viewport)
 {
 
     struct SwapChainSupportDetails
@@ -374,7 +375,7 @@ get_current_command_buffer(mvGraphics& graphics)
 }
 
 void
-setup_graphics_context(mvGraphics& graphics, mvViewport& viewport, std::vector<const char*> validationLayers)
+setup_graphics_context(mvGraphics& graphics, sWindow& viewport, std::vector<const char*> validationLayers)
 {
 
     std::vector<const char*> extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
@@ -487,8 +488,8 @@ setup_graphics_context(mvGraphics& graphics, mvViewport& viewport, std::vector<c
         surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
         surfaceCreateInfo.pNext = NULL;
         surfaceCreateInfo.flags = 0;
-        surfaceCreateInfo.hinstance = viewport.hinstance;
-        surfaceCreateInfo.hwnd = viewport.handle;
+        surfaceCreateInfo.hinstance = ::GetModuleHandle(NULL);
+        surfaceCreateInfo.hwnd = viewport.platform.handle;
 
         MV_VULKAN(vkCreateWin32SurfaceKHR(graphics.instance, &surfaceCreateInfo, nullptr, &graphics.surface));
     }
@@ -717,7 +718,7 @@ setup_graphics_context(mvGraphics& graphics, mvViewport& viewport, std::vector<c
     //-----------------------------------------------------------------------------
     // Dear ImGui
     //-----------------------------------------------------------------------------
-    setup_imgui(graphics, viewport.handle);
+    setup_imgui(graphics, viewport.platform.handle);
 }
 
 u32
@@ -770,7 +771,7 @@ cleanup_graphics_context(mvGraphics& graphics)
 }
 
 void 
-recreate_swapchain(mvGraphics& graphics, mvViewport& viewport)
+recreate_swapchain(mvGraphics& graphics, sWindow& viewport)
 {
     vkDeviceWaitIdle(graphics.logicalDevice);
     flush_resources(graphics);
