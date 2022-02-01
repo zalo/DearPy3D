@@ -1,7 +1,7 @@
 #include "mvTextures.h"
 #include <stdexcept>
 #include "imgui_impl_vulkan.h"
-#include "mvMath.h"
+#include "sMath.h"
 #include "mvBuffer.h"
 #include "mvGraphics.h"
 
@@ -9,7 +9,7 @@
 #include "stb_image.h"
 
 void 
-transition_image_layout(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageSubresourceRange subresourceRange,
+DearPy3D::transition_image_layout(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageSubresourceRange subresourceRange,
     VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask)
 {
     //VkCommandBuffer commandBuffer = mvBeginSingleTimeCommands();
@@ -129,7 +129,8 @@ transition_image_layout(VkCommandBuffer commandBuffer, VkImage image, VkImageLay
     //mvEndSingleTimeCommands(commandBuffer);
 }
 
-void transition_image_layout(VkCommandBuffer commandBuffer, VkImage image, VkImageAspectFlags aspectMask, VkImageLayout oldLayout, VkImageLayout newLayout,
+void 
+DearPy3D::transition_image_layout(VkCommandBuffer commandBuffer, VkImage image, VkImageAspectFlags aspectMask, VkImageLayout oldLayout, VkImageLayout newLayout,
     VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask)
 {
     VkImageSubresourceRange subresourceRange{};
@@ -151,7 +152,7 @@ mvGenerateMipmaps(mvGraphics& graphics, VkImage image, VkFormat imageFormat, i32
         throw std::runtime_error("texture image format does not support linear blitting!");
     }
 
-    VkCommandBuffer commandBuffer = begin_command_buffer(graphics);
+    VkCommandBuffer commandBuffer = DearPy3D::begin_command_buffer(graphics);
 
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -227,16 +228,18 @@ mvGenerateMipmaps(mvGraphics& graphics, VkImage image, VkFormat imageFormat, i32
         0, nullptr,
         1, &barrier);
 
-    submit_command_buffer(graphics, commandBuffer);
+    DearPy3D::submit_command_buffer(graphics, commandBuffer);
 }
 
 mvTexture
-create_texture_cube(mvGraphics& graphics, const char* path)
+DearPy3D::create_texture_cube(mvGraphics& graphics, const char* path)
 {
-    mvTexture texture{};
+    mvTexture texture;
     texture.file = path;
     texture.imageInfo = VkDescriptorImageInfo{};
     texture.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    texture.textureImage = VK_NULL_HANDLE;
+    texture.textureImageMemory = VK_NULL_HANDLE;
 
     // Load Image
     int texWidth, texHeight, texNumChannels, textBytesPerRow;
@@ -431,20 +434,20 @@ create_texture_cube(mvGraphics& graphics, const char* path)
 }
 
 mvTexture 
-create_texture(mvGraphics& graphics, const char* file)
+DearPy3D::create_texture(mvGraphics& graphics, const char* file)
 {
-    using namespace mvMath;
-
-    mvTexture texture{};
+    mvTexture texture;
     texture.file = file;
     texture.imageInfo = VkDescriptorImageInfo{};
     texture.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    texture.textureImage = VK_NULL_HANDLE;
+    texture.textureImageMemory = VK_NULL_HANDLE;
 
     int texWidth, texHeight, texChannels;
     stbi_uc* pixels = stbi_load(file, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     VkDeviceSize imageSize = texWidth * texHeight * 4;
 
-    texture.mipLevels = (u32)get_floor(log2(get_max(texWidth, texHeight))) + 1u;
+    texture.mipLevels = (u32)Semper::get_floor(Semper::log2(Semper::get_max(texWidth, texHeight))) + 1u;
     //texture.mipLevels = 1u;
 
     if (!pixels)
@@ -453,7 +456,7 @@ create_texture(mvGraphics& graphics, const char* file)
     //-----------------------------------------------------------------------------
     // staging buffer
     //-----------------------------------------------------------------------------
-    mvBufferSpecification bufferSpec{};
+    mvBufferSpecification bufferSpec;
     bufferSpec.size = imageSize;
     bufferSpec.usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     bufferSpec.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -556,10 +559,12 @@ create_texture(mvGraphics& graphics, const char* file)
 }
 
 mvTexture
-create_texture(mvGraphics& graphics, u32 width, u32 height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect)
+DearPy3D::create_texture(mvGraphics& graphics, u32 width, u32 height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect)
 {
-    mvTexture texture{};
+    mvTexture texture;
     texture.imageInfo = VkDescriptorImageInfo{};
+    texture.textureImage = VK_NULL_HANDLE;
+    texture.textureImageMemory = VK_NULL_HANDLE;
 
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -631,10 +636,12 @@ create_texture(mvGraphics& graphics, u32 width, u32 height, VkFormat format, VkI
 }
 
 mvTexture
-create_texture_cube(mvGraphics& graphics, u32 width, u32 height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect)
+DearPy3D::create_texture_cube(mvGraphics& graphics, u32 width, u32 height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect)
 {
-    mvTexture texture{};
+    mvTexture texture;
     texture.imageInfo = VkDescriptorImageInfo{};
+    texture.textureImage = VK_NULL_HANDLE;
+    texture.textureImageMemory = VK_NULL_HANDLE;
 
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -711,9 +718,13 @@ create_texture_cube(mvGraphics& graphics, u32 width, u32 height, VkFormat format
 }
 
 mvTextureManager
-create_texture_manager()
+DearPy3D::create_texture_manager()
 {
-    mvTextureManager manager{};
+    mvTextureManager manager;
+    manager.textureKeys = nullptr;
+    manager.maxTextureCount = 500u;
+    manager.textureCount = 0u;
+    manager.textures = nullptr;
 
     manager.textures = new mvTexture[manager.maxTextureCount];
     manager.textureKeys = new std::string[manager.maxTextureCount];
@@ -727,7 +738,7 @@ create_texture_manager()
 }
 
 void
-cleanup_texture_manager(mvGraphics& graphics, mvTextureManager& manager)
+DearPy3D::cleanup_texture_manager(mvGraphics& graphics, mvTextureManager& manager)
 {
     for (int i = 0; i < manager.textureCount; i++)
     {
@@ -743,7 +754,7 @@ cleanup_texture_manager(mvGraphics& graphics, mvTextureManager& manager)
 }
 
 mvAssetID
-register_texture(mvTextureManager& manager, const std::string& tag, mvTexture texture)
+DearPy3D::register_texture(mvTextureManager& manager, const std::string& tag, mvTexture texture)
 {
     assert(manager.textureCount <= manager.maxTextureCount);
     manager.textures[manager.textureCount] = texture;
@@ -753,7 +764,7 @@ register_texture(mvTextureManager& manager, const std::string& tag, mvTexture te
 }
 
 mvAssetID
-register_texture_safe_load(mvGraphics& graphics, mvTextureManager& manager, const std::string& tag)
+DearPy3D::register_texture_safe_load(mvGraphics& graphics, mvTextureManager& manager, const std::string& tag)
 {
     assert(manager.textureCount <= manager.maxTextureCount);
 
@@ -768,7 +779,7 @@ register_texture_safe_load(mvGraphics& graphics, mvTextureManager& manager, cons
 }
 
 mvAssetID
-register_texture_cube_safe_load(mvGraphics& graphics, mvTextureManager& manager, const std::string& tag)
+DearPy3D::register_texture_cube_safe_load(mvGraphics& graphics, mvTextureManager& manager, const std::string& tag)
 {
     assert(manager.textureCount <= manager.maxTextureCount);
 

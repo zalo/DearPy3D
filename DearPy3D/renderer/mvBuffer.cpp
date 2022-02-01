@@ -7,11 +7,14 @@ i_create_buffer(mvGraphics& graphics, mvBufferSpecification specification)
 {
     mvBuffer buffer{};
     buffer.specification = specification;
+    buffer.buffer = VK_NULL_HANDLE;
+    buffer.deviceMemory = VK_NULL_HANDLE;
+    buffer.actualSize = 0u;
     
     if (specification.aligned)
     {
-        buffer.actualSize = get_required_uniform_buffer_size(graphics, specification.size * specification.components) * specification.count;
-        buffer.bufferInfo.range = get_required_uniform_buffer_size(graphics, specification.size * specification.components);
+        buffer.actualSize = DearPy3D::get_required_uniform_buffer_size(graphics, specification.size * specification.components) * specification.count;
+        buffer.bufferInfo.range = DearPy3D::get_required_uniform_buffer_size(graphics, specification.size * specification.components);
     }
     else
         buffer.actualSize = specification.size * specification.count * specification.components;
@@ -31,7 +34,7 @@ i_create_buffer(mvGraphics& graphics, mvBufferSpecification specification)
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = find_memory_type(graphics.physicalDevice, memRequirements.memoryTypeBits, specification.propertyFlags);
+    allocInfo.memoryTypeIndex = DearPy3D::find_memory_type(graphics.physicalDevice, memRequirements.memoryTypeBits, specification.propertyFlags);
 
     MV_VULKAN(vkAllocateMemory(graphics.logicalDevice, &allocInfo, nullptr, &buffer.deviceMemory));
 
@@ -40,8 +43,8 @@ i_create_buffer(mvGraphics& graphics, mvBufferSpecification specification)
     return buffer;
 }
 
-mvBuffer 
-create_buffer(mvGraphics& graphics, mvBufferSpecification specification, void* data)
+mvBuffer
+DearPy3D::create_buffer(mvGraphics& graphics, mvBufferSpecification specification, void* data)
 {
     if (data)
     {
@@ -96,7 +99,7 @@ create_buffer(mvGraphics& graphics, mvBufferSpecification specification, void* d
 }
 
 void
-copy_buffer(mvGraphics& graphics, mvBuffer srcBuffer, mvBuffer dstBuffer)
+DearPy3D::copy_buffer(mvGraphics& graphics, mvBuffer srcBuffer, mvBuffer dstBuffer)
 {
     VkCommandBuffer commandBuffer = begin_command_buffer(graphics);
 
@@ -108,7 +111,7 @@ copy_buffer(mvGraphics& graphics, mvBuffer srcBuffer, mvBuffer dstBuffer)
 }
 
 void
-copy_buffer_to_image(mvGraphics& graphics, mvBuffer srcBuffer, VkImage dstImage, u32 width, u32 height, u32 layers)
+DearPy3D::copy_buffer_to_image(mvGraphics& graphics, mvBuffer srcBuffer, VkImage dstImage, unsigned width, unsigned height, unsigned layers)
 {
     VkCommandBuffer commandBuffer = begin_command_buffer(graphics);
 
@@ -142,7 +145,7 @@ copy_buffer_to_image(mvGraphics& graphics, mvBuffer srcBuffer, VkImage dstImage,
 }
 
 void 
-update_buffer(mvGraphics& graphics, mvBuffer& buffer, void* data)
+DearPy3D::update_buffer(mvGraphics& graphics, mvBuffer& buffer, void* data)
 {
     void* mapping;
     MV_VULKAN(vkMapMemory(graphics.logicalDevice, buffer.deviceMemory, 0, buffer.actualSize, 0, &mapping));
@@ -151,10 +154,10 @@ update_buffer(mvGraphics& graphics, mvBuffer& buffer, void* data)
 }
 
 void
-partial_buffer_update(mvGraphics& graphics, mvBuffer& buffer, void* data, u64 index)
+DearPy3D::partial_buffer_update(mvGraphics& graphics, mvBuffer& buffer, void* data, size_t index)
 {
-    u64 individualBlock = buffer.bufferInfo.range;
-    u64 offset = index * individualBlock;
+    size_t individualBlock = buffer.bufferInfo.range;
+    size_t offset = index * individualBlock;
     void* mapping;
     MV_VULKAN(vkMapMemory(graphics.logicalDevice, buffer.deviceMemory, 0, buffer.actualSize, 0, &mapping));
     char* mdata = (char*)mapping;

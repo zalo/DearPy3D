@@ -5,10 +5,11 @@
 #include <assert.h>
 
 mvDescriptorSetLayout
-create_descriptor_set_layout(mvGraphics& graphics, std::vector<mvDescriptorSpec> specs)
+DearPy3D::create_descriptor_set_layout(mvGraphics& graphics, std::vector<mvDescriptorSpec> specs)
 {
     mvDescriptorSetLayout layout{};
     layout.specs = specs;
+    layout.layout = VK_NULL_HANDLE;
 
     VkDescriptorSetLayoutBinding* bindings = new VkDescriptorSetLayoutBinding[specs.size()];
 
@@ -26,7 +27,7 @@ create_descriptor_set_layout(mvGraphics& graphics, std::vector<mvDescriptorSpec>
 }
 
 mvDescriptor
-create_uniform_descriptor(mvGraphics& graphics, mvDescriptorSpec spec, const std::string& name, u64 size, void* data)
+DearPy3D::create_uniform_descriptor(mvGraphics& graphics, mvDescriptorSpec spec, const std::string& name, size_t size, void* data)
 {
     mvDescriptor descriptor{};
     descriptor.size = size;
@@ -58,7 +59,7 @@ create_uniform_descriptor(mvGraphics& graphics, mvDescriptorSpec spec, const std
 }
 
 mvDescriptor
-create_dynamic_uniform_descriptor(mvGraphics& graphics, mvDescriptorSpec spec, const std::string& name, u64 count, u64 size, void* data)
+DearPy3D::create_dynamic_uniform_descriptor(mvGraphics& graphics, mvDescriptorSpec spec, const std::string& name, size_t count, size_t size, void* data)
 {
     mvDescriptor descriptor{};
     descriptor.size = size;
@@ -90,7 +91,7 @@ create_dynamic_uniform_descriptor(mvGraphics& graphics, mvDescriptorSpec spec, c
 }
 
 mvDescriptor
-create_texture_descriptor(mvDescriptorSpec spec)
+DearPy3D::create_texture_descriptor(mvDescriptorSpec spec)
 {
     mvDescriptor descriptor{};
     descriptor.size = 0u;
@@ -111,7 +112,7 @@ create_texture_descriptor(mvDescriptorSpec spec)
 }
 
 mvDescriptorSpec
-create_uniform_descriptor_spec(u32 binding)
+DearPy3D::create_uniform_descriptor_spec(unsigned binding)
 {
     mvDescriptorSpec descriptor{};
     descriptor.layoutBinding.binding = binding;
@@ -123,7 +124,7 @@ create_uniform_descriptor_spec(u32 binding)
 }
 
 mvDescriptorSpec
-create_dynamic_uniform_descriptor_spec(u32 binding)
+DearPy3D::create_dynamic_uniform_descriptor_spec(unsigned binding)
 {
     mvDescriptorSpec descriptor{};
     descriptor.layoutBinding.binding = binding;
@@ -135,7 +136,7 @@ create_dynamic_uniform_descriptor_spec(u32 binding)
 }
 
 mvDescriptorSpec
-create_texture_descriptor_spec(u32 binding)
+DearPy3D::create_texture_descriptor_spec(unsigned binding)
 {
     mvDescriptorSpec descriptor{};
     descriptor.layoutBinding.binding = binding;
@@ -147,7 +148,7 @@ create_texture_descriptor_spec(u32 binding)
 }
 
 mvDescriptorSet
-create_descriptor_set(mvGraphics& graphics, VkDescriptorSetLayout layout, VkPipelineLayout pipelineLayout)
+DearPy3D::create_descriptor_set(mvGraphics& graphics, VkDescriptorSetLayout layout, VkPipelineLayout pipelineLayout)
 {
     mvDescriptorSet descriptorSet{};
     descriptorSet.pipelineLayout = pipelineLayout;
@@ -167,16 +168,24 @@ create_descriptor_set(mvGraphics& graphics, VkDescriptorSetLayout layout, VkPipe
 }
 
 void
-bind_descriptor_set(mvGraphics& graphics, mvDescriptorSet& descriptorSet, u32 set, u32 dynamicDescriptorCount, u32* dynamicOffset)
+DearPy3D::bind_descriptor_set(mvGraphics& graphics, mvDescriptorSet& descriptorSet, unsigned set, unsigned dynamicDescriptorCount, unsigned* dynamicOffset)
 {
     VkDescriptorSet rawDescriptorSet = descriptorSet.descriptorSets[graphics.currentImageIndex];
     vkCmdBindDescriptorSets(get_current_command_buffer(graphics), VK_PIPELINE_BIND_POINT_GRAPHICS, descriptorSet.pipelineLayout, set, 1, &rawDescriptorSet, dynamicDescriptorCount, dynamicOffset);
 }
 
 mvDescriptorManager
-create_descriptor_manager()
+DearPy3D::create_descriptor_manager()
 {
     mvDescriptorManager manager{};
+    manager.descriptorSetKeys = nullptr;
+    manager.layoutKeys = nullptr;      	  
+    manager.maxDSCount = 50u;
+    manager.dsCount = 0u;
+    manager.descriptorSets = nullptr;    	  
+    manager.maxLayoutCount = 50u;
+    manager.layoutCount = 0u;
+    manager.layouts = nullptr;
 
     manager.descriptorSets = new mvDescriptorSet[manager.maxDSCount];
     manager.descriptorSetKeys = new std::string[manager.maxDSCount];
@@ -198,7 +207,7 @@ create_descriptor_manager()
 }
 
 void
-cleanup_descriptor_manager(mvGraphics& graphics, mvDescriptorManager& manager)
+DearPy3D::cleanup_descriptor_manager(mvGraphics& graphics, mvDescriptorManager& manager)
 {
 
     // cleanup descriptor sets
@@ -237,7 +246,7 @@ cleanup_descriptor_manager(mvGraphics& graphics, mvDescriptorManager& manager)
 }
 
 mvAssetID
-register_descriptor_set(mvDescriptorManager& manager, const std::string& tag, mvDescriptorSet pipeline)
+DearPy3D::register_descriptor_set(mvDescriptorManager& manager, const std::string& tag, mvDescriptorSet pipeline)
 {
     assert(manager.dsCount <= manager.maxDSCount);
     manager.descriptorSets[manager.dsCount] = pipeline;
@@ -247,7 +256,7 @@ register_descriptor_set(mvDescriptorManager& manager, const std::string& tag, mv
 }
 
 mvAssetID
-register_descriptor_set_layout(mvDescriptorManager& manager, const std::string& tag, VkDescriptorSetLayout layout)
+DearPy3D::register_descriptor_set_layout(mvDescriptorManager& manager, const std::string& tag, VkDescriptorSetLayout layout)
 {
     assert(manager.layoutCount <= manager.maxLayoutCount);
     manager.layouts[manager.layoutCount] = layout;
@@ -257,7 +266,7 @@ register_descriptor_set_layout(mvDescriptorManager& manager, const std::string& 
 }
 
 VkDescriptorSet
-get_descriptor_set(mvDescriptorManager& manager, const std::string& tag, u32 index)
+DearPy3D::get_descriptor_set(mvDescriptorManager& manager, const std::string& tag, unsigned index)
 {
     for (int i = 0; i < manager.dsCount; i++)
     {
@@ -268,7 +277,7 @@ get_descriptor_set(mvDescriptorManager& manager, const std::string& tag, u32 ind
 }
 
 VkDescriptorSetLayout
-get_descriptor_set_layout(mvDescriptorManager& manager, const std::string& tag)
+DearPy3D::get_descriptor_set_layout(mvDescriptorManager& manager, const std::string& tag)
 {
     for (int i = 0; i < manager.layoutCount; i++)
     {

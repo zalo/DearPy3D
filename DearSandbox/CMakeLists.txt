@@ -28,14 +28,8 @@ set_property(TARGET dearpy3dsandbox PROPERTY CXX_STANDARD 17)
 
 if(MV_NO_SHADERS)
 else()
-	add_shader(phong.frag)
-	add_shader(shadow.frag)
-	add_shader(phong.vert)
-	add_shader(shadow.vert)
-	add_shader(skybox.vert)
-	add_shader(skybox.frag)
-	add_shader(omnishadow.frag)
-	add_shader(omnishadow.vert)
+	add_shader(simple.vert)
+	add_shader(simple.frag)
 endif()
 
 target_sources(dearpy3dsandbox

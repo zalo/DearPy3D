@@ -6,11 +6,7 @@
 #include <set>
 #include <optional>
 #include <array>
-#include "mvMath.h"
-
-#if defined(_WIN32)
-#include <Windows.h>
-#endif
+#include "sMath.h"
 
 #include "sSemper.h"
 
@@ -31,13 +27,8 @@ debugCallback(
 
 struct QueueFamilyIndices
 {
-    std::optional<u32> graphicsFamily;
-    std::optional<u32> presentFamily;
-
-    bool isComplete() 
-    {
-        return graphicsFamily.has_value() && presentFamily.has_value();
-    }
+    int graphicsFamily = -1;
+    int presentFamily = -1;
 };
 
 mv_internal void
@@ -69,7 +60,7 @@ create_image(mvGraphics& graphics, u32 width, u32 height, VkFormat format,
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = find_memory_type(graphics.physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    allocInfo.memoryTypeIndex = DearPy3D::find_memory_type(graphics.physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     MV_VULKAN(vkAllocateMemory(graphics.logicalDevice, &allocInfo, nullptr, &imageMemory));
     MV_VULKAN(vkBindImageMemory(graphics.logicalDevice, image, imageMemory, 0));
@@ -118,7 +109,7 @@ find_queue_families(mvGraphics& graphics, VkPhysicalDevice device)
         if (presentSupport)
             indices.presentFamily = i;
 
-        if (indices.isComplete())
+        if (indices.graphicsFamily > -1 && indices.presentFamily > -1) // complete
             break;
 
         i++;
@@ -201,8 +192,8 @@ create_swapchain(mvGraphics& graphics, sWindow& viewport)
             (u32)viewport.height
         };
 
-        actualExtent.width = mvMath::get_max(swapChainSupport.capabilities.minImageExtent.width, mvMath::get_min(swapChainSupport.capabilities.maxImageExtent.width, actualExtent.width));
-        actualExtent.height = mvMath::get_max(swapChainSupport.capabilities.minImageExtent.height, mvMath::get_min(swapChainSupport.capabilities.maxImageExtent.height, actualExtent.height));
+        actualExtent.width = Semper::get_max(swapChainSupport.capabilities.minImageExtent.width, Semper::get_min(swapChainSupport.capabilities.maxImageExtent.width, actualExtent.width));
+        actualExtent.height = Semper::get_max(swapChainSupport.capabilities.minImageExtent.height, Semper::get_min(swapChainSupport.capabilities.maxImageExtent.height, actualExtent.height));
 
         extent = actualExtent;
     }
@@ -223,7 +214,7 @@ create_swapchain(mvGraphics& graphics, sWindow& viewport)
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
         QueueFamilyIndices indices = find_queue_families(graphics, graphics.physicalDevice);
-        u32 queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+        u32 queueFamilyIndices[] = { indices.graphicsFamily, indices.presentFamily};
 
         if (indices.graphicsFamily != indices.presentFamily)
         {
@@ -290,9 +281,9 @@ setup_imgui(mvGraphics& graphics, HWND window)
     // Upload Fonts
     {
         // Use any command queue
-        VkCommandBuffer command_buffer = begin_command_buffer(graphics);
+        VkCommandBuffer command_buffer = DearPy3D::begin_command_buffer(graphics);
         ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
-        submit_command_buffer(graphics, command_buffer);
+        DearPy3D::submit_command_buffer(graphics, command_buffer);
         ImGui_ImplVulkan_DestroyFontUploadObjects();
     }
 
@@ -369,14 +360,52 @@ flush_resources(mvGraphics& graphics)
 //-----------------------------------------------------------------------------
 
 VkCommandBuffer  
-get_current_command_buffer(mvGraphics& graphics)
+DearPy3D::get_current_command_buffer(mvGraphics& graphics)
 {
     return graphics.commandBuffers[graphics.currentImageIndex];
 }
 
-void
-setup_graphics_context(mvGraphics& graphics, sWindow& viewport, std::vector<const char*> validationLayers)
+mvGraphics*
+DearPy3D::setup_graphics_context(sWindow& viewport, std::vector<const char*> validationLayers)
 {
+    mvGraphics* graphicsPtr = new mvGraphics();
+    mvGraphics& graphics = *graphicsPtr;
+
+    graphics.physicalDevice = VK_NULL_HANDLE;
+    graphics.logicalDevice = VK_NULL_HANDLE;
+    graphics.graphicsQueue = VK_NULL_HANDLE;
+    graphics.presentQueue = VK_NULL_HANDLE;
+    graphics.commandPool = VK_NULL_HANDLE;
+    graphics.graphicsQueueFamily = 0;
+    graphics.swapChain = VK_NULL_HANDLE;
+    graphics.swapChainImages;
+    graphics.swapChainImageViews;
+    graphics.swapChainFramebuffers;
+    graphics.depthImage = VK_NULL_HANDLE;
+    graphics.depthImageMemory = VK_NULL_HANDLE;
+    graphics.depthImageView = VK_NULL_HANDLE;
+    graphics.renderPass = VK_NULL_HANDLE;
+    graphics.minImageCount = 0;
+    graphics.currentImageIndex = 0;
+    graphics.currentFrame = 0;
+    graphics.surface = VK_NULL_HANDLE;
+    graphics.enableValidationLayers = true;
+    graphics.shaderDirectory = "../../DearPy3D/shaders/";
+
+    graphics.instance = VK_NULL_HANDLE;
+    graphics.descriptorPool = VK_NULL_HANDLE;
+    //graphics.commandBuffers;
+    //graphics.deviceProperties;
+    //graphics.swapChainImageFormat;
+    //graphics.swapChainImages;
+    //graphics.swapChainImageViews;
+    //graphics.swapChainFramebuffers;
+    //graphics.imageAvailableSemaphores; // syncronize rendering to image when already rendering to image
+    //graphics.renderFinishedSemaphores; // syncronize render/present
+    //graphics.inFlightFences;
+    //graphics.imagesInFlight;
+    //graphics.swapChainExtent;
+    graphics.debugMessenger = VK_NULL_HANDLE;
 
     std::vector<const char*> extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
@@ -560,10 +589,10 @@ setup_graphics_context(mvGraphics& graphics, sWindow& viewport, std::vector<cons
     {
         QueueFamilyIndices indices = find_queue_families(graphics, graphics.physicalDevice);
 
-        graphics.graphicsQueueFamily = indices.graphicsFamily.value();
+        graphics.graphicsQueueFamily = indices.graphicsFamily;
 
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-        std::set<u32> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+        std::set<u32> uniqueQueueFamilies = { (unsigned)indices.graphicsFamily, (unsigned)indices.presentFamily };
 
         f32 queuePriority = 1.0f;
         for (u32 queueFamily : uniqueQueueFamilies)
@@ -601,8 +630,8 @@ setup_graphics_context(mvGraphics& graphics, sWindow& viewport, std::vector<cons
             MV_VULKAN(vkCreateDevice(graphics.physicalDevice, &createInfo, nullptr, &graphics.logicalDevice));
         }
 
-        vkGetDeviceQueue(graphics.logicalDevice, indices.graphicsFamily.value(), 0, &graphics.graphicsQueue);
-        vkGetDeviceQueue(graphics.logicalDevice, indices.presentFamily.value(), 0, &graphics.presentQueue);
+        vkGetDeviceQueue(graphics.logicalDevice, indices.graphicsFamily, 0, &graphics.graphicsQueue);
+        vkGetDeviceQueue(graphics.logicalDevice, indices.presentFamily, 0, &graphics.presentQueue);
     }
 
     //-----------------------------------------------------------------------------
@@ -617,7 +646,7 @@ setup_graphics_context(mvGraphics& graphics, sWindow& viewport, std::vector<cons
 
     VkCommandPoolCreateInfo commandPoolInfo{};
     commandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    commandPoolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+    commandPoolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
     commandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
     MV_VULKAN(vkCreateCommandPool(graphics.logicalDevice, &commandPoolInfo, nullptr, &graphics.commandPool));
@@ -719,10 +748,12 @@ setup_graphics_context(mvGraphics& graphics, sWindow& viewport, std::vector<cons
     // Dear ImGui
     //-----------------------------------------------------------------------------
     setup_imgui(graphics, viewport.platform.handle);
+
+    return graphicsPtr;
 }
 
 u32
-find_memory_type(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
+DearPy3D::find_memory_type(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
@@ -739,7 +770,7 @@ find_memory_type(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryP
 }
 
 void 
-cleanup_graphics_context(mvGraphics& graphics)
+DearPy3D::cleanup_graphics_context(mvGraphics& graphics)
 {        
     flush_resources(graphics);
 
@@ -771,7 +802,7 @@ cleanup_graphics_context(mvGraphics& graphics)
 }
 
 void 
-recreate_swapchain(mvGraphics& graphics, sWindow& viewport)
+DearPy3D::recreate_swapchain(mvGraphics& graphics, sWindow& viewport)
 {
     vkDeviceWaitIdle(graphics.logicalDevice);
     flush_resources(graphics);
@@ -810,7 +841,7 @@ recreate_swapchain(mvGraphics& graphics, sWindow& viewport)
 }
 
 size_t 
-get_required_uniform_buffer_size(mvGraphics& graphics, size_t size)
+DearPy3D::get_required_uniform_buffer_size(mvGraphics& graphics, size_t size)
 {
     // Calculate required alignment based on minimum device offset alignment
     size_t minUboAlignment = graphics.deviceProperties.limits.minUniformBufferOffsetAlignment;
@@ -823,7 +854,7 @@ get_required_uniform_buffer_size(mvGraphics& graphics, size_t size)
 }
 
 void
-present(mvGraphics& graphics)
+DearPy3D::present(mvGraphics& graphics)
 {
 
     VkSemaphore signalSemaphores[] = { graphics.renderFinishedSemaphores[graphics.currentFrame] };
@@ -844,7 +875,7 @@ present(mvGraphics& graphics)
 }
 
 VkCommandBuffer 
-begin_command_buffer(mvGraphics& graphics)
+DearPy3D::begin_command_buffer(mvGraphics& graphics)
 {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -865,7 +896,7 @@ begin_command_buffer(mvGraphics& graphics)
 }
 
 void 
-submit_command_buffer(mvGraphics& graphics, VkCommandBuffer commandBuffer)
+DearPy3D::submit_command_buffer(mvGraphics& graphics, VkCommandBuffer commandBuffer)
 {
     vkEndCommandBuffer(commandBuffer);
 

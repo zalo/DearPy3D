@@ -1,28 +1,11 @@
 #include <imgui.h>
 #include <imgui_impl_vulkan.h>
 #include <imgui_impl_win32.h>
-#include <array>
-#include "mvMesh.h"
-#include "mvCamera.h"
 #include "mvGraphics.h"
-#include "mvTimer.h"
-#include "mvLights.h"
-#include "mvMaterials.h"
-#include <iostream>
-#include "mvMath.h"
+#include "sTimer.h"
 #include "mvRenderer.h"
-#include "mvObjLoader.h"
-#include "mvScene.h"
-#include "mvSkybox.h"
 #include <stdlib.h>
-#include "mvAssetLoader.h"
-#include "passes.h"
-
 #include "sSemper.h"
-
-mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
-mv_internal b8 loadSponza = true;
-mv_internal ImVec2 oldContentRegion = ImVec2(500, 500);
 
 int main() 
 {
@@ -30,267 +13,109 @@ int main()
 
     Semper::create_context();
     sWindow* viewport = Semper::create_window(500, 500);
-
-    mvGraphics graphics{};
-    graphics.shaderDirectory = "../../DearPy3D/shaders/";
-    graphics.enableValidationLayers = true;
-
-
-    setup_graphics_context(graphics, *viewport, { "VK_LAYER_KHRONOS_validation" });
-
-    mvRendererContext rctx = Renderer::create_renderer_context(graphics);
-
-   
-    //---------------------------------------------------------------------
-    // load common descriptor sets
-    //---------------------------------------------------------------------
-    VkDescriptorSetLayout descriptorSetLayouts[4];
-    {
-
-        mvDescriptorSetLayout globalLayout = create_descriptor_set_layout(graphics,
-            {
-                create_dynamic_uniform_descriptor_spec(0u),
-                create_dynamic_uniform_descriptor_spec(1u),
-                create_dynamic_uniform_descriptor_spec(2u),
-                create_texture_descriptor_spec(3u),
-                create_texture_descriptor_spec(4u)
-            });
-
-        mvDescriptorSetLayout materialLayout = create_descriptor_set_layout(graphics,
-            {
-                create_texture_descriptor_spec(0u),
-                create_texture_descriptor_spec(1u),
-                create_texture_descriptor_spec(2u),
-                create_uniform_descriptor_spec(3u)
-            });
-
-
-        mvDescriptorSetLayout perDrawLayout = create_descriptor_set_layout(graphics,
-            {
-                create_dynamic_uniform_descriptor_spec(0u)
-            });
-
-        mvDescriptorSetLayout skyboxLayout = create_descriptor_set_layout(graphics,
-            {
-                create_texture_descriptor_spec(0u)
-            });
-
-        descriptorSetLayouts[0] = globalLayout.layout;
-        descriptorSetLayouts[1] = materialLayout.layout;
-        descriptorSetLayouts[2] = perDrawLayout.layout;
-        descriptorSetLayouts[3] = skyboxLayout.layout;
-
-        register_descriptor_set_layout(rctx.descriptorManager, "scene", descriptorSetLayouts[0]);
-        register_descriptor_set_layout(rctx.descriptorManager, "phong", descriptorSetLayouts[1]);
-        register_descriptor_set_layout(rctx.descriptorManager, "perdraw", descriptorSetLayouts[2]);
-        register_descriptor_set_layout(rctx.descriptorManager, "skybox_pass", descriptorSetLayouts[3]);
-    }
+    mvGraphics& graphics = *DearPy3D::setup_graphics_context(*viewport, { "VK_LAYER_KHRONOS_validation" });
+    mvRendererContext rctx = DearPy3D::create_renderer_context(graphics);
 
     //---------------------------------------------------------------------
     // load common pipelines
     //---------------------------------------------------------------------
-    
-    { // main pass
 
-        VkPipelineLayout pipelineLayout;
+    VkPipelineLayout pipelineLayout;
+    VkPipelineMultisampleStateCreateInfo multisampling{};
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.sampleShadingEnable = VK_FALSE;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-        VkPipelineMultisampleStateCreateInfo multisampling{};
-        multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-        multisampling.sampleShadingEnable = VK_FALSE;
-        multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 0;
+    pipelineLayoutInfo.pSetLayouts = nullptr;
 
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 0;
-        pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
+    MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
-        MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
+    mvAssetID pipelineLayoutID = DearPy3D::register_pipeline_layout(rctx.pipelineManager, "primary_pass", pipelineLayout);
 
-        register_pipeline_layout(rctx.pipelineManager, "main_pass", pipelineLayout);
-    }
+    mvPipelineSpec mainPipelineSpec;
+    mainPipelineSpec.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    mainPipelineSpec.backfaceCulling = true;
+    mainPipelineSpec.depthTest = true;
+    mainPipelineSpec.depthWrite = true;
+    mainPipelineSpec.wireFrame = false;
+    mainPipelineSpec.blendEnabled = true;
+    mainPipelineSpec.vertexShader = "simple.vert.spv";
+    mainPipelineSpec.pixelShader = "simple.frag.spv";
+    mainPipelineSpec.width = 0.0f;  // viewport
+    mainPipelineSpec.height = 0.0f; // viewport
+    mainPipelineSpec.renderPass = graphics.renderPass;
+    mainPipelineSpec.pipelineLayout = DearPy3D::get_pipeline_layout(rctx.pipelineManager, "primary_pass");
+    mainPipelineSpec.layout = DearPy3D::create_vertex_layout({ MV_POS_3D, MV_COLOR_3D });
 
-    { // primary pass
-        
-        VkPipelineLayout pipelineLayout;
-        VkPushConstantRange push_constant;
-        push_constant.offset = 0;
-        push_constant.size = 192;
-        push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    mvPassSpecification mainPassSpec;
+    mainPassSpec.name = "primary_pass";
+    mainPassSpec.pipeline = DearPy3D::reset_pipeline(graphics, rctx.pipelineManager, "primary_pass", DearPy3D::create_pipeline(graphics, mainPipelineSpec));
+    mainPassSpec.clearColorValue = { 0.0f, 0.0f, 0.0f, 1.0f };
+    mainPassSpec.clearDepthValue = 1.0f;
+    mainPassSpec.depthBias = 0.0f;
+    mainPassSpec.slopeDepthBias = 0.0f;
+    mainPassSpec.width = graphics.swapChainExtent.width;
+    mainPassSpec.height = -graphics.swapChainExtent.height;
+    mainPassSpec.colorFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    mainPassSpec.depthFormat = VK_FORMAT_D32_SFLOAT;
+    mainPassSpec.hasColor = true;
+    mainPassSpec.hasDepth = true;
+    mainPassSpec.mainPass = false;
 
-        VkPipelineMultisampleStateCreateInfo multisampling{};
-        multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-        multisampling.sampleShadingEnable = VK_FALSE;
-        multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    mvPass mainPass;
+    mainPass.pipelineSpec = mainPipelineSpec;
+    mainPass.specification = mainPassSpec;
+    mainPass.renderPass = graphics.renderPass;
+    mainPass.extent = graphics.swapChainExtent;
+    mainPass.frameBuffers = graphics.swapChainFramebuffers;
+    mainPass.viewport.x = 0.0f;
+    mainPass.viewport.y = graphics.swapChainExtent.height;
+    mainPass.viewport.width = graphics.swapChainExtent.width;
+    mainPass.viewport.height = -(int)graphics.swapChainExtent.height;
+    mainPass.viewport.minDepth = 0.0f;
+    mainPass.viewport.maxDepth = 1.0f;
+    mainPass.extent.width = (u32)graphics.swapChainExtent.width;
+    mainPass.extent.height = (u32)mainPass.viewport.y;
 
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 3;
-        pipelineLayoutInfo.pPushConstantRanges = &push_constant;
-        pipelineLayoutInfo.pushConstantRangeCount = 1;
-        pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
+    auto vertices = std::vector<float>
+    {
+        -0.5f,  0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
+         0.5f,  0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
+         0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f
+    };
 
-        MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
+    auto indices = std::vector<u32>{ 2u, 1u, 0u };
 
-        mvAssetID pipelineLayoutID = register_pipeline_layout(rctx.pipelineManager, "primary_pass", pipelineLayout);
+    mvBufferSpecification vertexBufferSpec{};
+    vertexBufferSpec.usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    vertexBufferSpec.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    vertexBufferSpec.size = sizeof(f32);
+    vertexBufferSpec.components = 6;
+    vertexBufferSpec.count = vertices.size()/6;
+    vertexBufferSpec.aligned = false;
 
-        mvTransforms* transforms = new mvTransforms[256 * 3 + rctx.meshCount];
-        mvDescriptorSet descriptorSet = create_descriptor_set(graphics, descriptorSetLayouts[2], pipelineLayout);
-        descriptorSet.descriptors.push_back(create_dynamic_uniform_descriptor(graphics, create_dynamic_uniform_descriptor_spec(0u), "transforms", 256 * 3 + rctx.meshCount, sizeof(mvTransforms), transforms));
-        register_descriptor_set(rctx.descriptorManager, "perdraw", descriptorSet);
-        delete[] transforms;
-    }
+    mvBufferSpecification indexBufferSpec{};
+    indexBufferSpec.usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    indexBufferSpec.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    indexBufferSpec.size = sizeof(u32);
+    indexBufferSpec.components = 1u;
+    indexBufferSpec.count = indices.size();
+    indexBufferSpec.aligned = false;
 
-    { // shadow pass
-
-        VkPipelineLayout pipelineLayout;
-        VkPushConstantRange push_constant;
-        push_constant.offset = 0;
-        push_constant.size = 192;
-        push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-        VkPipelineMultisampleStateCreateInfo multisampling{};
-        multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-        multisampling.sampleShadingEnable = VK_FALSE;
-        multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 0;
-        pipelineLayoutInfo.pPushConstantRanges = &push_constant;
-        pipelineLayoutInfo.pushConstantRangeCount = 1;
-        pipelineLayoutInfo.pSetLayouts = nullptr;
-
-        MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
-
-        register_pipeline_layout(rctx.pipelineManager, "shadow_pass", pipelineLayout);
-    }
-
-    { // skybox pass
-
-        VkPipelineLayout pipelineLayout;
-        VkPushConstantRange push_constant;
-        push_constant.offset = 0;
-        push_constant.size = 64;
-        push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-        VkPipelineMultisampleStateCreateInfo multisampling{};
-        multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-        multisampling.sampleShadingEnable = VK_FALSE;
-        multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 1;
-        pipelineLayoutInfo.pPushConstantRanges = &push_constant;
-        pipelineLayoutInfo.pushConstantRangeCount = 1;
-        pipelineLayoutInfo.pSetLayouts = &descriptorSetLayouts[3];
-
-        MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
-
-        register_pipeline_layout(rctx.pipelineManager, "skybox_pass", pipelineLayout);
-    }
-
-    { // omni shadow pass
-
-        VkPipelineLayout pipelineLayout;
-        VkPushConstantRange push_constant;
-        push_constant.offset = 0;
-        push_constant.size = 80;
-        push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-        VkPipelineMultisampleStateCreateInfo multisampling{};
-        multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-        multisampling.sampleShadingEnable = VK_FALSE;
-        multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 0;
-        pipelineLayoutInfo.pPushConstantRanges = &push_constant;
-        pipelineLayoutInfo.pushConstantRangeCount = 1;
-        pipelineLayoutInfo.pSetLayouts = nullptr;
-
-        MV_VULKAN(vkCreatePipelineLayout(graphics.logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout));
-
-        register_pipeline_layout(rctx.pipelineManager, "omnishadow_pass", pipelineLayout);
-    }
-
-    mvModel model = load_obj_model(rctx, sponzaPath, "sponza");
-
-    mvSkybox skybox = create_skybox(rctx);
-
-    mvSceneData sceneData{};
-
-    mvCamera camera{};
-    camera.aspect = oldContentRegion.x / oldContentRegion.y;
-    camera.pos = { -18.0f, 12.0f, 1.0f };
-    camera.pitch = 0.0f;
-    camera.yaw = -M_PI_2;
-
-    f32 angle = 10.0f;
-    f32 zcomponent = sinf(MV_PI * angle / 180.0f);
-    f32 ycomponent = cosf(MV_PI * angle / 180.0f);
-
-    f32 offscreenWidth = 75.0f;
-    mvOrthoCamera secondaryCamera{};
-    secondaryCamera.pos = { 0.0f, 100.0f, 0.0f };
-    secondaryCamera.dir = { 0.0f, -ycomponent, zcomponent };
-    secondaryCamera.up = { 1.0f, 0.0f, 0.0f };
-    secondaryCamera.left = -offscreenWidth;
-    secondaryCamera.right = offscreenWidth;
-    secondaryCamera.bottom = -offscreenWidth;
-    secondaryCamera.top = offscreenWidth;
-    secondaryCamera.nearZ = -121.0f;
-    secondaryCamera.farZ = 121.0f;
-    
-    mvPointLight light1 = create_point_light(rctx, "light1", { 40.0f, 10.0f, 0.0f });
-    mvMat4 lightTransform = translate( 40.0f, 10.0f, 0.0f );
-    mvDirectionLight dlight1 = create_directional_light("dlight1", mvVec3{ 0.0, -ycomponent, zcomponent });
-
-    mvCamera lightcamera{};
-    lightcamera.pos = light1.info.worldPos;
-    lightcamera.fieldOfView = M_PI_2;
-   
-    // passes
-    mvPass mainPass = create_main_pass(graphics);
-    mvPass primaryPass = create_primary_pass(graphics, rctx.descriptorManager, rctx.pipelineManager, oldContentRegion.x, oldContentRegion.y);
-    mvPass offscreenPass = create_primary_pass(graphics, rctx.descriptorManager, rctx.pipelineManager, 2048.0f, 2048.0f);
-    mvPass shadowPass = create_shadow_pass(graphics, rctx.descriptorManager, rctx.pipelineManager);
-    mvPass omniShadowPass = create_omnishadow_pass(graphics, rctx.descriptorManager, rctx.pipelineManager);
-
-    mvTexture shadowMapCube = create_texture_cube(graphics,
-        1024, 1024,
-        VK_FORMAT_R32_SFLOAT,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
-        VK_IMAGE_ASPECT_COLOR_BIT);
-
-    mvAssetID cube = register_texture(rctx.textureManager, "cubeshadowmap", shadowMapCube);
-
+    mvBuffer vertexBuffer = DearPy3D::create_buffer(graphics, vertexBufferSpec, vertices.data());
+    mvBuffer indexBuffer = DearPy3D::create_buffer(graphics, indexBufferSpec, indices.data());
 
     //---------------------------------------------------------------------
     // main loop
     //---------------------------------------------------------------------
-    mvTimer timer;
-    bool recreatePrimaryRender = false;
-
-    VkPipelineLayout primaryLayout = get_pipeline_layout(rctx.pipelineManager, "primary_pass");
-    VkPipelineLayout shadowPLayout = get_pipeline_layout(rctx.pipelineManager, "shadow_pass");
-    VkPipelineLayout skyboxLayout = get_pipeline_layout(rctx.pipelineManager, "skybox_pass");
-
+    sTimer timer;
     while (viewport->running)
     {
         const auto dt = timer.mark() * 1.0f;
 
-        //---------------------------------------------------------------------
-        // input handling
-        //---------------------------------------------------------------------
-        update_fps_camera(*viewport, camera, dt, 12.0f, 1.0f);
-        if (ImGui::IsKeyPressed(VK_ESCAPE))
-        {
-            if (viewport->cursorEnabled) Semper::disable_cursor(*viewport);
-            else Semper::enable_cursor(*viewport);
-        }
-       
         Semper::process_window_events(*viewport);
         Semper::new_frame();
         ImGui_ImplVulkan_NewFrame();
@@ -303,356 +128,70 @@ int main()
         if (viewport->sizeChanged)
         {
             // cleanup
-            recreate_swapchain(graphics, *viewport);
-            mainPass = create_main_pass(graphics);
+            DearPy3D::recreate_swapchain(graphics, *viewport);
+            mainPipelineSpec.renderPass = graphics.renderPass;
+            mainPass.pipelineSpec = mainPipelineSpec;
+            mainPass.specification.width = graphics.swapChainExtent.width;
+            mainPass.specification.height = -graphics.swapChainExtent.height;
+            mainPass.renderPass = graphics.renderPass;
+            mainPass.extent = graphics.swapChainExtent;
+            mainPass.frameBuffers = graphics.swapChainFramebuffers;
+            mainPass.viewport.y = graphics.swapChainExtent.height;
+            mainPass.viewport.width = graphics.swapChainExtent.width;
+            mainPass.viewport.height = -(int)graphics.swapChainExtent.height;
+            mainPass.extent.width = (u32)graphics.swapChainExtent.width;
+            mainPass.extent.height = (u32)mainPass.viewport.y;
+            mainPass.specification.pipeline = DearPy3D::reset_pipeline(graphics, rctx.pipelineManager, "primary_pass", DearPy3D::create_pipeline(graphics, mainPass.pipelineSpec));
             viewport->sizeChanged = false;
         }
 
-        if (recreatePrimaryRender)
-        {
-            Renderer::cleanup_pass(graphics, primaryPass);
-            primaryPass = create_primary_pass(graphics, rctx.descriptorManager, rctx.pipelineManager, primaryPass.viewport.width, abs(primaryPass.viewport.height));
-            recreatePrimaryRender = false;
-            primaryLayout = get_pipeline_layout(rctx.pipelineManager, "primary_pass");
-        }
-
-
-        mvMat4 viewMatrix = fps_view(camera.pos, camera.pitch, camera.yaw);
-        mvMat4 projMatrix = perspective(camera.fieldOfView, camera.aspect, camera.nearZ, camera.farZ);
-        
-        mvMat4 secondaryViewMatrix = look_at(secondaryCamera.pos, secondaryCamera.pos - secondaryCamera.dir, secondaryCamera.up);
-        mvMat4 secondaryProjMatrix = orthographic( secondaryCamera.left, secondaryCamera.right, secondaryCamera.bottom,
-            secondaryCamera.top, secondaryCamera.nearZ, secondaryCamera.farZ);
-        {
-            mvVec3 direction{};
-            direction.x = cos((lightcamera.yaw)) * cos((lightcamera.pitch));
-            direction.y = sin((lightcamera.pitch));
-            direction.z = sin((lightcamera.yaw)) * cos((lightcamera.pitch));
-            direction = normalize(direction);
-            sceneData.pointShadowView = look_at(lightcamera.pos, lightcamera.pos + direction, lightcamera.up);
-        }
-        sceneData.directionalShadowView = secondaryViewMatrix;
-        sceneData.directionalShadowProjection = secondaryProjMatrix;
  
         //---------------------------------------------------------------------
         // wait for fences and acquire next image
         //---------------------------------------------------------------------
-        Renderer::begin_frame(rctx);
-        update_skybox_descriptors(rctx, skybox, skybox.mesh.diffuseTexture);
-        update_scene_descriptors(rctx, model.scenes[0], shadowPass.depthTextures[graphics.currentImageIndex],cube);
-        Renderer::update_descriptors(graphics, model, rctx);
-
-        //---------------------------------------------------------------------
-        // shadow pass
-        //---------------------------------------------------------------------
-        Renderer::begin_pass(rctx, get_current_command_buffer(graphics), shadowPass);
-
-        
-        Renderer::render_mesh_shadow(graphics, shadowPLayout ,*light1.mesh, lightTransform, secondaryViewMatrix, secondaryProjMatrix);
-
-        for (int i = 0; i < model.sceneCount; i++)
-            Renderer::render_scene_shadows(graphics, model, shadowPLayout, model.scenes[i], secondaryViewMatrix, secondaryProjMatrix);
-
-        Renderer::end_pass(get_current_command_buffer(graphics));
-
-        //---------------------------------------------------------------------
-        // omni shadow pass
-        //---------------------------------------------------------------------
-        for (u32 i = 0; i < 6; i++)
-        {
-
-            mvMat4 camera_matrix(1.0f);
-            mvVec3 look_target{};
-            switch (i)
-            {
-            case 0: // POSITIVE_X
-                look_target = light1.info.worldPos + mvVec3{ 0.0f, 0.0f, 1.0f };
-                camera_matrix = look_at(light1.info.worldPos, look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
-                break;
-            case 1:	// NEGATIVE_X
-                look_target = light1.info.worldPos + mvVec3{ 0.0f, 0.0f, -1.0f };
-                camera_matrix = look_at(light1.info.worldPos, look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
-                break;
-            case 2:	// POSITIVE_Y
-                look_target = light1.info.worldPos + mvVec3{ 0.0f, -1.0f, 0.0f };
-                camera_matrix = look_at(light1.info.worldPos, look_target, mvVec3{ 1.0f, 0.0f, 0.0f });
-                break;
-            case 3:	// NEGATIVE_Y
-                look_target = light1.info.worldPos + mvVec3{ 0.0f, 1.0f, 0.0f };
-                camera_matrix = look_at(light1.info.worldPos, look_target, mvVec3{ -1.0f, 0.0f, 0.0f });
-                break;
-            case 4:	// POSITIVE_Z
-                look_target = light1.info.worldPos+ mvVec3{ 1.0f, 0.0f, 0.0f };
-                camera_matrix = look_at(light1.info.worldPos, look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
-                break;
-            case 5:	// NEGATIVE_Z
-                look_target = light1.info.worldPos+ mvVec3{ -1.0f, 0.0f, 0.0f };
-                camera_matrix = look_at(light1.info.worldPos, look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
-                break;
-            }
-
-            Renderer::begin_pass(rctx, get_current_command_buffer(graphics), omniShadowPass);
-
-            for (int i = 0; i < model.sceneCount; i++)
-                Renderer::render_scene_omni_shadows(graphics, model, shadowPLayout, model.scenes[i], camera_matrix, perspective(M_PI_2, 1.0f, 0.1f, 400.0f), light1.info.worldPos);
-
-            Renderer::end_pass(get_current_command_buffer(graphics));
-
-            transition_image_layout(get_current_command_buffer(graphics),
-                omniShadowPass.colorTextures[graphics.currentImageIndex].textureImage,
-                VK_IMAGE_ASPECT_COLOR_BIT,
-                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-            VkImageSubresourceRange cubeFaceSubresourceRange = {};
-            cubeFaceSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            cubeFaceSubresourceRange.baseMipLevel = 0;
-            cubeFaceSubresourceRange.levelCount = 1;
-            cubeFaceSubresourceRange.baseArrayLayer = i;
-            cubeFaceSubresourceRange.layerCount = 1;
-
-            transition_image_layout(get_current_command_buffer(graphics),
-                shadowMapCube.textureImage,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                cubeFaceSubresourceRange
-            );
-
-            // Copy region for transfer from framebuffer to cube face
-            VkImageCopy copyRegion = {};
-
-            copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            copyRegion.srcSubresource.baseArrayLayer = 0;
-            copyRegion.srcSubresource.mipLevel = 0;
-            copyRegion.srcSubresource.layerCount = 1;
-            copyRegion.srcOffset = { 0, 0, 0 };
-
-            copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            copyRegion.dstSubresource.baseArrayLayer = i;
-            copyRegion.dstSubresource.mipLevel = 0;
-            copyRegion.dstSubresource.layerCount = 1;
-            copyRegion.dstOffset = { 0, 0, 0 };
-
-            copyRegion.extent.width = 1024;
-            copyRegion.extent.height = 1024;
-            copyRegion.extent.depth = 1;
-
-            // Put image copy into command buffer
-            vkCmdCopyImage(
-                get_current_command_buffer(graphics),
-                omniShadowPass.colorTextures[graphics.currentImageIndex].textureImage,
-                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                shadowMapCube.textureImage,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                1,
-                &copyRegion);
-
-            transition_image_layout(get_current_command_buffer(graphics),
-                omniShadowPass.colorTextures[graphics.currentImageIndex].textureImage,
-                VK_IMAGE_ASPECT_COLOR_BIT,
-                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-            transition_image_layout(get_current_command_buffer(graphics),
-                shadowMapCube.textureImage,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                cubeFaceSubresourceRange);
-        }
-
-        //---------------------------------------------------------------------
-        // offscreen pass
-        //--------------------------------------------------------------------- 
-        update_light_buffers(graphics, light1, model.scenes[0].descriptorSet.descriptors[1].buffers[graphics.currentImageIndex], secondaryViewMatrix, 0);
-        update_light_buffers(graphics, dlight1, model.scenes[0].descriptorSet.descriptors[2].buffers[graphics.currentImageIndex], secondaryViewMatrix, 0);
-        sceneData.camPos = secondaryCamera.pos;
-        bind_scene(graphics, model.scenes[0], sceneData, 0);
-        
-        Renderer::begin_pass(rctx, get_current_command_buffer(graphics), offscreenPass);
-
-        Renderer::render_mesh(graphics, rctx.materialManager.materials[light1.mesh->phongMaterialID].descriptorSet, primaryLayout, *light1.mesh, lightTransform, secondaryViewMatrix, secondaryProjMatrix);
-
-        for (int i = 0; i < model.sceneCount; i++)
-            Renderer::render_scene(graphics, model, rctx.materialManager, primaryLayout, model.scenes[i], secondaryViewMatrix, secondaryProjMatrix);
-
-        Renderer::end_pass(get_current_command_buffer(graphics));
-
-        //---------------------------------------------------------------------
-        // primary pass
-        //---------------------------------------------------------------------
-        update_light_buffers(graphics, light1, model.scenes[0].descriptorSet.descriptors[1].buffers[graphics.currentImageIndex], viewMatrix, 1);
-        update_light_buffers(graphics, dlight1, model.scenes[0].descriptorSet.descriptors[2].buffers[graphics.currentImageIndex], viewMatrix, 1);
-        sceneData.camPos = camera.pos;
-        bind_scene(graphics, model.scenes[0], sceneData, 1);
-        Renderer::begin_pass(rctx, get_current_command_buffer(graphics), primaryPass);
-
-        Renderer::render_mesh(graphics, rctx.materialManager.materials[light1.mesh->phongMaterialID].descriptorSet, primaryLayout, *light1.mesh, lightTransform, viewMatrix, projMatrix);
-
-        for (int i = 0; i < model.sceneCount; i++)
-            Renderer::render_scene(graphics, model, rctx.materialManager, primaryLayout, model.scenes[i], viewMatrix, projMatrix);
-
-        if (sceneData.doSkybox)
-        {
-            bind_skybox(graphics, skybox);
-            vkCmdBindPipeline(get_current_command_buffer(graphics), VK_PIPELINE_BIND_POINT_GRAPHICS, get_pipeline(rctx.pipelineManager, "skybox_pass"));
-            Renderer::render_skybox(skybox, graphics, skyboxLayout, viewMatrix, projMatrix);
-        }
-
-        Renderer::end_pass(get_current_command_buffer(graphics));
+        DearPy3D::begin_frame(rctx);
 
         //---------------------------------------------------------------------
         // main pass
         //---------------------------------------------------------------------
-        Renderer::begin_pass(rctx, get_current_command_buffer(graphics), mainPass);
+        DearPy3D::begin_pass(rctx, DearPy3D::get_current_command_buffer(graphics), mainPass);
 
-        ImGui::SetNextWindowBgAlpha(1.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f); // to prevent main window corners from showing
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(14.0f, 5.0f));
-        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0.0f, 0.0f));
-        ImGui::PushStyleColor(ImGuiCol_TableBorderLight, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-        ImGui::PushStyleColor(ImGuiCol_TableBorderStrong, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-        ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
-        ImGui::SetNextWindowSize(ImVec2((float)viewport->width, (float)viewport->height));
 
-        static ImGuiWindowFlags windowFlags =
-            ImGuiWindowFlags_NoBringToFrontOnFocus |
-            ImGuiWindowFlags_NoDecoration;
+        ImGui::ShowDemoWindow();
 
-        ImGui::Begin("Main Window", 0, windowFlags);
-
-        static ImGuiTableFlags tableflags =
-            ImGuiTableFlags_Borders |
-            ImGuiTableFlags_Resizable |
-            ImGuiTableFlags_SizingStretchProp |
-            ImGuiTableFlags_NoHostExtendX;
-
-        if (ImGui::BeginTable("Main Table", 3, tableflags))
-        {
-
-            ImGui::TableSetupColumn("Scene Controls", ImGuiTableColumnFlags_WidthFixed, 300.0f);
-            ImGui::TableSetupColumn("Primary Scene");
-            ImGui::TableSetupColumn("Light Controls", ImGuiTableColumnFlags_WidthFixed, 300.0f);
-            ImGui::TableNextColumn();
-
-            //-----------------------------------------------------------------------------
-            // left panel
-            //-----------------------------------------------------------------------------
-
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Dummy(ImVec2(50.0f, 75.0f));
-
-            ImGui::Checkbox("Diffuse Mapping", (bool*)&sceneData.doDiffuse);
-            ImGui::Checkbox("Normal Mapping", (bool*)&sceneData.doNormal);
-            ImGui::Checkbox("Specular Mapping", (bool*)&sceneData.doSpecular);
-            ImGui::Checkbox("Omni Shadows", (bool*)&sceneData.doOmniShadows);
-            ImGui::Checkbox("Direct Shadows", (bool*)&sceneData.doDirectionalShadows);
-            ImGui::Checkbox("Skybox", (bool*)&sceneData.doSkybox);
-            ImGui::Checkbox("PCF", (bool*)&sceneData.doPCF);
-            ImGui::SliderInt("pcfRange", &sceneData.pcfRange, 1, 5);
-
-            //-----------------------------------------------------------------------------
-            // center panel
-            //-----------------------------------------------------------------------------
-            ImGui::TableSetColumnIndex(1);
-
-            ImGuiIO& io = ImGui::GetIO();
-            ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x + 45, 15),
-                ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(io.Framerate) + " FPS").c_str());
-
-            ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x + 45, 30),
-                ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(camera.pos.x) + ", "
-                    + std::to_string(camera.pos.y) + ", " + std::to_string(camera.pos.z)).c_str());
-            ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x + 45, 45),
-                ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(camera.pitch) + ", "
-                    + std::to_string(camera.yaw)).c_str());
-
-            ImVec2 contentSize = ImGui::GetContentRegionAvail();
-            
-            ImGui::Image(primaryPass.colorTextures[graphics.currentImageIndex].imguiID, contentSize);
-            if (!(contentSize.x == oldContentRegion.x && contentSize.y == oldContentRegion.y))
-            {
-                primaryPass.viewport.width = contentSize.x;
-                primaryPass.viewport.height = contentSize.y;
-                camera.aspect = primaryPass.viewport.width / abs(primaryPass.viewport.height);
-                recreatePrimaryRender = true;
-            }
-            oldContentRegion = contentSize;
-
-            //-----------------------------------------------------------------------------
-            // right panel
-            //-----------------------------------------------------------------------------
-            ImGui::TableSetColumnIndex(2);
-            ImGui::Dummy(ImVec2(50.0f, 25.0f));
-            ImGui::Indent(14.0f);
-            ImGui::SliderFloat("omni depthBias", &omniShadowPass.specification.depthBias, 0.0f, 50.0f);
-            ImGui::SliderFloat("omni slopeDepthBias", &omniShadowPass.specification.slopeDepthBias, 0.0f, 50.0f);
-            ImGui::SliderFloat("directional depthBias", &shadowPass.specification.depthBias, 0.0f, 50.0f);
-            ImGui::SliderFloat("directional slopeDepthBias", &shadowPass.specification.slopeDepthBias, 0.0f, 50.0f);
-            if (ImGui::SliderFloat3("Position", &light1.info.worldPos.x, -50.0f, 50.0f))
-            {
-                lightTransform = translate(light1.info.worldPos.x, light1.info.worldPos.y, light1.info.worldPos.z);
-                lightcamera.pos = light1.info.worldPos;
-            }
-
-            if (ImGui::SliderFloat("Directional Light Angle", &angle, -45.0f, 45.0f))
-            {
-                zcomponent = sinf(MV_PI * angle / 180.0f);
-                ycomponent = cosf(MV_PI * angle / 180.0f);
-
-                secondaryCamera.dir = { 0.0f, -ycomponent, zcomponent };
-                dlight1.info.viewLightDir = mvVec3{ 0.0, -ycomponent, zcomponent };
-            }
-
-            ImGui::Image(offscreenPass.colorTextures[graphics.currentImageIndex].imguiID, ImVec2(512, 512));
-            ImGui::Unindent(14.0f);
-            ImGui::EndTable();
-            ImGui::End();
-            ImGui::PopStyleVar(3);
-            ImGui::PopStyleColor(2);
-
-        }
+        mv_local_persist VkDeviceSize offsets = { 0 };
+        VkCommandBuffer commandBuffer = graphics.commandBuffers[graphics.currentImageIndex];
+        vkCmdBindIndexBuffer(DearPy3D::get_current_command_buffer(graphics), indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(DearPy3D::get_current_command_buffer(graphics), 0, 1, &vertexBuffer.buffer, &offsets);
+        vkCmdDrawIndexed(DearPy3D::get_current_command_buffer(graphics), indexBuffer.specification.count, 1, 0, 0, 0);
 
         ImGui::Render();
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), get_current_command_buffer(graphics));
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), DearPy3D::get_current_command_buffer(graphics));
 
-        Renderer::end_pass(get_current_command_buffer(graphics));
+        DearPy3D::end_pass(DearPy3D::get_current_command_buffer(graphics));
 
 
         //---------------------------------------------------------------------
         // submit command buffers & present
         //---------------------------------------------------------------------
-        Renderer::end_frame(rctx);
-        present(graphics);
+        DearPy3D::end_frame(rctx);
+        DearPy3D::present(graphics);
 
         Semper::end_frame();
     }
 
-    Renderer::cleanup_pass(graphics, primaryPass);
-    Renderer::cleanup_pass(graphics, offscreenPass);
-    Renderer::cleanup_pass(graphics, omniShadowPass);
-    Renderer::cleanup_pass(graphics, shadowPass);
-    Renderer::cleanup_renderer_context(rctx);
-
-    vkDestroyBuffer(graphics.logicalDevice, skybox.mesh.indexBuffer.buffer, nullptr);
-    vkDestroyBuffer(graphics.logicalDevice, skybox.mesh.vertexBuffer.buffer, nullptr);
-    vkFreeMemory(graphics.logicalDevice, skybox.mesh.indexBuffer.deviceMemory, nullptr);
-    vkFreeMemory(graphics.logicalDevice, skybox.mesh.vertexBuffer.deviceMemory, nullptr);
-    skybox.mesh.indexBuffer.buffer = VK_NULL_HANDLE;
-    skybox.mesh.indexBuffer.deviceMemory = VK_NULL_HANDLE;
-    skybox.mesh.indexBuffer.specification.count = 0u;
-    skybox.mesh.indexBuffer.specification.aligned = false;
-    skybox.mesh.vertexBuffer.buffer = VK_NULL_HANDLE;
-    skybox.mesh.vertexBuffer.deviceMemory = VK_NULL_HANDLE;
-    skybox.mesh.vertexBuffer.specification.count = 0u;
-    skybox.mesh.vertexBuffer.specification.aligned = false;
-
-    cleanup_model(graphics, model);
+    
+    DearPy3D::cleanup_renderer_context(rctx);
+    vkDestroyBuffer(graphics.logicalDevice, vertexBuffer.buffer, nullptr);
+    vkDestroyBuffer(graphics.logicalDevice, indexBuffer.buffer, nullptr);
+    vkFreeMemory(graphics.logicalDevice, indexBuffer.deviceMemory, nullptr);
+    vkFreeMemory(graphics.logicalDevice, vertexBuffer.deviceMemory, nullptr);
 
     // cleanup imgui
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
-    cleanup_graphics_context(graphics);
+    DearPy3D::cleanup_graphics_context(graphics);
     Semper::cleanup_window(viewport);
 }

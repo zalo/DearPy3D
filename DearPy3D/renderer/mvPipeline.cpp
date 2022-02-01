@@ -2,7 +2,6 @@
 #include <stdexcept>
 #include <fstream>
 #include "mvGraphics.h"
-#include "mvScene.h"
 #include "mvMaterials.h"
 
 mv_internal std::vector<char>
@@ -29,6 +28,7 @@ mvCreateShader(mvGraphics& graphics, const std::string& file)
 {
     mvShader shader{};
     shader.file = file;
+    shader.shaderModule = VK_NULL_HANDLE;
 
     auto shaderCode = ReadFile(graphics.shaderDirectory + file);
 
@@ -54,7 +54,7 @@ struct mvVertexElement
 };
 
 mvVertexLayout
-create_vertex_layout(std::vector<mvVertexElementType> elements)
+DearPy3D::create_vertex_layout(std::vector<mvVertexElementType> elements)
 {
     std::vector<mvVertexElement> velements;
     size_t stride = 0;
@@ -67,43 +67,43 @@ create_vertex_layout(std::vector<mvVertexElementType> elements)
         switch (element)
         {
 
-        case mvVertexElementType::Position2D:
+        case MV_POS_2D:
             newelement.format = VK_FORMAT_R32G32_SFLOAT;
             newelement.itemCount = 2;
             newelement.size = sizeof(float) * 2;
             break;
 
-        case mvVertexElementType::Position3D:
+        case MV_POS_3D:
             newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
             newelement.itemCount = 3;
             newelement.size = sizeof(float) * 3;
             break;
 
-        case mvVertexElementType::Tangent:
+        case MV_TAN_3D:
             newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
             newelement.itemCount = 3;
             newelement.size = sizeof(float) * 3;
             break;
 
-        case mvVertexElementType::Bitangent:
+        case MV_BITAN_3D:
             newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
             newelement.itemCount = 3;
             newelement.size = sizeof(float) * 3;
             break;
 
-        case mvVertexElementType::Normal:
+        case MV_NORM_3D:
             newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
             newelement.itemCount = 3;
             newelement.size = sizeof(float) * 3;
             break;
 
-        case mvVertexElementType::Texture2D:
+        case MV_TEXCOORD_3D:
             newelement.format = VK_FORMAT_R32G32_SFLOAT;
             newelement.itemCount = 2;
             newelement.size = sizeof(float) * 2;
             break;
 
-        case mvVertexElementType::Color:
+        case MV_COLOR_3D:
             newelement.format = VK_FORMAT_R32G32B32_SFLOAT;
             newelement.itemCount = 3;
             newelement.size = sizeof(float) * 3;
@@ -140,10 +140,11 @@ create_vertex_layout(std::vector<mvVertexElementType> elements)
 }
 
 mvPipeline
-create_pipeline(mvGraphics& graphics, mvPipelineSpec& spec)
+DearPy3D::create_pipeline(mvGraphics& graphics, mvPipelineSpec& spec)
 {
 
-    mvPipeline pipeline{};
+    mvPipeline pipeline;
+    pipeline.pipeline = VK_NULL_HANDLE;
 
     if(!spec.vertexShader.empty())
         pipeline.vertexShader = mvCreateShader(graphics, spec.vertexShader);
@@ -325,9 +326,17 @@ create_pipeline(mvGraphics& graphics, mvPipelineSpec& spec)
 }
 
 mvPipelineManager
-create_pipeline_manager()
+DearPy3D::create_pipeline_manager()
 {
     mvPipelineManager pipelineManager{};
+    pipelineManager.pipelineKeys = nullptr;
+    pipelineManager.layoutKeys = nullptr;       	  
+    pipelineManager.maxPipelineCount = 50u;
+    pipelineManager.pipelineCount = 0u;
+    pipelineManager.pipelines = nullptr;    	  
+    pipelineManager.maxLayoutCount = 50u;
+    pipelineManager.layoutCount = 0u;
+    pipelineManager.layouts = nullptr;
 
     pipelineManager.pipelines = new mvPipeline[pipelineManager.maxPipelineCount];
     pipelineManager.pipelineKeys = new std::string[pipelineManager.maxPipelineCount];
@@ -349,7 +358,7 @@ create_pipeline_manager()
 }
 
 void
-cleanup_pipeline_manager(mvGraphics& graphics, mvPipelineManager& manager)
+DearPy3D::cleanup_pipeline_manager(mvGraphics& graphics, mvPipelineManager& manager)
 {
 
     // pipeline layouts
@@ -374,7 +383,7 @@ cleanup_pipeline_manager(mvGraphics& graphics, mvPipelineManager& manager)
 }
 
 mvAssetID
-register_pipeline(mvPipelineManager& manager, const std::string& tag, mvPipeline pipeline)
+DearPy3D::register_pipeline(mvPipelineManager& manager, const std::string& tag, mvPipeline pipeline)
 {
     assert(manager.pipelineCount <= manager.maxPipelineCount);
     manager.pipelines[manager.pipelineCount] = pipeline;
@@ -384,7 +393,7 @@ register_pipeline(mvPipelineManager& manager, const std::string& tag, mvPipeline
 }
 
 mvAssetID
-register_pipeline_layout(mvPipelineManager& manager, const std::string& tag, VkPipelineLayout layout)
+DearPy3D::register_pipeline_layout(mvPipelineManager& manager, const std::string& tag, VkPipelineLayout layout)
 {
     assert(manager.layoutCount <= manager.maxLayoutCount);
     manager.layouts[manager.layoutCount] = layout;
@@ -394,7 +403,7 @@ register_pipeline_layout(mvPipelineManager& manager, const std::string& tag, VkP
 }
 
 VkPipeline
-get_pipeline(mvPipelineManager& manager, const std::string& tag)
+DearPy3D::get_pipeline(mvPipelineManager& manager, const std::string& tag)
 {
     for (int i = 0; i < manager.pipelineCount; i++)
     {
@@ -405,7 +414,7 @@ get_pipeline(mvPipelineManager& manager, const std::string& tag)
 }
 
 VkPipelineLayout
-get_pipeline_layout(mvPipelineManager& manager, const std::string& tag)
+DearPy3D::get_pipeline_layout(mvPipelineManager& manager, const std::string& tag)
 {
     for (int i = 0; i < manager.layoutCount; i++)
     {
@@ -416,7 +425,7 @@ get_pipeline_layout(mvPipelineManager& manager, const std::string& tag)
 }
 
 mvAssetID
-reset_pipeline(mvGraphics& graphics, mvPipelineManager& manager, const std::string& tag, mvPipeline& pipeline)
+DearPy3D::reset_pipeline(mvGraphics& graphics, mvPipelineManager& manager, const std::string& tag, mvPipeline& pipeline)
 {
 
     for (int i = 0; i < manager.pipelineCount; i++)

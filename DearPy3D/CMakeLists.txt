@@ -16,25 +16,14 @@ target_sources(dearpy3d
 
 	PRIVATE
 
-		# core
-		"core/mvTimer.cpp"
-		"core/mvMath.cpp"
-
 		# renderer
-		"renderer/mvObjLoader.cpp"
-		"renderer/mvAssetLoader.cpp"
 		"renderer/mvRenderer.cpp"
 		"renderer/mvDescriptors.cpp"
 		"renderer/mvMaterials.cpp"
-		"renderer/mvLights.cpp"
 		"renderer/mvGraphics.cpp"
-		"renderer/mvCamera.cpp"
 		"renderer/mvBuffer.cpp"
 		"renderer/mvPipeline.cpp"
 		"renderer/mvTextures.cpp"
-		"renderer/mvMesh.cpp"
-		"renderer/mvScene.cpp"
-		"renderer/mvSkybox.cpp"
 
 		# Semper
 		"vendor/Semper/sSemper.cpp"

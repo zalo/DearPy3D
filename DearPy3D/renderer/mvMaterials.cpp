@@ -5,26 +5,13 @@
 #include "mvRenderer.h"
 
 mvMaterial 
-create_material(mvGraphics& graphics, mvRendererContext& rctx, mvMaterialData materialData, const char* vertexShader, const char* pixelShader)
+DearPy3D::create_material(mvGraphics& graphics, mvRendererContext& rctx, mvMaterialData materialData, const char* vertexShader, const char* pixelShader)
 {
+    std::string hash = "solid_color";
     mvMaterial material{};
+    material.offsetIndex = 0u;
     material.vertexShader = vertexShader;
     material.pixelShader = pixelShader;
-
-    std::string hash =
-        std::string(materialData.useTextureMap ? "T" : "F")
-        + std::string(materialData.useNormalMap ? "T" : "F")
-        + std::string(materialData.useSpecularMap ? "T" : "F")
-        + std::string(materialData.useGlossAlpha ? "T" : "F")
-        + std::string(materialData.hasAlpha ? "T" : "F")
-        + std::string(materialData.doLighting ? "T" : "F");
-
-    // temporary until we have a "bindless" solution
-    // to descriptor set updates
-    mv_local_persist int i = 0;
-    //i++;
-    hash.append(std::to_string(i));
-
     material.descriptorSet = create_descriptor_set(graphics, get_descriptor_set_layout(rctx.descriptorManager, "phong"), get_pipeline_layout(rctx.pipelineManager, "primary_pass"));
     material.descriptorSet.descriptors.push_back(create_texture_descriptor(create_texture_descriptor_spec(0u)));
     material.descriptorSet.descriptors.push_back(create_texture_descriptor(create_texture_descriptor_spec(1u)));
@@ -35,7 +22,7 @@ create_material(mvGraphics& graphics, mvRendererContext& rctx, mvMaterialData ma
 }
 
 void
-update_material_descriptors(mvRendererContext& rctx, mvMaterial& material, mvAssetID colorTexture, mvAssetID normalTexture, mvAssetID specularTexture)
+DearPy3D::update_material_descriptors(mvRendererContext& rctx, mvMaterial& material, mvAssetID colorTexture, mvAssetID normalTexture, mvAssetID specularTexture)
 {
     
     VkWriteDescriptorSet descriptorWrites[4];
@@ -61,10 +48,13 @@ update_material_descriptors(mvRendererContext& rctx, mvMaterial& material, mvAss
 }
 
 mvMaterialManager
-create_material_manager()
+DearPy3D::create_material_manager()
 {
     mvMaterialManager manager{};
-
+    manager.materialKeys = nullptr;
+    manager.maxMaterialCount = 500u;
+    manager.materialCount = 0u;
+    manager.materials = nullptr;
     manager.materials = new mvMaterial[manager.maxMaterialCount];
     manager.materialKeys = new std::string[manager.maxMaterialCount];
 
@@ -77,7 +67,7 @@ create_material_manager()
 }
 
 void
-cleanup_material_manager(mvGraphics& graphics, mvMaterialManager& manager)
+DearPy3D::cleanup_material_manager(mvGraphics& graphics, mvMaterialManager& manager)
 {
     manager.materialCount = 0u;
     delete[] manager.materials;
@@ -85,7 +75,7 @@ cleanup_material_manager(mvGraphics& graphics, mvMaterialManager& manager)
 }
 
 mvAssetID
-register_material(mvMaterialManager& manager, const std::string& tag, mvMaterial material)
+DearPy3D::register_material(mvMaterialManager& manager, const std::string& tag, mvMaterial material)
 {
     assert(manager.materialCount <= manager.maxMaterialCount);
     manager.materials[manager.materialCount] = material;
