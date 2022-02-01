@@ -21,6 +21,8 @@
 #include <assert.h>
 #endif // SEMPER_MATH_IMPLEMENTATION
 
+#include <cmath>
+
 static constexpr float S_E        = 2.71828182f; // e
 static constexpr float S_LOG2E    = 1.44269504f; // log2(e)
 static constexpr float S_LOG10E   = 0.43429448f; // log10(e)
@@ -45,27 +47,27 @@ namespace Semper
 {
 
 	// vector operations
-	sVec2 normalize(sVec2& v);
-	sVec3 normalize(sVec3& v);
-	sVec4 normalize(sVec4& v);
-	float length   (sVec2& v);
-	float length   (sVec3& v);
-	float length   (sVec4& v);
-	float lengthSqr(sVec2& v);
-	float lengthSqr(sVec3& v);
-	float lengthSqr(sVec4& v);
-	float dot      (sVec2& v1, sVec2& v2);
-	float dot      (sVec3& v1, sVec3& v2);
-	float dot      (sVec4& v1, sVec4& v2);
-	sVec3 cross    (sVec3& v1, sVec3& v2);
+	sVec2 normalize(const sVec2& v);
+	sVec3 normalize(const sVec3& v);
+	sVec4 normalize(const sVec4& v);
+    float length   (const sVec2& v);
+    float length   (const sVec3& v);
+    float length   (const sVec4& v);
+	float lengthSqr(const sVec2& v);
+	float lengthSqr(const sVec3& v);
+	float lengthSqr(const sVec4& v);
+	float dot      (const sVec2& v1, const sVec2& v2);
+	float dot      (const sVec3& v1, const sVec3& v2);
+	float dot      (const sVec4& v1, const sVec4& v2);
+	sVec3 cross    (const sVec3& v1, const sVec3& v2);
 
 	// common matrix construction
 	sMat4 scale    (float x, float y, float z);
 	sMat4 translate(float x, float y, float z);
 
 	// matrix operations
-	sMat4 transpose(sMat4& m);
-	sMat4 invert   (sMat4& m);
+	sMat4 transpose(const sMat4& m);
+	sMat4 invert   (const sMat4& m);
 	sMat4 create_matrix(
 		float m00, float m01, float m02, float m03,
 		float m10, float m11, float m12, float m13,
@@ -132,6 +134,7 @@ struct sVec2
 	}
 
 	float& operator[](int index);
+    float operator[](int index) const;
 };
 
 struct sVec3
@@ -148,6 +151,7 @@ struct sVec3
 	}
 
 	float& operator[](int index);
+    float operator[](int index) const;
 };
 
 struct sVec4
@@ -164,7 +168,13 @@ struct sVec4
 	{
 	}
 
+	operator sVec3()
+	{
+		return sVec3(x, y, z);
+	}
+
 	float& operator[](int index);
+    float operator[](int index) const;
 };
 
 struct sMat4
@@ -181,8 +191,18 @@ struct sMat4
 		cols[3][3] = value;
 	}
 
+	sMat4(sVec4 c0, sVec4 c1, sVec4 c2, sVec4 c3)
+	{
+		cols[0] = c0;
+		cols[1] = c1;
+		cols[2] = c2;
+		cols[3] = c3;
+	}
+
 	sVec4& operator[](int index);
+	sVec4 operator[](int index) const;
 	float& at(int index);
+	float at(int index) const;
 };
 
 // end of header file
@@ -248,79 +268,136 @@ sMat4::at(int index)
 }
 
 float
-Semper::length(sVec2& v)
+sVec2::operator[](int index) const
+{
+	switch (index)
+	{
+	case 0: return x;
+	case 1: return y;
+	default: return y;
+	}
+}
+
+float
+sVec3::operator[](int index) const
+{
+	switch (index)
+	{
+	case 0: return x;
+	case 1: return y;
+	case 2: return z;
+	default: return z;
+	}
+}
+
+float
+sVec4::operator[](int index) const
+{
+	switch (index)
+	{
+	case 0: return x;
+	case 1: return y;
+	case 2: return z;
+	case 3: return w;
+	default: return w;
+	}
+}
+
+sVec4
+sMat4::operator[](int index) const
+{
+	switch (index)
+	{
+	case 0: return cols[0];
+	case 1: return cols[1];
+	case 2: return cols[2];
+	case 3: return cols[3];
+	default: return cols[3];
+	}
+}
+
+float
+sMat4::at(int index) const
+{
+	int col = index / 4;
+	int row = index % 4;
+	return cols[col][row];
+}
+
+float
+Semper::length(const sVec2& v)
 {
 	return sqrt(square(v[0]) + square(v[1]));
 }
 
 float
-Semper::length(sVec3& v)
+Semper::length(const sVec3& v)
 {
 	return sqrt(square(v[0]) + square(v[1]) + square(v[2]));
 }
 
 float
-Semper::length(sVec4& v)
+Semper::length(const sVec4& v)
 {
 	return sqrt(square(v[0]) + square(v[1]) + square(v[2]) + square(v[3]));
 }
 
 float
-Semper::lengthSqr(sVec2& v)
+Semper::lengthSqr(const sVec2& v)
 {
 	return square(v[0]) + square(v[1]);
 }
 
 float
-Semper::lengthSqr(sVec3& v)
+Semper::lengthSqr(const sVec3& v)
 {
 	return square(v[0]) + square(v[1]) + square(v[2]);
 }
 
 float
-Semper::lengthSqr(sVec4& v)
+Semper::lengthSqr(const sVec4& v)
 {
 	return square(v[0]) + square(v[1]) + square(v[2]) + square(v[3]);
 }
 
 sVec2
-Semper::normalize(sVec2& v)
+Semper::normalize(const sVec2& v)
 {
 	return v / length(v);
 }
 
 sVec3
-Semper::normalize(sVec3& v)
+Semper::normalize(const sVec3& v)
 {
 	return v / length(v);
 }
 
 sVec4
-Semper::normalize(sVec4& v)
+Semper::normalize(const sVec4& v)
 {
 	return v / length(v);
 }
 
 float
-Semper::dot(sVec2& v1, sVec2& v2)
+Semper::dot(const sVec2& v1, const sVec2& v2)
 {
 	return v1.x * v2.x + v1.y * v2.y;
 }
 
 float
-Semper::dot(sVec3& v1, sVec3& v2)
+Semper::dot(const sVec3& v1, const sVec3& v2)
 {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
 
 float
-Semper::dot(sVec4& v1, sVec4& v2)
+Semper::dot(const sVec4& v1, const sVec4& v2)
 {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z + v1.w * v2.w;
 }
 
 sVec3
-Semper::cross(sVec3& v1, sVec3& v2)
+Semper::cross(const sVec3& v1, const sVec3& v2)
 {
 	sVec3 result{};
 	result.x = v1.y * v2.z - v2.y * v1.z;
@@ -351,7 +428,7 @@ Semper::translate(float x, float y, float z)
 }
 
 sMat4
-Semper::transpose(sMat4& m)
+Semper::transpose(const sMat4& m)
 {
 	sMat4 mr(0.0f);
 
@@ -365,7 +442,7 @@ Semper::transpose(sMat4& m)
 }
 
 sMat4
-Semper::invert(sMat4& m)
+Semper::invert(const sMat4& m)
 {
 	sMat4 invout(1.0f);
 	float det = 0.0f;

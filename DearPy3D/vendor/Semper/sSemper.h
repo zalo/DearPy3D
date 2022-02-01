@@ -15,6 +15,11 @@
 #include <wrl.h> // Microsoft::WRL::ComPtr
 template <typename T>
 using sComPtr = Microsoft::WRL::ComPtr<T>;
+#elif defined(__APPLE__)
+#import <Cocoa/Cocoa.h>
+#import <Metal/Metal.h>
+#include <Metal/Metal.hpp>
+#import <MetalKit/MetalKit.h>
 #endif
 
 // Helper Macros
@@ -91,7 +96,7 @@ typedef unsigned int     u32;
 #if defined(_MSC_VER) && !defined(__clang__)
 typedef unsigned __int64 u64;
 #else
-typedef unsigned long long   i64;
+typedef unsigned long long   u64;
 #endif
 
 extern sSemperContext* GContext;
@@ -275,12 +280,27 @@ struct sKeyData
     float downDurationPrev; // Last frame duration the key has been down
 };
 
+#if defined(__APPLE__)
+@interface SemperMetalView : MTKView
+@end
+
+struct sApplePass
+{
+    MTL::Drawable* drawable;
+    double width;
+    double height;
+};
+#endif
+
 struct sPlatformSpecifics
 {
 #if defined(WIN32)
     HWND       handle;
     HWND       mouseHandle;
     WNDCLASSEX wc;
+#elif defined(__APPLE__)
+    NSWindow* handle;
+    SemperMetalView *view;
 #endif
 };
 
@@ -379,7 +399,6 @@ struct sIO
     unsigned short              inputQueueSurrogate;                // for pushInputCharacterUTF16()
     std::vector<unsigned short> inputQueueCharacters;               // queue of _characters_ input (obtained by platform backend). Fill using pushInputCharacter() helper.
 
-    double                      virtualCursorPos[2];
     double                      restoreCursorPos[2];
     double                      lastCursorPos[2];
 };

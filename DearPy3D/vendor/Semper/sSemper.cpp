@@ -14,6 +14,13 @@ namespace Semper
 	extern void               enable_platform_cursor (sWindow& window);
 	extern void               disable_platform_cursor(sWindow& window);
 	extern void               process_windows_workarounds();
+#elif defined(__APPLE__)
+    extern sPlatformSpecifics initialize_platform    (sWindow& window, int cwidth, int cheight);
+	extern void               cleanup_platform       (sWindow& window);
+	extern void               process_platform_events(sWindow& window);
+	extern void               enable_platform_cursor (sWindow& window);
+	extern void               disable_platform_cursor(sWindow& window);
+	void                      process_windows_workarounds(){}
 #endif
 }
 
@@ -681,8 +688,6 @@ Semper::update_mouse_wheel()
 sWindow*
 Semper::create_window(int cwidth, int cheight)
 {
-	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-
 	sWindow* window = new sWindow();
 
 	window->client_width = cwidth;
