@@ -279,7 +279,7 @@ setup_imgui(mvGraphics& graphics, HWND window)
     init_info.Device = graphics.logicalDevice;
     init_info.QueueFamily = graphics.graphicsQueueFamily;
     init_info.Queue = graphics.graphicsQueue;
-    init_info.PipelineCache = nullptr;
+    init_info.PipelineCache = 0;
     init_info.DescriptorPool = graphics.descriptorPool;
     init_info.Allocator = nullptr;
     init_info.MinImageCount = graphics.minImageCount;
